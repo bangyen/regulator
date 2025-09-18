@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 
-from src.cartel.cartel_env import CartelEnv
+from cartel.cartel_env import CartelEnv
 
 
 class BaseAgent(ABC):
