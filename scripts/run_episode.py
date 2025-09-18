@@ -19,6 +19,7 @@ sys.path.insert(0, str(project_root))
 
 # Import after path manipulation
 from src.agents.firm_agents import (  # noqa: E402
+    BaseAgent,
     RandomAgent,
     BestResponseAgent,
     TitForTatAgent,
@@ -27,7 +28,9 @@ from src.cartel.cartel_env import CartelEnv  # noqa: E402
 from src.episode_logging.logger import Logger  # noqa: E402
 
 
-def create_agent(agent_type: str, agent_id: int, seed: Optional[int] = None):
+def create_agent(
+    agent_type: str, agent_id: int, seed: Optional[int] = None
+) -> BaseAgent:
     """
     Create an agent of the specified type.
 
@@ -97,10 +100,43 @@ def run_episode(
     }
 
     if env_params:
-        default_env_params.update(env_params)
+        # Convert string values to appropriate types
+        for key, value in env_params.items():
+            if key in ["n_firms", "max_steps"]:
+                default_env_params[key] = int(str(value))
+            elif key in [
+                "marginal_cost",
+                "demand_intercept",
+                "demand_slope",
+                "shock_std",
+                "price_min",
+                "price_max",
+            ]:
+                default_env_params[key] = float(str(value))
+            elif key == "seed":
+                if value is not None:
+                    default_env_params[key] = int(str(value))
+                else:
+                    default_env_params[key] = None  # type: ignore
+            else:
+                default_env_params[key] = value
 
-    # Create environment
-    env = CartelEnv(**default_env_params)
+    # Create environment with explicit type conversion
+    env = CartelEnv(
+        n_firms=int(default_env_params["n_firms"]),
+        max_steps=int(default_env_params["max_steps"]),
+        marginal_cost=float(default_env_params["marginal_cost"]),
+        demand_intercept=float(default_env_params["demand_intercept"]),
+        demand_slope=float(default_env_params["demand_slope"]),
+        shock_std=float(default_env_params["shock_std"]),
+        price_min=float(default_env_params["price_min"]),
+        price_max=float(default_env_params["price_max"]),
+        seed=(
+            int(default_env_params["seed"])
+            if default_env_params["seed"] is not None
+            else None
+        ),
+    )
 
     # Create agents
     agents = []

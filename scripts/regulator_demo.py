@@ -10,6 +10,7 @@ that fines trigger appropriately when violations are detected.
 import argparse
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -30,7 +31,7 @@ def run_regulator_demo(
     fine_amount: float = 50.0,
     seed: int = 42,
     verbose: bool = True,
-) -> dict:
+) -> Dict[str, Any]:
     """
     Run a demonstration of the Regulator with RandomAgents.
 
@@ -75,7 +76,7 @@ def run_regulator_demo(
     regulator.reset()
 
     # Track simulation results
-    results = {
+    results: Dict[str, Any] = {
         "step_data": [],
         "total_rewards": np.zeros(n_firms),
         "total_fines": 0.0,
@@ -188,7 +189,7 @@ def run_regulator_demo(
     return results
 
 
-def main() -> None:
+def main() -> int:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Demo script for Regulator with RandomAgents",
