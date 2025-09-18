@@ -67,7 +67,7 @@ class BaseAgent(ABC):
             rival_prices: Array of prices chosen by rival agents
         """
         self.price_history.append(my_price)
-        rival_avg = float(np.mean(rival_prices))
+        rival_avg = float(np.mean(rival_prices)) if rival_prices.size > 0 else 0.0
         self.rival_price_history.append(rival_avg)
 
     def reset(self) -> None:

@@ -123,11 +123,15 @@ class Logger:
 
         # Add regulator flags if provided
         if regulator_flags is not None:
-            step_data["regulator_flags"] = regulator_flags
+            # Convert numpy types in regulator flags
+            converted_regulator_flags = self._convert_numpy_types(regulator_flags)
+            step_data["regulator_flags"] = converted_regulator_flags
 
         # Add additional info if provided
         if additional_info is not None:
-            step_data["additional_info"] = additional_info
+            # Convert numpy types in additional info
+            converted_additional_info = self._convert_numpy_types(additional_info)
+            step_data["additional_info"] = converted_additional_info
 
         # Store in memory and write to file
         self.episode_data.append(step_data)
@@ -135,6 +139,21 @@ class Logger:
 
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(step_data) + "\n")
+
+    def _convert_numpy_types(self, obj: Any) -> Any:
+        """Convert numpy types to Python native types for JSON serialization."""
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_numpy_types(item) for item in obj]
+        else:
+            return obj
 
     def log_episode_end(
         self,
@@ -171,7 +190,9 @@ class Logger:
             end_data["final_rewards"] = [float(r) for r in final_rewards.tolist()]
 
         if episode_summary is not None:
-            end_data["episode_summary"] = episode_summary
+            # Convert numpy types in episode summary
+            converted_episode_summary = self._convert_numpy_types(episode_summary)
+            end_data["episode_summary"] = converted_episode_summary
 
         # Write to file
         with open(self.log_file, "a", encoding="utf-8") as f:

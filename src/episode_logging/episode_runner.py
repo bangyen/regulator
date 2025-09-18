@@ -153,16 +153,16 @@ def run_episode_with_logging(
             else []
         ),
         "avg_prices": (
-            np.mean(prices_array, axis=0).tolist() if len(prices_array) > 0 else []
+            np.mean(prices_array, axis=0).tolist() if prices_array.size > 0 else []
         ),
         "price_std": (
-            np.std(prices_array, axis=0).tolist() if len(prices_array) > 0 else []
+            np.std(prices_array, axis=0).tolist() if prices_array.size > 0 else []
         ),
         "avg_demand_shock": (
-            np.mean(demand_shocks_array) if len(demand_shocks_array) > 0 else 0.0
+            np.mean(demand_shocks_array) if demand_shocks_array.size > 0 else 0.0
         ),
         "demand_shock_std": (
-            np.std(demand_shocks_array) if len(demand_shocks_array) > 0 else 0.0
+            np.std(demand_shocks_array) if demand_shocks_array.size > 0 else 0.0
         ),
         "agent_types": agent_types,
         "environment_params": {
@@ -371,16 +371,16 @@ def run_episode_with_regulator_logging(
         "total_fines": episode_data["total_fines"],
         "violations": episode_data["violations"],
         "avg_prices": (
-            np.mean(prices_array, axis=0).tolist() if len(prices_array) > 0 else []
+            np.mean(prices_array, axis=0).tolist() if prices_array.size > 0 else []
         ),
         "price_std": (
-            np.std(prices_array, axis=0).tolist() if len(prices_array) > 0 else []
+            np.std(prices_array, axis=0).tolist() if prices_array.size > 0 else []
         ),
         "avg_demand_shock": (
-            np.mean(demand_shocks_array) if len(demand_shocks_array) > 0 else 0.0
+            np.mean(demand_shocks_array) if demand_shocks_array.size > 0 else 0.0
         ),
         "demand_shock_std": (
-            np.std(demand_shocks_array) if len(demand_shocks_array) > 0 else 0.0
+            np.std(demand_shocks_array) if demand_shocks_array.size > 0 else 0.0
         ),
         "agent_types": agent_types,
         "environment_params": {
