@@ -11,7 +11,7 @@ lint: ## lint code
 	ruff check .
 
 type: ## type-check
-	mypy --ignore-missing-imports src/agents/regulator.py src/agents/firm_agents.py src/cartel/cartel_env.py
+	mypy .
 
 test: ## run tests
 	python -m pytest
