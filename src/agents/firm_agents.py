@@ -10,11 +10,12 @@ These agents serve as baselines for testing and benchmarking the CartelEnv.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 from src.cartel.cartel_env import CartelEnv
+from src.agents.leniency import LeniencyProgram, WhistleblowerAgent
 
 
 class BaseAgent(ABC):
@@ -224,3 +225,253 @@ class TitForTatAgent(BaseAgent):
         tit_for_tat_price = max(env.price_min, min(env.price_max, tit_for_tat_price))
 
         return float(tit_for_tat_price)
+
+
+class CollusiveAgent(BaseAgent):
+    """
+    Agent that attempts to maintain collusive pricing behavior.
+
+    This agent tries to set prices at a collusive level, coordinating with
+    other firms to maintain high prices and avoid price wars.
+    """
+
+    def __init__(
+        self,
+        agent_id: int,
+        collusive_price: float = 30.0,
+        deviation_penalty: float = 0.1,
+        seed: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the collusive agent.
+
+        Args:
+            agent_id: Unique identifier for this agent
+            collusive_price: Target collusive price level
+            deviation_penalty: Penalty factor for deviating from collusive price
+            seed: Random seed for reproducibility
+        """
+        super().__init__(agent_id, seed)
+        self.collusive_price = collusive_price
+        self.deviation_penalty = deviation_penalty
+
+    def choose_price(
+        self,
+        observation: np.ndarray,
+        env: CartelEnv,
+        info: Optional[Dict[str, Any]] = None,
+    ) -> float:
+        """
+        Choose a collusive price.
+
+        Args:
+            observation: Current environment observation
+            env: The CartelEnv environment instance
+            info: Additional information (unused)
+
+        Returns:
+            The collusive price
+        """
+        # Start with collusive price
+        price = self.collusive_price
+
+        # If we have rival price history, try to coordinate
+        if self.rival_price_history:
+            rival_avg = self.rival_price_history[-1]
+
+            # If rivals are pricing below collusive level, match them to avoid price war
+            if rival_avg < self.collusive_price * 0.9:
+                price = rival_avg
+            # If rivals are pricing above collusive level, stay at collusive level
+            elif rival_avg > self.collusive_price * 1.1:
+                price = self.collusive_price
+            # Otherwise, set collusive price
+            else:
+                price = self.collusive_price
+
+        # Add small random variation to avoid perfect coordination
+        variation = self.np_random.normal(0, 0.5)
+        price += variation
+
+        # Clip to valid price range
+        price = max(env.price_min, min(env.price_max, price))
+
+        return float(price)
+
+
+class WhistleblowerTitForTatAgent(TitForTatAgent, WhistleblowerAgent):
+    """
+    Agent that combines tit-for-tat pricing with strategic whistleblowing.
+
+    This agent sets prices using a tit-for-tat strategy but can also
+    strategically whistleblow when leniency incentives are sufficient.
+    """
+
+    def __init__(
+        self,
+        agent_id: int,
+        leniency_program: LeniencyProgram,
+        whistleblow_threshold: float = 10.0,
+        risk_aversion: float = 1.0,
+        seed: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the whistleblower tit-for-tat agent.
+
+        Args:
+            agent_id: Unique identifier for this agent
+            leniency_program: The leniency program instance
+            whistleblow_threshold: Minimum incentive to whistleblow
+            risk_aversion: Risk aversion parameter
+            seed: Random seed for reproducibility
+        """
+        TitForTatAgent.__init__(self, agent_id, seed)
+        WhistleblowerAgent.__init__(
+            self, agent_id, leniency_program, whistleblow_threshold, risk_aversion, seed
+        )
+
+    def evaluate_whistleblow_opportunity(
+        self,
+        current_fine: float,
+        collusion_probability: float,
+        step: int,
+        rival_firms: List[int],
+    ) -> Tuple[bool, float]:
+        """
+        Evaluate whether to whistleblow and submit a report if beneficial.
+
+        Args:
+            current_fine: Current fine amount if caught
+            collusion_probability: Probability of being caught in collusion
+            step: Current step number
+            rival_firms: List of rival firm IDs to potentially report
+
+        Returns:
+            Tuple of (whistled, incentive_value)
+        """
+        should_whistleblow, incentive = self.evaluate_whistleblow_decision(
+            current_fine, collusion_probability, step
+        )
+
+        if should_whistleblow and rival_firms:
+            # Submit leniency report
+            evidence_strength = min(
+                0.9, collusion_probability + 0.2
+            )  # Base evidence on detection probability
+            success = self.leniency_program.submit_report(
+                self.agent_id, rival_firms, evidence_strength, step
+            )
+
+            if success:
+                return True, incentive
+
+        return False, incentive
+
+    def get_combined_statistics(self) -> Dict[str, Any]:
+        """
+        Get combined statistics from both pricing and whistleblowing behavior.
+
+        Returns:
+            Dictionary containing combined statistics
+        """
+        pricing_stats = {
+            "price_history_length": len(self.price_history),
+            "rival_price_history_length": len(self.rival_price_history),
+        }
+
+        whistleblow_stats = self.get_whistleblow_statistics()
+
+        return {**pricing_stats, **whistleblow_stats}
+
+    def reset(self) -> None:
+        """Reset both pricing and whistleblowing history."""
+        TitForTatAgent.reset(self)
+        WhistleblowerAgent.reset(self)
+
+
+class StrategicWhistleblowerAgent(BestResponseAgent, WhistleblowerAgent):
+    """
+    Agent that combines best response pricing with strategic whistleblowing.
+
+    This agent chooses optimal prices against rivals but can also
+    strategically whistleblow when leniency incentives are sufficient.
+    """
+
+    def __init__(
+        self,
+        agent_id: int,
+        leniency_program: LeniencyProgram,
+        whistleblow_threshold: float = 15.0,
+        risk_aversion: float = 1.2,
+        seed: Optional[int] = None,
+    ) -> None:
+        """
+        Initialize the strategic whistleblower agent.
+
+        Args:
+            agent_id: Unique identifier for this agent
+            leniency_program: The leniency program instance
+            whistleblow_threshold: Minimum incentive to whistleblow
+            risk_aversion: Risk aversion parameter
+            seed: Random seed for reproducibility
+        """
+        BestResponseAgent.__init__(self, agent_id, seed)
+        WhistleblowerAgent.__init__(
+            self, agent_id, leniency_program, whistleblow_threshold, risk_aversion, seed
+        )
+
+    def evaluate_whistleblow_opportunity(
+        self,
+        current_fine: float,
+        collusion_probability: float,
+        step: int,
+        rival_firms: List[int],
+    ) -> Tuple[bool, float]:
+        """
+        Evaluate whether to whistleblow and submit a report if beneficial.
+
+        Args:
+            current_fine: Current fine amount if caught
+            collusion_probability: Probability of being caught in collusion
+            step: Current step number
+            rival_firms: List of rival firm IDs to potentially report
+
+        Returns:
+            Tuple of (whistled, incentive_value)
+        """
+        should_whistleblow, incentive = self.evaluate_whistleblow_decision(
+            current_fine, collusion_probability, step
+        )
+
+        if should_whistleblow and rival_firms:
+            # Submit leniency report with higher evidence strength for strategic agent
+            evidence_strength = min(0.95, collusion_probability + 0.3)
+            success = self.leniency_program.submit_report(
+                self.agent_id, rival_firms, evidence_strength, step
+            )
+
+            if success:
+                return True, incentive
+
+        return False, incentive
+
+    def get_combined_statistics(self) -> Dict[str, Any]:
+        """
+        Get combined statistics from both pricing and whistleblowing behavior.
+
+        Returns:
+            Dictionary containing combined statistics
+        """
+        pricing_stats = {
+            "price_history_length": len(self.price_history),
+            "rival_price_history_length": len(self.rival_price_history),
+        }
+
+        whistleblow_stats = self.get_whistleblow_statistics()
+
+        return {**pricing_stats, **whistleblow_stats}
+
+    def reset(self) -> None:
+        """Reset both pricing and whistleblowing history."""
+        BestResponseAgent.reset(self)
+        WhistleblowerAgent.reset(self)

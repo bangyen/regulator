@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from src.agents.leniency import LeniencyProgram, LeniencyStatus
+
 
 class Regulator:
     """
@@ -29,6 +31,8 @@ class Regulator:
         parallel_steps: int = 3,
         structural_break_threshold: float = 10.0,
         fine_amount: float = 50.0,
+        leniency_enabled: bool = True,
+        leniency_reduction: float = 0.5,
         seed: Optional[int] = None,
     ) -> None:
         """
@@ -39,6 +43,8 @@ class Regulator:
             parallel_steps: Minimum consecutive steps (k) for parallel pricing detection
             structural_break_threshold: Maximum price change (δ) before structural break
             fine_amount: Fine to subtract from firm rewards when violations detected
+            leniency_enabled: Whether to enable the leniency program
+            leniency_reduction: Fraction of fine reduction for whistleblowers
             seed: Random seed for reproducibility
         """
         if parallel_threshold < 0:
@@ -49,11 +55,15 @@ class Regulator:
             raise ValueError("Structural break threshold must be non-negative")
         if fine_amount < 0:
             raise ValueError("Fine amount must be non-negative")
+        if not 0.0 <= leniency_reduction <= 1.0:
+            raise ValueError("Leniency reduction must be between 0.0 and 1.0")
 
         self.parallel_threshold = parallel_threshold
         self.parallel_steps = parallel_steps
         self.structural_break_threshold = structural_break_threshold
         self.fine_amount = fine_amount
+        self.leniency_enabled = leniency_enabled
+        self.leniency_reduction = leniency_reduction
         self.np_random = np.random.default_rng(seed)
 
         # Episode monitoring state
@@ -61,6 +71,14 @@ class Regulator:
         self.parallel_violations: List[Tuple[int, str]] = []  # (step, violation_type)
         self.structural_break_violations: List[Tuple[int, str]] = []
         self.total_fines_applied: float = 0.0
+
+        # Leniency program
+        if self.leniency_enabled:
+            self.leniency_program: Optional[LeniencyProgram] = LeniencyProgram(
+                leniency_reduction=leniency_reduction, seed=seed
+            )
+        else:
+            self.leniency_program = None
 
     def monitor_step(
         self,
@@ -110,8 +128,25 @@ class Regulator:
 
         # Apply fines if violations detected
         if parallel_violation or structural_break_violation:
-            detection_results["fines_applied"] = np.full(len(prices), self.fine_amount)
-            self.total_fines_applied += len(prices) * self.fine_amount
+            base_fines = np.full(len(prices), self.fine_amount)
+
+            # Apply leniency reductions if program is enabled
+            if self.leniency_program is not None:
+                for i in range(len(prices)):
+                    reduction = self.leniency_program.get_fine_reduction(i)
+                    base_fines[i] *= 1.0 - reduction
+
+                # Update collusion evidence for leniency program
+                evidence_strength = (
+                    0.8 if parallel_violation else 0.6
+                )  # Higher evidence for parallel pricing
+                for i in range(len(prices)):
+                    self.leniency_program.update_collusion_evidence(
+                        i, evidence_strength, step
+                    )
+
+            detection_results["fines_applied"] = base_fines
+            self.total_fines_applied += np.sum(base_fines)
 
         return detection_results
 
@@ -214,12 +249,24 @@ class Regulator:
             ],
         }
 
-    def reset(self) -> None:
-        """Reset the regulator's monitoring state for a new episode."""
+    def reset(self, n_firms: Optional[int] = None) -> None:
+        """
+        Reset the regulator's monitoring state for a new episode.
+
+        Args:
+            n_firms: Number of firms (required if leniency program is enabled)
+        """
         self.price_history.clear()
         self.parallel_violations.clear()
         self.structural_break_violations.clear()
         self.total_fines_applied = 0.0
+
+        if self.leniency_program is not None:
+            if n_firms is None:
+                raise ValueError(
+                    "n_firms must be provided when leniency program is enabled"
+                )
+            self.leniency_program.reset(n_firms)
 
     def get_price_statistics(self) -> Dict[str, float]:
         """
@@ -261,3 +308,96 @@ class Regulator:
             if total_checkable_steps > 0
             else 0.0
         )
+
+    def submit_leniency_report(
+        self,
+        firm_id: int,
+        reported_firms: List[int],
+        evidence_strength: float,
+        step: int,
+    ) -> bool:
+        """
+        Submit a leniency report from a firm.
+
+        Args:
+            firm_id: ID of the reporting firm
+            reported_firms: List of firm IDs being reported
+            evidence_strength: Strength of evidence provided
+            step: Current step number
+
+        Returns:
+            True if report was accepted, False otherwise
+        """
+        if self.leniency_program is None:
+            return False
+
+        return self.leniency_program.submit_report(
+            firm_id, reported_firms, evidence_strength, step
+        )
+
+    def get_leniency_status(self, firm_id: int) -> LeniencyStatus:
+        """
+        Get the leniency status for a firm.
+
+        Args:
+            firm_id: ID of the firm
+
+        Returns:
+            Current leniency status
+        """
+        if self.leniency_program is None:
+            return LeniencyStatus.NOT_APPLICABLE
+
+        return self.leniency_program.firm_status.get(
+            firm_id, LeniencyStatus.NOT_APPLICABLE
+        )
+
+    def get_whistleblower_incentive(
+        self,
+        firm_id: int,
+        current_fine: float,
+        collusion_probability: float,
+    ) -> float:
+        """
+        Get the whistleblower incentive for a firm.
+
+        Args:
+            firm_id: ID of the firm
+            current_fine: Current fine amount if caught
+            collusion_probability: Probability of being caught in collusion
+
+        Returns:
+            Expected benefit from whistleblowing
+        """
+        if self.leniency_program is None:
+            return 0.0
+
+        return self.leniency_program.get_whistleblower_incentive(
+            firm_id, current_fine, collusion_probability
+        )
+
+    def get_leniency_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of the leniency program's current state.
+
+        Returns:
+            Dictionary containing leniency program statistics
+        """
+        if self.leniency_program is None:
+            return {"leniency_enabled": False}
+
+        summary = self.leniency_program.get_program_summary()
+        summary["leniency_enabled"] = True
+        return summary
+
+    def get_leniency_reports(self) -> List[Dict[str, Any]]:
+        """
+        Get a summary of all leniency reports.
+
+        Returns:
+            List of dictionaries containing report details
+        """
+        if self.leniency_program is None:
+            return []
+
+        return self.leniency_program.get_reports_summary()

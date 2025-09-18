@@ -513,7 +513,7 @@ class TestReset:
 
     def test_reset_clears_all_state(self) -> None:
         """Test that reset clears all regulator state."""
-        regulator = Regulator()
+        regulator = Regulator(leniency_enabled=False)
 
         # Add some state
         regulator.price_history = [np.array([10.0, 11.0, 12.0])]
