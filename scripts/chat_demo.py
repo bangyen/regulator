@@ -47,13 +47,13 @@ def create_chat_agents(
     Returns:
         List of chat-enabled agents
     """
-    agents = []
+    agents: List[ChatFirmAgent] = []
 
     for i in range(n_firms):
         agent_type = agent_types[i % len(agent_types)]
 
         if agent_type == "collusive":
-            agent = CollusiveChatAgent(
+            agent: ChatFirmAgent = CollusiveChatAgent(
                 agent_id=i,
                 chat_enabled=chat_enabled,
                 message_frequency=0.6,
@@ -105,14 +105,14 @@ def run_chat_episode(
         Dictionary containing episode results
     """
     # Reset environment and agents
-    observation = env.reset()
+    observation, _ = env.reset()
     for agent in agents:
         agent.reset()
     message_manager.reset()
     chat_regulator.reset()
     price_regulator.reset()
 
-    episode_results = {
+    episode_results: Dict[str, Any] = {
         "total_steps": n_steps,
         "total_messages": 0,
         "collusive_messages": 0,
@@ -272,7 +272,7 @@ def print_episode_summary(results: Dict[str, Any]) -> None:
                 )
 
 
-def main():
+def main() -> None:
     """Main function to run the chat demo."""
     parser = argparse.ArgumentParser(description="Run chat-enabled firm episode demo")
     parser.add_argument(
