@@ -17,7 +17,7 @@ import numpy as np
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from detectors.ml_detector import (
+from src.detectors.ml_detector import (
     CollusionDetector,
     FeatureExtractor,
     generate_synthetic_labels,
@@ -190,7 +190,7 @@ def train_and_evaluate_detector(
     # Generate synthetic labels
     print("Generating synthetic labels...")
     valid_files, labels = generate_synthetic_labels(
-        log_files, collusion_ratio=0.5, random_state=random_state
+        list(log_files), collusion_ratio=0.5, random_state=random_state
     )
 
     print(f"Generated labels for {len(valid_files)} episodes")
@@ -254,7 +254,7 @@ def demonstrate_predictions(detector: CollusionDetector, log_files: List[Path]) 
 
     # Extract features
     extractor = FeatureExtractor()
-    features = extractor.extract_features_batch(sample_files)
+    features = extractor.extract_features_batch(list(sample_files))
 
     # Make predictions
     predictions = detector.predict(features)
