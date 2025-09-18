@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from src.agents.leniency import LeniencyProgram, LeniencyStatus
+from agents.leniency import LeniencyProgram, LeniencyStatus
 
 
 class Regulator:

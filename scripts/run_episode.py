@@ -8,24 +8,19 @@ step-by-step data to a JSONL file for analysis and reproducibility.
 
 import argparse
 import sys
-from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
 
-# Add the project root to the Python path so src imports work
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import after path manipulation
-from src.agents.firm_agents import (  # noqa: E402
+# Import from the package
+from agents.firm_agents import (
     BaseAgent,
     RandomAgent,
     BestResponseAgent,
     TitForTatAgent,
 )
-from src.cartel.cartel_env import CartelEnv  # noqa: E402
-from src.episode_logging.logger import Logger  # noqa: E402
+from cartel.cartel_env import CartelEnv
+from episode_logging.logger import Logger
 
 
 def create_agent(

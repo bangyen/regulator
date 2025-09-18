@@ -14,10 +14,8 @@ from typing import Any, Dict, List, Tuple, cast
 
 import numpy as np
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from src.detectors.ml_detector import (
+# Import from the package
+from detectors.ml_detector import (
     CollusionDetector,
     FeatureExtractor,
     generate_synthetic_labels,

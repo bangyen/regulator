@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from src.cartel.cartel_env import CartelEnv
-from src.episode_logging.logger import Logger
+from cartel.cartel_env import CartelEnv
+from episode_logging.logger import Logger
 
 
 def run_episode_with_logging(

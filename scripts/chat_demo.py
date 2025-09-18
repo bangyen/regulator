@@ -14,19 +14,17 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.agents.chat_firm import (
+# Import from the package
+from agents.chat_firm import (
     ChatFirmAgent,
     CollusiveChatAgent,
     CompetitiveChatAgent,
     ChatMessageManager,
 )
-from src.detectors.llm_detector import LLMDetector, ChatRegulator
-from src.cartel.cartel_env import CartelEnv
-from src.agents.regulator import Regulator
-from src.episode_logging.episode_logger import EpisodeLogger
+from detectors.llm_detector import LLMDetector, ChatRegulator
+from cartel.cartel_env import CartelEnv
+from agents.regulator import Regulator
+from episode_logging.episode_logger import EpisodeLogger
 
 
 def create_chat_agents(

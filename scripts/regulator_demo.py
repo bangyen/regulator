@@ -9,17 +9,14 @@ that fines trigger appropriately when violations are detected.
 
 import argparse
 import sys
-from pathlib import Path
 from typing import Any, Dict
-
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 
-from src.agents.firm_agents import RandomAgent
-from src.agents.regulator import Regulator
-from src.cartel.cartel_env import CartelEnv
+# Import from the package
+from agents.firm_agents import RandomAgent
+from agents.regulator import Regulator
+from cartel.cartel_env import CartelEnv
 
 
 def run_regulator_demo(

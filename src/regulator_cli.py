@@ -6,18 +6,14 @@ and analyzing results.
 """
 
 import sys
-from pathlib import Path
 from typing import Optional
 
 import click
 from dotenv import load_dotenv
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from scripts.run_experiment import main as run_experiment_main
-from scripts.train_ml_detector import main as train_ml_main
-from scripts.run_episode import run_episode
+# Import from the package
+from experiments.experiment_runner import run_experiment
+from experiments.trainer import train_ml_detector, run_episode
 
 
 @click.group()
@@ -57,26 +53,19 @@ def experiment(
     """Run a single episode experiment."""
     click.echo("Running experiment...")
 
-    # Set up arguments for run_experiment
-    sys.argv = [
-        "run_experiment.py",
-        "--firms",
-        firms,
-        "--steps",
-        str(steps),
-        "--regulator",
-        regulator,
-        "--seed",
-        str(seed),
-        "--log-dir",
-        log_dir,
-    ]
-
-    if episode_id:
-        sys.argv.extend(["--episode-id", episode_id])
-
     try:
-        run_experiment_main()
+        # Parse firms string into list
+        firms_list = [firm.strip() for firm in firms.split(",")]
+
+        # Call the function directly
+        run_experiment(
+            firms=firms_list,
+            steps=steps,
+            regulator_config=regulator,
+            seed=seed,
+            log_dir=log_dir,
+            episode_id=episode_id,
+        )
         click.echo("✅ Experiment completed successfully!")
     except Exception as e:
         click.echo(f"❌ Experiment failed: {e}", err=True)
@@ -99,22 +88,14 @@ def train(
     """Train the ML collusion detector."""
     click.echo(f"Training ML detector with {model_type}...")
 
-    # Set up arguments for train_ml_detector
-    sys.argv = [
-        "train_ml_detector.py",
-        "--n-episodes",
-        str(n_episodes),
-        "--model-type",
-        model_type,
-        "--output-dir",
-        output_dir,
-    ]
-
-    if existing_logs:
-        sys.argv.extend(["--existing-logs", existing_logs])
-
     try:
-        train_ml_main()
+        # Call the function directly
+        train_ml_detector(
+            n_episodes=n_episodes,
+            model_type=model_type,
+            existing_logs=existing_logs,
+            output_dir=output_dir,
+        )
         click.echo("✅ Training completed successfully!")
     except Exception as e:
         click.echo(f"❌ Training failed: {e}", err=True)

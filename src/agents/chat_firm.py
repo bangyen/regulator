@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from src.agents.firm_agents import BaseAgent
-from src.cartel.cartel_env import CartelEnv
+from agents.firm_agents import BaseAgent
+from cartel.cartel_env import CartelEnv
 
 
 class ChatFirmAgent(BaseAgent):
