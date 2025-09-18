@@ -67,6 +67,9 @@ python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+explicit_package_bases = true
+mypy_path = "src"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
