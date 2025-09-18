@@ -13,7 +13,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Bang Yen", email = "bangyen@example.com"},
+    {name = "Bangyen Pham", email = "bangyenp@gmail.com"},
 ]
 keywords = ["python", "economics", "collusion", "detection", "machine-learning", "simulation"]
 classifiers = [
