@@ -288,66 +288,39 @@ class TestRegulatorCLIIntegration:
 
     def test_cli_help_commands(self) -> None:
         """Test that CLI help commands work."""
+        runner = CliRunner()
+
         # Test main help
-        result = subprocess.run(
-            [sys.executable, "-m", "src.regulator.cli", "--help"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-        )
-        assert result.returncode == 0
-        assert "Regulator: Market Competition" in result.stdout
+        result = runner.invoke(main, ["--help"])
+        assert result.exit_code == 0
+        assert "Regulator: Market Competition" in result.output
 
         # Test experiment help
-        result = subprocess.run(
-            [sys.executable, "-m", "src.regulator.cli", "experiment", "--help"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-        )
-        assert result.returncode == 0
-        assert "--n-episodes" in result.stdout
+        result = runner.invoke(experiment, ["--help"])
+        assert result.exit_code == 0
+        assert "--n-episodes" in result.output
 
         # Test train help
-        result = subprocess.run(
-            [sys.executable, "-m", "src.regulator.cli", "train", "--help"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-        )
-        assert result.returncode == 0
-        assert "--model-type" in result.stdout
+        result = runner.invoke(train, ["--help"])
+        assert result.exit_code == 0
+        assert "--model-type" in result.output
 
         # Test episode help
-        result = subprocess.run(
-            [sys.executable, "-m", "src.regulator.cli", "episode", "--help"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-        )
-        assert result.returncode == 0
-        assert "--firms" in result.stdout
+        result = runner.invoke(episode, ["--help"])
+        assert result.exit_code == 0
+        assert "--firms" in result.output
 
         # Test dashboard help
-        result = subprocess.run(
-            [sys.executable, "-m", "src.regulator.cli", "dashboard", "--help"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-        )
-        assert result.returncode == 0
-        assert "--port" in result.stdout
+        result = runner.invoke(dashboard, ["--help"])
+        assert result.exit_code == 0
+        assert "--port" in result.output
 
     def test_cli_version_option(self) -> None:
         """Test that CLI version option works."""
-        result = subprocess.run(
-            [sys.executable, "-m", "src.regulator.cli", "--version"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-        )
-        assert result.returncode == 0
-        assert "0.1.0" in result.stdout
+        runner = CliRunner()
+        result = runner.invoke(main, ["--version"])
+        assert result.exit_code == 0
+        assert "0.1.0" in result.output
 
 
 if __name__ == "__main__":
