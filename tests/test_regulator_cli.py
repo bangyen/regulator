@@ -12,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 
 # Import from the package
-from regulator.cli import main, experiment, train, episode, dashboard
+from regulator_cli import main, experiment, train, episode, dashboard
 
 
 class TestRegulatorCLI:

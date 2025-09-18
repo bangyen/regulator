@@ -64,7 +64,9 @@ def train_and_evaluate_detector(
 
     # Generate synthetic labels
     print("Generating synthetic labels...")
-    labels = generate_synthetic_labels(log_files)
+    log_files_with_labels, labels = generate_synthetic_labels(
+        [str(f) for f in log_files]
+    )
 
     print(f"Generated labels for {len(log_files)} episodes")
     print(f"Collusive episodes: {sum(labels)}")
@@ -73,7 +75,7 @@ def train_and_evaluate_detector(
     # Extract features
     print("Extracting features...")
     extractor = FeatureExtractor()
-    features = extractor.extract_features(log_files)
+    features = extractor.extract_features_batch([str(f) for f in log_files])
     print(f"Extracted {features.shape[1]} features from {len(log_files)} episodes")
 
     # Train detector
@@ -189,7 +191,7 @@ def train_ml_detector(
     importance = detector.get_feature_importance()
     importance_file = output_path / "feature_importance.json"
     importance_data = {
-        "feature_importance": importance.tolist(),
+        "feature_importance": importance.tolist() if importance is not None else [],
         "model_type": detector.model_type,
     }
     with open(importance_file, "w") as f:
