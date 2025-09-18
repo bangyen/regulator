@@ -2,164 +2,198 @@
 """
 Demo script showing RandomAgent vs BestResponseAgent in CartelEnv.
 
-This script runs one episode with RandomAgent competing against BestResponseAgent
-and logs the prices, profits, and market outcomes for analysis.
+This script demonstrates the baseline firm agents by running a single episode
+where a RandomAgent competes against a BestResponseAgent, logging their prices
+and profits throughout the episode.
 """
 
 import logging
+from typing import List
+
 import sys
 from pathlib import Path
 
 import numpy as np
 
-# Add the project root to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# Add the src directory to the Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.agents.firm_agents import BestResponseAgent, RandomAgent  # noqa: E402
-from src.cartel.cartel_env import CartelEnv  # noqa: E402
+from agents.firm_agents import BestResponseAgent, RandomAgent
+from cartel.cartel_env import CartelEnv
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(), logging.FileHandler("agent_demo.log")],
-)
-logger = logging.getLogger(__name__)
+
+def setup_logging() -> None:
+    """Set up logging configuration for the demo."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
 
 def run_agent_demo() -> None:
-    """Run a demo episode with RandomAgent vs BestResponseAgent."""
-    logger.info("Starting agent demo: RandomAgent vs BestResponseAgent")
+    """
+    Run a demo episode with RandomAgent vs BestResponseAgent.
 
-    # Create environment
+    This function creates a CartelEnv with 2 firms, initializes the agents,
+    and runs a single episode while logging prices and profits.
+    """
+    logger = logging.getLogger(__name__)
+
+    # Set up environment
     env = CartelEnv(
         n_firms=2,
         max_steps=20,
         marginal_cost=10.0,
         demand_intercept=100.0,
         demand_slope=-1.0,
-        shock_std=2.0,  # Small demand shocks for clearer results
+        shock_std=5.0,
         price_min=1.0,
         price_max=100.0,
         seed=42,
     )
 
     # Create agents
-    random_agent = RandomAgent(agent_id=0, seed=42)
-    best_response_agent = BestResponseAgent(agent_id=1, seed=43)
+    random_agent = RandomAgent(agent_id=0, seed=123)
+    best_response_agent = BestResponseAgent(agent_id=1, seed=456)
+    agents = [random_agent, best_response_agent]
 
-    logger.info(f"Environment setup: {env.n_firms} firms, {env.max_steps} steps")
-    logger.info(f"Demand: D = {env.demand_intercept} + {env.demand_slope} * p_market")
-    logger.info(f"Marginal cost: {env.marginal_cost}")
+    logger.info("Starting agent demo: RandomAgent vs BestResponseAgent")
+    logger.info(f"Environment: {env.n_firms} firms, {env.max_steps} max steps")
+    logger.info(
+        f"Parameters: MC={env.marginal_cost}, Demand={env.demand_intercept}+{env.demand_slope}*p, Shock_std={env.shock_std}"
+    )
     logger.info(f"Price bounds: [{env.price_min}, {env.price_max}]")
+    logger.info("-" * 80)
 
     # Reset environment
     obs, info = env.reset(seed=42)
-    logger.info(f"Initial observation: {obs}")
-    logger.info(f"Initial demand shock: {info['demand_shock']:.2f}")
+    logger.info(f"Initial observation: prices={obs[:2]}, demand_shock={obs[2]:.2f}")
 
-    # Track results
-    step_results = []
+    # Track episode statistics
+    episode_prices: List[List[float]] = []
+    episode_profits: List[List[float]] = []
+    episode_demand_shocks: List[float] = []
 
     # Run episode
-    for step in range(env.max_steps):
-        logger.info(f"\n--- Step {step + 1} ---")
+    step = 0
+    while step < env.max_steps:
+        # Each agent chooses a price
+        prices = []
+        for i, agent in enumerate(agents):
+            price = agent.choose_price(obs, env, info)
+            prices.append(price)
 
-        # Get prices from agents
-        random_price = random_agent.choose_price(obs, env, info)
-        best_response_price = best_response_agent.choose_price(obs, env, info)
-
-        prices = np.array([random_price, best_response_price], dtype=np.float32)
-
-        logger.info(f"RandomAgent price: {random_price:.2f}")
-        logger.info(f"BestResponseAgent price: {best_response_price:.2f}")
-        logger.info(f"Market average price: {np.mean(prices):.2f}")
+        # Log prices for this step
+        logger.info(
+            f"Step {step + 1:2d}: RandomAgent price={prices[0]:6.2f}, BestResponseAgent price={prices[1]:6.2f}"
+        )
 
         # Take environment step
-        next_obs, rewards, terminated, truncated, next_info = env.step(prices)
-
-        # Update agent histories
-        random_agent.update_history(random_price, np.array([best_response_price]))
-        best_response_agent.update_history(
-            best_response_price, np.array([random_price])
-        )
+        action = np.array(prices, dtype=np.float32)
+        obs, rewards, terminated, truncated, info = env.step(action)
 
         # Log results
-        logger.info(f"RandomAgent profit: {rewards[0]:.2f}")
-        logger.info(f"BestResponseAgent profit: {rewards[1]:.2f}")
-        logger.info(f"Total demand: {next_info['total_demand']:.2f}")
-        logger.info(f"Individual quantity: {next_info['individual_quantity']:.2f}")
-        logger.info(f"Demand shock: {next_info['demand_shock']:.2f}")
-
-        # Store step results
-        step_results.append(
-            {
-                "step": step + 1,
-                "random_price": random_price,
-                "best_response_price": best_response_price,
-                "market_price": np.mean(prices),
-                "random_profit": rewards[0],
-                "best_response_profit": rewards[1],
-                "total_demand": next_info["total_demand"],
-                "demand_shock": next_info["demand_shock"],
-            }
+        market_price = np.mean(prices)
+        logger.info(
+            f"         Market price={market_price:6.2f}, Demand shock={info['demand_shock']:6.2f}"
+        )
+        logger.info(
+            f"         Profits: RandomAgent={rewards[0]:8.2f}, BestResponseAgent={rewards[1]:8.2f}"
+        )
+        logger.info(
+            f"         Total demand={info['total_demand']:6.2f}, Individual quantity={info['individual_quantity']:6.2f}"
         )
 
-        # Update observation for next step
-        obs = next_obs
-        info = next_info
+        # Update agent histories
+        for i, agent in enumerate(agents):
+            rival_prices = np.array([prices[j] for j in range(len(prices)) if j != i])
+            agent.update_history(prices[i], rival_prices)
 
-        # Check termination
+        # Store episode data
+        episode_prices.append(prices.copy())
+        episode_profits.append(rewards.copy())
+        episode_demand_shocks.append(info["demand_shock"])
+
+        step += 1
+
         if terminated or truncated:
-            logger.info(
-                f"Episode ended: terminated={terminated}, truncated={truncated}"
-            )
             break
 
-    # Summary statistics
-    logger.info("\n" + "=" * 50)
+    # Episode summary
+    logger.info("-" * 80)
     logger.info("EPISODE SUMMARY")
-    logger.info("=" * 50)
+    logger.info("-" * 80)
 
-    random_prices = [r["random_price"] for r in step_results]
-    best_response_prices = [r["best_response_price"] for r in step_results]
-    random_profits = [r["random_profit"] for r in step_results]
-    best_response_profits = [r["best_response_profit"] for r in step_results]
-
-    logger.info(f"Total steps: {len(step_results)}")
+    # Calculate total profits
+    total_profits = np.sum(episode_profits, axis=0)
     logger.info(
-        f"RandomAgent - Avg price: {np.mean(random_prices):.2f}, Total profit: {sum(random_profits):.2f}"
-    )
-    logger.info(
-        f"BestResponseAgent - Avg price: {np.mean(best_response_prices):.2f}, Total profit: {sum(best_response_profits):.2f}"
+        f"Total profits: RandomAgent={total_profits[0]:8.2f}, BestResponseAgent={total_profits[1]:8.2f}"
     )
 
-    # Price statistics
+    # Calculate average prices
+    avg_prices = np.mean(episode_prices, axis=0)
     logger.info(
-        f"RandomAgent price range: [{min(random_prices):.2f}, {max(random_prices):.2f}]"
-    )
-    logger.info(
-        f"BestResponseAgent price range: [{min(best_response_prices):.2f}, {max(best_response_prices):.2f}]"
+        f"Average prices: RandomAgent={avg_prices[0]:6.2f}, BestResponseAgent={avg_prices[1]:6.2f}"
     )
 
-    # Profit comparison
-    total_random_profit = sum(random_profits)
-    total_best_response_profit = sum(best_response_profits)
-    profit_difference = total_best_response_profit - total_random_profit
+    # Calculate price statistics
+    random_prices = [p[0] for p in episode_prices]
+    best_response_prices = [p[1] for p in episode_prices]
 
-    logger.info(f"Profit difference (BestResponse - Random): {profit_difference:.2f}")
     logger.info(
-        f"BestResponseAgent outperformed by: {profit_difference/total_random_profit*100:.1f}%"
+        f"RandomAgent price range: [{min(random_prices):6.2f}, {max(random_prices):6.2f}]"
+    )
+    logger.info(
+        f"BestResponseAgent price range: [{min(best_response_prices):6.2f}, {max(best_response_prices):6.2f}]"
     )
 
-    # Market efficiency
-    avg_market_prices = [r["market_price"] for r in step_results]
-    logger.info(f"Average market price: {np.mean(avg_market_prices):.2f}")
-    logger.info(f"Market price volatility: {np.std(avg_market_prices):.2f}")
+    # Calculate demand shock statistics
+    avg_demand_shock = np.mean(episode_demand_shocks)
+    logger.info(f"Average demand shock: {avg_demand_shock:6.2f}")
 
+    # Analyze agent behavior
+    logger.info("-" * 80)
+    logger.info("AGENT BEHAVIOR ANALYSIS")
+    logger.info("-" * 80)
+
+    # RandomAgent analysis
+    random_std = np.std(random_prices)
+    logger.info(f"RandomAgent: Mean={avg_prices[0]:6.2f}, Std={random_std:6.2f}")
+
+    # BestResponseAgent analysis
+    best_response_std = np.std(best_response_prices)
+    logger.info(
+        f"BestResponseAgent: Mean={avg_prices[1]:6.2f}, Std={best_response_std:6.2f}"
+    )
+
+    # Check if BestResponseAgent is more consistent (lower std)
+    if best_response_std < random_std:
+        logger.info(
+            "BestResponseAgent shows more consistent pricing (lower standard deviation)"
+        )
+    else:
+        logger.info(
+            "RandomAgent shows more consistent pricing (lower standard deviation)"
+        )
+
+    # Check profit comparison
+    if total_profits[1] > total_profits[0]:
+        logger.info("BestResponseAgent achieved higher total profits")
+    elif total_profits[0] > total_profits[1]:
+        logger.info("RandomAgent achieved higher total profits")
+    else:
+        logger.info("Both agents achieved equal total profits")
+
+    logger.info("-" * 80)
     logger.info("Demo completed successfully!")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Main function to run the agent demo."""
+    setup_logging()
     run_agent_demo()
+
+
+if __name__ == "__main__":
+    main()

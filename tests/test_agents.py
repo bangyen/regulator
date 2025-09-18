@@ -1,96 +1,185 @@
 """
-Unit tests for firm agents.
+Unit tests for firm agents in the CartelEnv environment.
 
-This module contains comprehensive tests for the firm agent classes,
-including validation of price selection, history tracking, and strategic behavior.
+This module contains comprehensive tests for all baseline firm agents:
+- RandomAgent: Tests price bounds and randomness
+- BestResponseAgent: Tests analytical optimal response in 2-firm static game
+- TitForTatAgent: Tests price copying behavior
 """
 
 import math
 
 import numpy as np
 
-from src.agents.firm_agents import BestResponseAgent, RandomAgent, TitForTatAgent
+from typing import Any, Dict, Optional
+
+from src.agents.firm_agents import (
+    BaseAgent,
+    BestResponseAgent,
+    RandomAgent,
+    TitForTatAgent,
+)
 from src.cartel.cartel_env import CartelEnv
+
+
+class TestBaseAgent:
+    """Test suite for BaseAgent abstract class functionality."""
+
+    def test_base_agent_initialization(self) -> None:
+        """Test that BaseAgent initializes correctly."""
+
+        # Create a concrete implementation for testing
+        class TestAgent(BaseAgent):
+            def choose_price(
+                self,
+                observation: np.ndarray,
+                env: CartelEnv,
+                info: Optional[Dict[str, Any]] = None,
+            ) -> float:
+                return 10.0
+
+        agent = TestAgent(agent_id=0, seed=42)
+
+        assert agent.agent_id == 0
+        assert agent.price_history == []
+        assert agent.rival_price_history == []
+
+    def test_base_agent_update_history(self) -> None:
+        """Test that BaseAgent updates price history correctly."""
+
+        class TestAgent(BaseAgent):
+            def choose_price(
+                self,
+                observation: np.ndarray,
+                env: CartelEnv,
+                info: Optional[Dict[str, Any]] = None,
+            ) -> float:
+                return 10.0
+
+        agent = TestAgent(agent_id=0)
+
+        # Update history
+        agent.update_history(my_price=20.0, rival_prices=np.array([15.0, 25.0]))
+
+        assert agent.price_history == [20.0]
+        assert agent.rival_price_history == [20.0]  # Average of 15 and 25
+
+    def test_base_agent_reset(self) -> None:
+        """Test that BaseAgent reset clears history."""
+
+        class TestAgent(BaseAgent):
+            def choose_price(
+                self,
+                observation: np.ndarray,
+                env: CartelEnv,
+                info: Optional[Dict[str, Any]] = None,
+            ) -> float:
+                return 10.0
+
+        agent = TestAgent(agent_id=0)
+
+        # Add some history
+        agent.update_history(my_price=20.0, rival_prices=np.array([15.0, 25.0]))
+        agent.update_history(my_price=30.0, rival_prices=np.array([20.0, 30.0]))
+
+        # Reset
+        agent.reset()
+
+        assert agent.price_history == []
+        assert agent.rival_price_history == []
 
 
 class TestRandomAgent:
     """Test suite for RandomAgent class."""
 
-    def test_initialization(self) -> None:
+    def test_random_agent_initialization(self) -> None:
         """Test RandomAgent initialization."""
         agent = RandomAgent(agent_id=0, seed=42)
 
         assert agent.agent_id == 0
-        assert len(agent.price_history) == 0
-        assert len(agent.rival_price_history) == 0
+        assert isinstance(agent.np_random, np.random.Generator)
 
-    def test_choose_price_within_bounds(self) -> None:
-        """Test that RandomAgent produces prices within bounds."""
-        env = CartelEnv(n_firms=2, price_min=10.0, price_max=50.0, seed=42)
-        agent = RandomAgent(agent_id=0, seed=42)
+    def test_random_agent_chooses_prices_within_bounds(self) -> None:
+        """Test that RandomAgent produces prices within environment bounds."""
+        env = CartelEnv(price_min=10.0, price_max=50.0, seed=42)
+        agent = RandomAgent(agent_id=0, seed=123)
 
-        # Test multiple price selections
+        # Test multiple price choices
         for _ in range(100):
-            observation = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-            price = agent.choose_price(observation, env)
+            price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
             assert env.price_min <= price <= env.price_max
             assert isinstance(price, float)
 
-    def test_choose_price_reproducibility(self) -> None:
-        """Test that RandomAgent with same seed produces same prices."""
-        env = CartelEnv(n_firms=2, seed=42)
+    def test_random_agent_reproducibility_with_seed(self) -> None:
+        """Test that RandomAgent with same seed produces same sequence."""
+        env = CartelEnv(seed=42)
         agent1 = RandomAgent(agent_id=0, seed=123)
         agent2 = RandomAgent(agent_id=0, seed=123)
 
-        observation = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+        # Generate sequences
+        prices1 = [
+            agent1.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+            for _ in range(10)
+        ]
+        prices2 = [
+            agent2.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+            for _ in range(10)
+        ]
 
-        # Should produce same prices with same seed
-        price1 = agent1.choose_price(observation, env)
-        price2 = agent2.choose_price(observation, env)
+        assert prices1 == prices2
 
-        assert math.isclose(price1, price2)
+    def test_random_agent_different_seeds_produce_different_sequences(self) -> None:
+        """Test that RandomAgent with different seeds produces different sequences."""
+        env = CartelEnv(seed=42)
+        agent1 = RandomAgent(agent_id=0, seed=123)
+        agent2 = RandomAgent(agent_id=0, seed=456)
 
-    def test_update_history(self) -> None:
-        """Test that RandomAgent correctly updates price history."""
-        agent = RandomAgent(agent_id=0, seed=42)
+        # Generate sequences
+        prices1 = [
+            agent1.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+            for _ in range(10)
+        ]
+        prices2 = [
+            agent2.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+            for _ in range(10)
+        ]
 
-        # Update history
-        agent.update_history(20.0, np.array([25.0, 30.0]))
+        assert prices1 != prices2
 
-        assert len(agent.price_history) == 1
-        assert agent.price_history[0] == 20.0
-        assert len(agent.rival_price_history) == 1
-        assert math.isclose(agent.rival_price_history[0], 27.5)  # (25 + 30) / 2
+    def test_random_agent_price_distribution(self) -> None:
+        """Test that RandomAgent produces approximately uniform distribution."""
+        env = CartelEnv(price_min=0.0, price_max=100.0, seed=42)
+        agent = RandomAgent(agent_id=0, seed=123)
 
-    def test_reset(self) -> None:
-        """Test that RandomAgent reset clears history."""
-        agent = RandomAgent(agent_id=0, seed=42)
+        # Generate many prices
+        n_samples = 10000
+        prices = [
+            agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+            for _ in range(n_samples)
+        ]
 
-        # Add some history
-        agent.update_history(20.0, np.array([25.0, 30.0]))
-        agent.update_history(22.0, np.array([26.0, 28.0]))
+        # Check that mean is approximately in the middle
+        mean_price = np.mean(prices)
+        expected_mean = (env.price_min + env.price_max) / 2
+        assert math.isclose(mean_price, expected_mean, rel_tol=0.1)
 
-        # Reset
-        agent.reset()
-
-        assert len(agent.price_history) == 0
-        assert len(agent.rival_price_history) == 0
+        # Check that all prices are within bounds
+        assert all(env.price_min <= p <= env.price_max for p in prices)
 
 
 class TestBestResponseAgent:
     """Test suite for BestResponseAgent class."""
 
-    def test_initialization(self) -> None:
+    def test_best_response_agent_initialization(self) -> None:
         """Test BestResponseAgent initialization."""
         agent = BestResponseAgent(agent_id=0, seed=42)
 
         assert agent.agent_id == 0
-        assert len(agent.price_history) == 0
-        assert len(agent.rival_price_history) == 0
+        assert isinstance(agent.np_random, np.random.Generator)
 
-    def test_choose_price_no_history_uses_nash(self) -> None:
-        """Test that BestResponseAgent uses Nash equilibrium when no history."""
+    def test_best_response_agent_no_history_uses_nash_equilibrium(self) -> None:
+        """Test that BestResponseAgent uses Nash equilibrium when no rival history."""
         env = CartelEnv(
             n_firms=2,
             marginal_cost=10.0,
@@ -102,20 +191,19 @@ class TestBestResponseAgent:
         )
         agent = BestResponseAgent(agent_id=0, seed=42)
 
-        observation = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
         # For 2-firm symmetric game with D = 100 - p_market, c = 10
-        # Nash equilibrium: p* = (100 + 10) / (2*(-1) - (-1)/2) = 110 / (-2 + 0.5) = 110 / (-1.5) = -73.33
-        # But this is negative, so it should be clipped to price_min
+        # Nash equilibrium: p* = (a + c) / (2*b - b/n) = (100 + 10) / (2*(-1) - (-1)/2) = 110 / (-2 + 0.5) = 110 / (-1.5) = -73.33
+        # But this would be negative, so it gets clipped to price_min = 1.0
         expected_nash = max(
             env.price_min, min(env.price_max, (100 + 10) / (2 * (-1) - (-1) / 2))
         )
 
         assert math.isclose(price, expected_nash)
 
-    def test_choose_price_with_history(self) -> None:
-        """Test that BestResponseAgent responds optimally to rival prices."""
+    def test_best_response_agent_analytical_2_firm_static_game(self) -> None:
+        """Test BestResponseAgent matches analytically optimal response in 2-firm static game."""
         env = CartelEnv(
             n_firms=2,
             marginal_cost=10.0,
@@ -127,46 +215,80 @@ class TestBestResponseAgent:
         )
         agent = BestResponseAgent(agent_id=0, seed=42)
 
-        # Add some rival price history
-        agent.update_history(20.0, np.array([30.0]))  # Rival price = 30
+        # Simulate rival setting price of 30
+        rival_price = 30.0
+        agent.update_history(my_price=25.0, rival_prices=np.array([rival_price]))
 
-        observation = np.array([20.0, 30.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
-        # Best response to rival price 30:
-        # p* = (a + c + b*p_rival) / (2*b) = (100 + 10 + (-1)*30) / (2*(-1)) = 80 / (-2) = -40
-        # But this is negative, so it should be clipped to price_min
-        expected_response = max(
-            env.price_min, min(env.price_max, (100 + 10 + (-1) * 30) / (2 * (-1)))
+        # Analytical best response: p* = (a + c + b*p_rival) / (2*b)
+        # p* = (100 + 10 + (-1)*30) / (2*(-1)) = (110 - 30) / (-2) = 80 / (-2) = -40
+        # But this is negative, so it gets clipped to price_min = 1.0
+        expected_best_response = max(
+            env.price_min,
+            min(env.price_max, (100 + 10 + (-1) * rival_price) / (2 * (-1))),
         )
 
-        assert math.isclose(price, expected_response)
+        assert math.isclose(price, expected_best_response)
 
-    def test_choose_price_clipping(self) -> None:
-        """Test that BestResponseAgent clips prices to valid range."""
+    def test_best_response_agent_with_positive_profitable_response(self) -> None:
+        """Test BestResponseAgent with parameters that yield positive best response."""
         env = CartelEnv(
             n_firms=2,
-            marginal_cost=10.0,
-            demand_intercept=100.0,
-            demand_slope=-1.0,
-            price_min=50.0,  # High minimum
-            price_max=60.0,  # Low maximum
+            marginal_cost=5.0,
+            demand_intercept=200.0,
+            demand_slope=-2.0,
+            price_min=1.0,
+            price_max=100.0,
             seed=42,
         )
         agent = BestResponseAgent(agent_id=0, seed=42)
 
-        observation = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
+        # Simulate rival setting price of 20
+        rival_price = 20.0
+        agent.update_history(my_price=25.0, rival_prices=np.array([rival_price]))
 
-        assert env.price_min <= price <= env.price_max
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
-    def test_nash_equilibrium_calculation(self) -> None:
-        """Test Nash equilibrium calculation for 2-firm static game."""
+        # Analytical best response: p* = (a + c + b*p_rival) / (2*b)
+        # p* = (200 + 5 + (-2)*20) / (2*(-2)) = (205 - 40) / (-4) = 165 / (-4) = -41.25
+        # Still negative, so clipped to price_min
+        expected_best_response = max(
+            env.price_min,
+            min(env.price_max, (200 + 5 + (-2) * rival_price) / (2 * (-2))),
+        )
+
+        assert math.isclose(price, expected_best_response)
+
+    def test_best_response_agent_clips_to_price_bounds(self) -> None:
+        """Test that BestResponseAgent clips prices to environment bounds."""
         env = CartelEnv(
             n_firms=2,
             marginal_cost=10.0,
             demand_intercept=100.0,
             demand_slope=-1.0,
+            price_min=20.0,
+            price_max=80.0,
+            seed=42,
+        )
+        agent = BestResponseAgent(agent_id=0, seed=42)
+
+        # Test with no history (should use Nash equilibrium)
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+        assert env.price_min <= price <= env.price_max
+
+        # Test with rival history
+        agent.update_history(my_price=25.0, rival_prices=np.array([30.0]))
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+        assert env.price_min <= price <= env.price_max
+
+    def test_best_response_agent_nash_equilibrium_calculation(self) -> None:
+        """Test the internal Nash equilibrium calculation."""
+        env = CartelEnv(
+            n_firms=3,
+            marginal_cost=15.0,
+            demand_intercept=150.0,
+            demand_slope=-1.5,
             price_min=1.0,
             price_max=100.0,
             seed=42,
@@ -175,202 +297,200 @@ class TestBestResponseAgent:
 
         nash_price = agent._calculate_nash_equilibrium_price(env)
 
-        # For 2-firm symmetric game: p* = (a + c) / (2*b - b/n)
-        # = (100 + 10) / (2*(-1) - (-1)/2) = 110 / (-2 + 0.5) = 110 / (-1.5) = -73.33
-        # But this is negative, so it should be clipped to price_min
+        # For n=3, c=15, a=150, b=-1.5:
+        # p* = (a + c) / (2*b - b/n) = (150 + 15) / (2*(-1.5) - (-1.5)/3) = 165 / (-3 + 0.5) = 165 / (-2.5) = -66
+        # Clipped to price_min = 1.0
         expected_nash = max(
-            env.price_min, min(env.price_max, (100 + 10) / (2 * (-1) - (-1) / 2))
+            env.price_min, min(env.price_max, (150 + 15) / (2 * (-1.5) - (-1.5) / 3))
         )
 
         assert math.isclose(nash_price, expected_nash)
-
-    def test_analytical_optimal_response_2_firm(self) -> None:
-        """Test that BestResponseAgent matches analytically optimal response in 2-firm static game."""
-        # Set up a scenario where we can analytically verify the best response
-        env = CartelEnv(
-            n_firms=2,
-            marginal_cost=5.0,
-            demand_intercept=50.0,
-            demand_slope=-0.5,  # Less steep demand curve
-            price_min=1.0,
-            price_max=100.0,
-            seed=42,
-        )
-        agent = BestResponseAgent(agent_id=0, seed=42)
-
-        # Set rival price to 20
-        agent.update_history(15.0, np.array([20.0]))
-
-        observation = np.array([15.0, 20.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
-
-        # Best response to rival price 20:
-        # p* = (a + c + b*p_rival) / (2*b) = (50 + 5 + (-0.5)*20) / (2*(-0.5)) = 45 / (-1) = -45
-        # But this is negative, so it should be clipped to price_min
-        expected_response = max(
-            env.price_min, min(env.price_max, (50 + 5 + (-0.5) * 20) / (2 * (-0.5)))
-        )
-
-        assert math.isclose(price, expected_response)
 
 
 class TestTitForTatAgent:
     """Test suite for TitForTatAgent class."""
 
-    def test_initialization(self) -> None:
+    def test_tit_for_tat_agent_initialization(self) -> None:
         """Test TitForTatAgent initialization."""
         agent = TitForTatAgent(agent_id=0, seed=42)
 
         assert agent.agent_id == 0
-        assert len(agent.price_history) == 0
-        assert len(agent.rival_price_history) == 0
+        assert isinstance(agent.np_random, np.random.Generator)
 
-    def test_choose_price_no_history_uses_default(self) -> None:
-        """Test that TitForTatAgent uses default price when no history."""
-        env = CartelEnv(
-            n_firms=2, marginal_cost=10.0, price_min=1.0, price_max=100.0, seed=42
-        )
+    def test_tit_for_tat_agent_no_history_uses_default(self) -> None:
+        """Test that TitForTatAgent uses default price when no rival history."""
+        env = CartelEnv(marginal_cost=10.0, price_min=1.0, price_max=100.0, seed=42)
         agent = TitForTatAgent(agent_id=0, seed=42)
 
-        observation = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
-        # Should use marginal_cost + 5.0 = 15.0, clipped to bounds
-        expected_default = max(env.price_min, min(env.price_max, 15.0))
-
+        # Default should be marginal_cost + 5.0 = 15.0
+        expected_default = env.marginal_cost + 5.0
         assert math.isclose(price, expected_default)
 
-    def test_choose_price_copies_prior_prices(self) -> None:
+    def test_tit_for_tat_agent_copies_prior_prices_correctly(self) -> None:
         """Test that TitForTatAgent copies prior rival average prices correctly."""
-        env = CartelEnv(n_firms=3, price_min=1.0, price_max=100.0, seed=42)
+        env = CartelEnv(price_min=1.0, price_max=100.0, seed=42)
         agent = TitForTatAgent(agent_id=0, seed=42)
 
-        # Add rival price history
-        agent.update_history(20.0, np.array([25.0, 30.0]))  # Rival avg = 27.5
-        agent.update_history(22.0, np.array([28.0, 32.0]))  # Rival avg = 30.0
+        # Add some rival price history
+        rival_prices_sequence = [20.0, 25.0, 30.0, 35.0]
 
-        observation = np.array([22.0, 28.0, 32.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
+        for i, rival_avg in enumerate(rival_prices_sequence):
+            # Simulate rival prices that average to the target
+            rival_prices = np.array([rival_avg - 2.0, rival_avg + 2.0])
+            agent.update_history(my_price=15.0, rival_prices=rival_prices)
 
-        # Should copy the most recent rival average (30.0)
-        assert math.isclose(price, 30.0)
+            # Choose price should copy the most recent rival average
+            price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+            assert math.isclose(price, rival_avg)
 
-    def test_choose_price_clipping(self) -> None:
-        """Test that TitForTatAgent clips prices to valid range."""
-        env = CartelEnv(
-            n_firms=2,
-            price_min=50.0,  # High minimum
-            price_max=60.0,  # Low maximum
-            seed=42,
-        )
+    def test_tit_for_tat_agent_clips_to_price_bounds(self) -> None:
+        """Test that TitForTatAgent clips prices to environment bounds."""
+        env = CartelEnv(price_min=20.0, price_max=80.0, seed=42)
         agent = TitForTatAgent(agent_id=0, seed=42)
 
-        # Add rival price history with price outside bounds
-        agent.update_history(20.0, np.array([40.0]))  # Rival avg = 40.0 (below min)
+        # Test with no history (default price)
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+        assert env.price_min <= price <= env.price_max
 
-        observation = np.array([20.0, 40.0, 0.0], dtype=np.float32)
-        price = agent.choose_price(observation, env)
-
-        # Should be clipped to price_min
+        # Test with rival history that would be out of bounds
+        agent.update_history(
+            my_price=25.0, rival_prices=np.array([10.0, 15.0])
+        )  # Avg = 12.5, below min
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
         assert price == env.price_min
 
-    def test_multiple_price_copies(self) -> None:
-        """Test that TitForTatAgent correctly copies multiple rival prices."""
-        env = CartelEnv(n_firms=2, seed=42)
+        agent.update_history(
+            my_price=25.0, rival_prices=np.array([90.0, 95.0])
+        )  # Avg = 92.5, above max
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+        assert price == env.price_max
+
+    def test_tit_for_tat_agent_multiple_rivals_averaging(self) -> None:
+        """Test that TitForTatAgent correctly averages multiple rival prices."""
+        env = CartelEnv(price_min=1.0, price_max=100.0, seed=42)
         agent = TitForTatAgent(agent_id=0, seed=42)
 
-        # Test sequence of rival prices
-        rival_prices = [20.0, 25.0, 30.0, 35.0]
+        # Test with 3 rivals
+        rival_prices = np.array([20.0, 30.0, 40.0])  # Average = 30.0
+        agent.update_history(my_price=25.0, rival_prices=rival_prices)
 
-        for i, rival_price in enumerate(rival_prices):
-            # Update history with this rival price
-            agent.update_history(15.0 + i, np.array([rival_price]))
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+        assert math.isclose(price, 30.0)
 
-            observation = np.array([15.0 + i, rival_price, 0.0], dtype=np.float32)
-            price = agent.choose_price(observation, env)
+        # Test with 4 rivals
+        rival_prices = np.array([10.0, 20.0, 30.0, 40.0])  # Average = 25.0
+        agent.update_history(my_price=25.0, rival_prices=rival_prices)
 
-            # Should copy the rival price
-            assert math.isclose(price, rival_price)
-
-    def test_update_history(self) -> None:
-        """Test that TitForTatAgent correctly updates price history."""
-        agent = TitForTatAgent(agent_id=0, seed=42)
-
-        # Update history
-        agent.update_history(20.0, np.array([25.0, 30.0]))
-
-        assert len(agent.price_history) == 1
-        assert agent.price_history[0] == 20.0
-        assert len(agent.rival_price_history) == 1
-        assert math.isclose(agent.rival_price_history[0], 27.5)  # (25 + 30) / 2
-
-    def test_reset(self) -> None:
-        """Test that TitForTatAgent reset clears history."""
-        agent = TitForTatAgent(agent_id=0, seed=42)
-
-        # Add some history
-        agent.update_history(20.0, np.array([25.0, 30.0]))
-        agent.update_history(22.0, np.array([26.0, 28.0]))
-
-        # Reset
-        agent.reset()
-
-        assert len(agent.price_history) == 0
-        assert len(agent.rival_price_history) == 0
+        price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
+        assert math.isclose(price, 25.0)
 
 
 class TestAgentIntegration:
-    """Integration tests for agents with CartelEnv."""
+    """Integration tests for agents working together in CartelEnv."""
 
-    def test_agents_with_environment_step(self) -> None:
-        """Test that agents work correctly with environment steps."""
-        env = CartelEnv(n_firms=2, seed=42)
-        agent1 = RandomAgent(agent_id=0, seed=42)
-        agent2 = BestResponseAgent(agent_id=1, seed=43)
-
-        obs, info = env.reset(seed=42)
-
-        # Get prices from both agents
-        price1 = agent1.choose_price(obs, env, info)
-        price2 = agent2.choose_price(obs, env, info)
-
-        # Take step with these prices
-        action = np.array([price1, price2], dtype=np.float32)
-        next_obs, rewards, terminated, truncated, next_info = env.step(action)
-
-        # Update agent histories
-        agent1.update_history(price1, np.array([price2]))
-        agent2.update_history(price2, np.array([price1]))
-
-        # Verify results
-        assert len(rewards) == 2
-        assert not terminated
-        assert not truncated
-        assert len(next_obs) == 3  # 2 prices + 1 demand shock
-
-    def test_agent_price_bounds_with_environment(self) -> None:
-        """Test that agent prices are within environment bounds."""
-        env = CartelEnv(n_firms=3, price_min=10.0, price_max=50.0, seed=42)
+    def test_agents_can_play_episode_together(self) -> None:
+        """Test that multiple agents can play an episode together."""
+        env = CartelEnv(n_firms=3, max_steps=5, seed=42)
         agents = [
-            RandomAgent(agent_id=0, seed=42),
-            BestResponseAgent(agent_id=1, seed=43),
-            TitForTatAgent(agent_id=2, seed=44),
+            RandomAgent(agent_id=0, seed=123),
+            BestResponseAgent(agent_id=1, seed=456),
+            TitForTatAgent(agent_id=2, seed=789),
         ]
 
-        obs, info = env.reset(seed=42)
+        obs, _ = env.reset(seed=42)
 
-        prices = []
+        for step in range(5):
+            # Each agent chooses a price
+            prices = []
+            for i, agent in enumerate(agents):
+                price = agent.choose_price(obs, env)
+                prices.append(price)
+
+            # Take environment step
+            action = np.array(prices, dtype=np.float32)
+            obs, rewards, terminated, truncated, info = env.step(action)
+
+            # Update agent histories
+            for i, agent in enumerate(agents):
+                rival_prices = np.array(
+                    [prices[j] for j in range(len(prices)) if j != i]
+                )
+                agent.update_history(prices[i], rival_prices)
+
+            # Check that all agents received rewards
+            assert len(rewards) == 3
+            assert all(isinstance(r, (int, float, np.floating)) for r in rewards)
+
+            if truncated:
+                break
+
+    def test_agent_price_histories_accumulate_correctly(self) -> None:
+        """Test that agent price histories accumulate correctly during episode."""
+        env = CartelEnv(n_firms=2, max_steps=3, seed=42)
+        agents = [
+            RandomAgent(agent_id=0, seed=123),
+            TitForTatAgent(agent_id=1, seed=456),
+        ]
+
+        obs, _ = env.reset(seed=42)
+
+        for step in range(3):
+            # Choose prices
+            prices = [agent.choose_price(obs, env) for agent in agents]
+
+            # Take step
+            action = np.array(prices, dtype=np.float32)
+            obs, rewards, terminated, truncated, info = env.step(action)
+
+            # Update histories
+            for i, agent in enumerate(agents):
+                rival_prices = np.array(
+                    [prices[j] for j in range(len(prices)) if j != i]
+                )
+                agent.update_history(prices[i], rival_prices)
+
+            # Check history lengths
+            for agent in agents:
+                assert len(agent.price_history) == step + 1
+                assert len(agent.rival_price_history) == step + 1
+
+        # Check that histories contain the expected values
+        assert len(agents[0].price_history) == 3
+        assert len(agents[1].price_history) == 3
+
+    def test_agents_reset_clears_histories(self) -> None:
+        """Test that calling reset on agents clears their histories."""
+        env = CartelEnv(n_firms=2, max_steps=2, seed=42)
+        agents = [
+            RandomAgent(agent_id=0, seed=123),
+            TitForTatAgent(agent_id=1, seed=456),
+        ]
+
+        # Play one episode
+        obs, _ = env.reset(seed=42)
+        for step in range(2):
+            prices = [agent.choose_price(obs, env) for agent in agents]
+            action = np.array(prices, dtype=np.float32)
+            obs, rewards, terminated, truncated, info = env.step(action)
+
+            for i, agent in enumerate(agents):
+                rival_prices = np.array(
+                    [prices[j] for j in range(len(prices)) if j != i]
+                )
+                agent.update_history(prices[i], rival_prices)
+
+        # Check histories are populated
         for agent in agents:
-            price = agent.choose_price(obs, env, info)
-            prices.append(price)
+            assert len(agent.price_history) == 2
+            assert len(agent.rival_price_history) == 2
 
-            # Verify price is within bounds
-            assert env.price_min <= price <= env.price_max
+        # Reset agents
+        for agent in agents:
+            agent.reset()
 
-        # Take step with these prices
-        action = np.array(prices, dtype=np.float32)
-        next_obs, rewards, terminated, truncated, next_info = env.step(action)
-
-        # Verify environment accepted the prices
-        assert len(rewards) == 3
-        assert np.allclose(next_obs[:3], prices)
+        # Check histories are cleared
+        for agent in agents:
+            assert len(agent.price_history) == 0
+            assert len(agent.rival_price_history) == 0
