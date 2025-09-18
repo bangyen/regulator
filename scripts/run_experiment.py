@@ -149,10 +149,10 @@ def calculate_welfare_metrics(
     # Consumer surplus: area under demand curve above market price
     # For linear demand D = a + b*p, CS = 0.5 * (a - p) * q
     consumer_surplus = 0.5 * (env.demand_intercept - market_prices) * quantities
-    total_consumer_surplus = np.sum(consumer_surplus)
+    total_consumer_surplus: float = np.sum(consumer_surplus)
 
     # Producer surplus: total profits
-    total_producer_surplus = np.sum(profits_array)
+    total_producer_surplus: float = np.sum(profits_array)
 
     # Total welfare
     total_welfare = total_consumer_surplus + total_producer_surplus
