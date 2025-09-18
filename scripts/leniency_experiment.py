@@ -138,7 +138,7 @@ def run_episode_with_leniency(
             * total_demand
             * (env.demand_intercept / (-env.demand_slope) - market_price)
         )
-        producer_surplus = np.sum(modified_rewards)
+        producer_surplus: float = np.sum(modified_rewards)
         total_welfare = consumer_surplus + producer_surplus
 
         episode_data["consumer_surplus"] += consumer_surplus
@@ -262,7 +262,7 @@ def run_episode_without_leniency(
             * total_demand
             * (env.demand_intercept / (-env.demand_slope) - market_price)
         )
-        producer_surplus = np.sum(modified_rewards)
+        producer_surplus: float = np.sum(modified_rewards)
         total_welfare = consumer_surplus + producer_surplus
 
         episode_data["consumer_surplus"] += consumer_surplus
@@ -413,24 +413,24 @@ def run_leniency_experiment(
         summaries = [ep["summary"] for ep in episodes]
 
         return {
-            "avg_parallel_violations": np.mean(
-                [s["total_parallel_violations"] for s in summaries]
+            "avg_parallel_violations": float(
+                np.mean([s["total_parallel_violations"] for s in summaries])
             ),
-            "avg_structural_break_violations": np.mean(
-                [s["total_structural_break_violations"] for s in summaries]
+            "avg_structural_break_violations": float(
+                np.mean([s["total_structural_break_violations"] for s in summaries])
             ),
-            "avg_whistleblow_events": np.mean(
-                [s["total_whistleblow_events"] for s in summaries]
+            "avg_whistleblow_events": float(
+                np.mean([s["total_whistleblow_events"] for s in summaries])
             ),
-            "avg_leniency_reports": np.mean(
-                [s["total_leniency_reports"] for s in summaries]
+            "avg_leniency_reports": float(
+                np.mean([s["total_leniency_reports"] for s in summaries])
             ),
-            "avg_price": np.mean([s["avg_price"] for s in summaries]),
-            "avg_price_std": np.mean([s["price_std"] for s in summaries]),
-            "avg_total_fines": np.mean([s["total_fines"] for s in summaries]),
-            "avg_welfare": np.mean([ep["total_welfare"] for ep in episodes]),
-            "avg_consumer_surplus": np.mean(
-                [ep["consumer_surplus"] for ep in episodes]
+            "avg_price": float(np.mean([s["avg_price"] for s in summaries])),
+            "avg_price_std": float(np.mean([s["price_std"] for s in summaries])),
+            "avg_total_fines": float(np.mean([s["total_fines"] for s in summaries])),
+            "avg_welfare": float(np.mean([ep["total_welfare"] for ep in episodes])),
+            "avg_consumer_surplus": float(
+                np.mean([ep["consumer_surplus"] for ep in episodes])
             ),
             "avg_producer_surplus": np.mean(
                 [ep["producer_surplus"] for ep in episodes]

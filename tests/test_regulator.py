@@ -615,6 +615,6 @@ class TestRegulatorIntegration:
         assert np.array_equal(modified_rewards, expected_rewards)
 
         # Check that total reward reduction equals total fines
-        total_reduction = np.sum(original_rewards - modified_rewards)
-        total_fines = np.sum(detection_results["fines_applied"])
+        total_reduction: float = np.sum(original_rewards - modified_rewards)
+        total_fines: float = np.sum(detection_results["fines_applied"])
         assert math.isclose(total_reduction, total_fines)

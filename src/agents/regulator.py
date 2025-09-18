@@ -176,8 +176,8 @@ class Regulator:
                 return False  # Need at least 2 firms
 
             # Check if all prices are within threshold of each other
-            max_price = np.max(prices)
-            min_price = np.min(prices)
+            max_price: float = np.max(prices)
+            min_price: float = np.min(prices)
             price_range = max_price - min_price
 
             if price_range > self.parallel_threshold:
@@ -207,7 +207,7 @@ class Regulator:
 
         # Check if any firm had a price change exceeding threshold
         price_changes = np.abs(current_prices - previous_prices)
-        max_change = np.max(price_changes)
+        max_change: float = np.max(price_changes)
 
         return bool(max_change > self.structural_break_threshold)
 

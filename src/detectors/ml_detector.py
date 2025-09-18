@@ -230,7 +230,7 @@ class FeatureExtractor:
         features.append(n_steps)
         features.append(n_firms)
 
-        return np.array(features, dtype=np.float32)
+        return np.array(features, dtype=np.float32)  # type: ignore[no-any-return]
 
     def extract_features_batch(self, log_files: List[Union[str, Path]]) -> np.ndarray:
         """
@@ -257,7 +257,7 @@ class FeatureExtractor:
         if not features_list:
             raise ValueError("No valid log files found")
 
-        return np.array(features_list)
+        return np.array(features_list)  # type: ignore[no-any-return]
 
 
 class CollusionDetector:
@@ -379,7 +379,7 @@ class CollusionDetector:
             raise ValueError("Model must be trained before making predictions")
 
         X_scaled = self.scaler.transform(X)
-        return np.array(self.model.predict(X_scaled))
+        return np.array(self.model.predict(X_scaled))  # type: ignore[no-any-return]
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -395,7 +395,7 @@ class CollusionDetector:
             raise ValueError("Model must be trained before making predictions")
 
         X_scaled = self.scaler.transform(X)
-        return np.array(self.model.predict_proba(X_scaled))
+        return np.array(self.model.predict_proba(X_scaled))  # type: ignore[no-any-return]
 
     def get_feature_importance(self) -> Optional[np.ndarray]:
         """
@@ -408,9 +408,9 @@ class CollusionDetector:
             return None
 
         if hasattr(self.model, "feature_importances_"):
-            return np.array(self.model.feature_importances_)
+            return np.array(self.model.feature_importances_)  # type: ignore[no-any-return]
         elif hasattr(self.model, "coef_"):
-            return np.array(np.abs(self.model.coef_[0]))
+            return np.array(np.abs(self.model.coef_[0]))  # type: ignore[no-any-return]
         else:
             return None
 
