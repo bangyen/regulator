@@ -379,7 +379,7 @@ class CollusionDetector:
             raise ValueError("Model must be trained before making predictions")
 
         X_scaled = self.scaler.transform(X)
-        return self.model.predict(X_scaled)
+        return np.array(self.model.predict(X_scaled))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -395,7 +395,7 @@ class CollusionDetector:
             raise ValueError("Model must be trained before making predictions")
 
         X_scaled = self.scaler.transform(X)
-        return self.model.predict_proba(X_scaled)
+        return np.array(self.model.predict_proba(X_scaled))
 
     def get_feature_importance(self) -> Optional[np.ndarray]:
         """
@@ -408,9 +408,9 @@ class CollusionDetector:
             return None
 
         if hasattr(self.model, "feature_importances_"):
-            return self.model.feature_importances_
+            return np.array(self.model.feature_importances_)
         elif hasattr(self.model, "coef_"):
-            return np.abs(self.model.coef_[0])
+            return np.array(np.abs(self.model.coef_[0]))
         else:
             return None
 
@@ -490,7 +490,9 @@ def generate_synthetic_labels(
                         corr = _safe_correlation(prices[:, i], prices[:, j])
                         if corr != 0.0:  # Only add non-zero correlations
                             correlations.append(corr)
-                price_correlation = np.mean(correlations) if correlations else 0.0
+                price_correlation = (
+                    float(np.mean(correlations)) if correlations else 0.0
+                )
 
             # Calculate price stability
             price_volatility = np.std(prices)

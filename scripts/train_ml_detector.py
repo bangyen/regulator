@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import numpy as np
 
@@ -53,7 +53,7 @@ def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> List[Path]:
         }
 
         # Create step data with different patterns
-        steps = []
+        steps = cast(List[Dict[str, Any]], [])
         np.random.seed(42 + i)
         n_steps = 30
 
@@ -98,8 +98,8 @@ def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> List[Path]:
 
             # Market calculations
             market_price = np.mean(prices)
-            total_demand = max(0, 100 - market_price + demand_shock)
-            individual_quantity = max(0, total_demand / 2)
+            total_demand = max(0.0, 100.0 - market_price + demand_shock)
+            individual_quantity = max(0.0, float(str(total_demand)) / 2.0)
 
             step_data = {
                 "type": "step",
@@ -157,7 +157,7 @@ def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> List[Path]:
         # Write to file
         with open(log_file, "w") as f:
             f.write(json.dumps(episode_header) + "\n")
-            for step in steps:
+            for step in steps:  # type: ignore
                 f.write(json.dumps(step) + "\n")
             f.write(json.dumps(episode_end) + "\n")
 

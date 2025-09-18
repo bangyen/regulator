@@ -7,6 +7,7 @@ collusion detector, and synthetic data generation functionality.
 
 import json
 from pathlib import Path
+from typing import Any, Dict, List, Union, cast
 
 import numpy as np
 import pytest
@@ -44,7 +45,7 @@ class TestFeatureExtractor:
         }
 
         # Create step data
-        steps = []
+        steps = cast(List[Dict[str, Any]], [])
         np.random.seed(42)
         n_steps = 20
 
@@ -114,7 +115,7 @@ class TestFeatureExtractor:
         # Write to file
         with open(log_file, "w") as f:
             f.write(json.dumps(episode_header) + "\n")
-            for step in steps:
+            for step in steps:  # type: ignore
                 f.write(json.dumps(step) + "\n")
             f.write(json.dumps(episode_end) + "\n")
 
@@ -155,7 +156,7 @@ class TestFeatureExtractor:
         extractor = FeatureExtractor()
 
         # Create multiple log files
-        log_files = []
+        log_files: List[Union[str, Path]] = []
         for i in range(3):
             log_files.append(self.create_mock_log_file(tmp_path))
 
@@ -329,7 +330,7 @@ class TestSyntheticLabels:
     def test_generate_synthetic_labels(self, tmp_path: Path) -> None:
         """Test synthetic label generation."""
         # Create mock log files
-        log_files = []
+        log_files: List[Union[str, Path]] = []
         for i in range(5):
             log_file = tmp_path / f"episode_{i}.jsonl"
             # Create a simple mock log file
@@ -387,7 +388,7 @@ class TestIntegration:
     def test_full_pipeline(self, tmp_path: Path) -> None:
         """Test the complete ML detector pipeline."""
         # Create mock log files
-        log_files = []
+        log_files: List[Union[str, Path]] = []
         for i in range(10):
             log_file = tmp_path / f"episode_{i}.jsonl"
 
@@ -470,7 +471,7 @@ class TestIntegration:
             # Write to file
             with open(log_file, "w") as f:
                 f.write(json.dumps(episode_header) + "\n")
-                for step in steps:
+                for step in steps:  # type: ignore
                     f.write(json.dumps(step) + "\n")
                 f.write(json.dumps(episode_end) + "\n")
 
