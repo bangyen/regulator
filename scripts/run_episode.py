@@ -24,7 +24,7 @@ from src.agents.firm_agents import (  # noqa: E402
     TitForTatAgent,
 )
 from src.cartel.cartel_env import CartelEnv  # noqa: E402
-from src.logging.logger import Logger  # noqa: E402
+from src.episode_logging.logger import Logger  # noqa: E402
 
 
 def create_agent(agent_type: str, agent_id: int, seed: Optional[int] = None):

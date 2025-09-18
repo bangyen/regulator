@@ -1,14 +1,15 @@
-# Python Package Template
+# Regulator: Market Competition & Collusion Detection
 
-A minimal, modern Python package template with development tools pre-configured.
+A Python package for simulating market competition and detecting collusive behavior using machine learning.
 
 ## Features
 
+- **Market Simulation**: CartelEnv for oligopolistic price competition
+- **Agent Framework**: Multiple agent types (random, tit-for-tat, best response)
+- **Regulator System**: Real-time monitoring and penalty application
+- **ML Collusion Detection**: Machine learning-based collusion detection
+- **Comprehensive Logging**: Structured episode logging and analysis
 - **Modern tooling**: Black, Ruff, MyPy, Pytest
-- **Pre-commit hooks**: Automated code quality checks
-- **Type hints**: Full type checking with MyPy
-- **Testing**: Pytest with fixtures and coverage
-- **Package structure**: Standard src/ layout
 
 ## Quick Start
 
@@ -28,15 +29,37 @@ A minimal, modern Python package template with development tools pre-configured.
    make all    # Run all checks
    ```
 
+## ML Collusion Detector
+
+Train and use machine learning models to detect collusive behavior:
+
+```bash
+# Train ML detector with demo episodes
+python scripts/train_ml_detector.py --n-episodes 50
+
+# Train with existing log files
+python scripts/train_ml_detector.py --existing-logs logs/
+
+# Use LightGBM model
+python scripts/train_ml_detector.py --model-type lightgbm --n-episodes 50
+```
+
+The ML detector extracts 26 features from episode logs and achieves ≥0.8 AUROC on synthetic datasets.
+
 ## Project Structure
 
 ```
-├── src/           # Source code
-├── tests/         # Test files
-├── scripts/       # Utility scripts
-├── Makefile       # Development commands
-├── pyproject.toml # Package configuration
-└── README.md      # This file
+├── src/
+│   ├── agents/          # Market agents (firms, regulator)
+│   ├── cartel/          # Market environment
+│   ├── detectors/       # ML collusion detection
+│   └── episode_logging/ # Structured logging
+├── tests/               # Test files
+├── scripts/             # Utility scripts and demos
+├── logs/                # Episode logs (gitignored)
+├── ml_detector_output/  # ML training outputs (gitignored)
+├── Makefile            # Development commands
+└── pyproject.toml      # Package configuration
 ```
 
 ## Customization

@@ -77,3 +77,6 @@ Desktop.ini
 # Log files
 *.log
 logs/
+
+# ML detector outputs
+ml_detector_output/
