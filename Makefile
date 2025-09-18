@@ -15,7 +15,7 @@ lint: ## lint code
 	ruff check .
 
 type: ## type-check
-	mypy .
+	mypy --explicit-package-bases --namespace-packages src/
 
 test: ## run tests
 	python -m pytest

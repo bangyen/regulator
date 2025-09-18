@@ -77,7 +77,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 explicit_package_bases = true
-mypy_path = "."
+mypy_path = "src"
 ignore_missing_imports = true
 namespace_packages = true
 
