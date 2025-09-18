@@ -7,6 +7,7 @@ regulator behavior.
 """
 
 import pytest
+from typing import List
 
 import numpy as np
 
@@ -23,7 +24,7 @@ from src.cartel.cartel_env import CartelEnv
 class TestChatFirmAgent:
     """Test cases for ChatFirmAgent base class."""
 
-    def test_chat_firm_agent_initialization(self):
+    def test_chat_firm_agent_initialization(self) -> None:
         """Test that ChatFirmAgent initializes correctly."""
         agent = ChatFirmAgent(agent_id=0, chat_enabled=True, message_frequency=0.5)
 
@@ -33,7 +34,7 @@ class TestChatFirmAgent:
         assert len(agent.message_history) == 0
         assert len(agent.received_messages) == 0
 
-    def test_chat_firm_agent_disabled(self):
+    def test_chat_firm_agent_disabled(self) -> None:
         """Test that disabled chat agent doesn't generate messages."""
         agent = ChatFirmAgent(agent_id=0, chat_enabled=False)
 
@@ -44,7 +45,7 @@ class TestChatFirmAgent:
         message = agent.generate_message(observation, env)
         assert message is None
 
-    def test_message_generation_frequency(self):
+    def test_message_generation_frequency(self) -> None:
         """Test that message generation follows the specified frequency."""
         agent = ChatFirmAgent(agent_id=0, message_frequency=1.0, seed=42)
 
@@ -58,7 +59,7 @@ class TestChatFirmAgent:
         assert isinstance(message, str)
         assert len(message) > 0
 
-    def test_message_sending_and_receiving(self):
+    def test_message_sending_and_receiving(self) -> None:
         """Test message sending and receiving functionality."""
         agent = ChatFirmAgent(agent_id=0)
 
@@ -77,7 +78,7 @@ class TestChatFirmAgent:
         assert agent.received_messages[0]["message"] == "Received message"
         assert agent.received_messages[0]["sender_id"] == 1
 
-    def test_reset_functionality(self):
+    def test_reset_functionality(self) -> None:
         """Test that reset clears message history."""
         agent = ChatFirmAgent(agent_id=0)
 
@@ -98,14 +99,14 @@ class TestChatFirmAgent:
 class TestCollusiveChatAgent:
     """Test cases for CollusiveChatAgent."""
 
-    def test_collusive_agent_initialization(self):
+    def test_collusive_agent_initialization(self) -> None:
         """Test that CollusiveChatAgent initializes correctly."""
         agent = CollusiveChatAgent(agent_id=0, collusion_intensity=0.8, seed=42)
 
         assert agent.agent_id == 0
         assert agent.collusion_intensity == 0.8
 
-    def test_collusive_message_generation(self):
+    def test_collusive_message_generation(self) -> None:
         """Test that collusive agent generates appropriate messages."""
         agent = CollusiveChatAgent(
             agent_id=0,
@@ -145,14 +146,14 @@ class TestCollusiveChatAgent:
 class TestCompetitiveChatAgent:
     """Test cases for CompetitiveChatAgent."""
 
-    def test_competitive_agent_initialization(self):
+    def test_competitive_agent_initialization(self) -> None:
         """Test that CompetitiveChatAgent initializes correctly."""
         agent = CompetitiveChatAgent(agent_id=0, seed=42)
 
         assert agent.agent_id == 0
         assert agent.chat_enabled is True
 
-    def test_competitive_message_generation(self):
+    def test_competitive_message_generation(self) -> None:
         """Test that competitive agent generates appropriate messages."""
         agent = CompetitiveChatAgent(agent_id=0, seed=42)
 
@@ -187,7 +188,7 @@ class TestCompetitiveChatAgent:
 class TestChatMessageManager:
     """Test cases for ChatMessageManager."""
 
-    def test_message_manager_initialization(self):
+    def test_message_manager_initialization(self) -> None:
         """Test that ChatMessageManager initializes correctly."""
         agents = [
             ChatFirmAgent(agent_id=0, message_frequency=1.0, seed=42),
@@ -198,7 +199,7 @@ class TestChatMessageManager:
         assert len(manager.agents) == 2
         assert len(manager.episode_messages) == 0
 
-    def test_message_collection_and_distribution(self):
+    def test_message_collection_and_distribution(self) -> None:
         """Test message collection and distribution."""
         agents = [
             ChatFirmAgent(agent_id=0, message_frequency=1.0, seed=42),
@@ -223,7 +224,7 @@ class TestChatMessageManager:
                 len(agent.received_messages) == 1
             )  # Received one message from the other agent
 
-    def test_reset_functionality(self):
+    def test_reset_functionality(self) -> None:
         """Test that reset clears all message history."""
         agents = [
             ChatFirmAgent(agent_id=0, message_frequency=1.0, seed=42),
@@ -251,7 +252,7 @@ class TestChatMessageManager:
 class TestLLMDetector:
     """Test cases for LLMDetector."""
 
-    def test_llm_detector_initialization(self):
+    def test_llm_detector_initialization(self) -> None:
         """Test that LLMDetector initializes correctly."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.7, seed=42)
 
@@ -260,7 +261,7 @@ class TestLLMDetector:
         assert detector.total_messages_analyzed == 0
         assert detector.collusive_messages_detected == 0
 
-    def test_collusive_message_classification(self):
+    def test_collusive_message_classification(self) -> None:
         """Test classification of clearly collusive messages."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
 
@@ -280,7 +281,7 @@ class TestLLMDetector:
             assert result["collusive_probability"] > 0.5
             assert len(result["detected_patterns"]) > 0
 
-    def test_non_collusive_message_classification(self):
+    def test_non_collusive_message_classification(self) -> None:
         """Test classification of clearly non-collusive messages."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
 
@@ -302,7 +303,7 @@ class TestLLMDetector:
             if result["is_collusive"]:
                 assert result["confidence"] < 0.8  # Low confidence if misclassified
 
-    def test_batch_classification(self):
+    def test_batch_classification(self) -> None:
         """Test batch classification of multiple messages."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
 
@@ -318,7 +319,7 @@ class TestLLMDetector:
         assert all("is_collusive" in result for result in results)
         assert all("collusive_probability" in result for result in results)
 
-    def test_detection_summary(self):
+    def test_detection_summary(self) -> None:
         """Test detection summary statistics."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
 
@@ -334,7 +335,7 @@ class TestLLMDetector:
         assert 0 <= summary["collusion_rate"] <= 1
         assert 0 <= summary["average_confidence"] <= 1
 
-    def test_reset_functionality(self):
+    def test_reset_functionality(self) -> None:
         """Test that reset clears detection history."""
         detector = LLMDetector(model_type="stubbed", seed=42)
 
@@ -355,7 +356,7 @@ class TestLLMDetector:
 class TestChatRegulator:
     """Test cases for ChatRegulator."""
 
-    def test_chat_regulator_initialization(self):
+    def test_chat_regulator_initialization(self) -> None:
         """Test that ChatRegulator initializes correctly."""
         detector = LLMDetector(model_type="stubbed", seed=42)
         regulator = ChatRegulator(
@@ -367,7 +368,7 @@ class TestChatRegulator:
         assert len(regulator.message_violations) == 0
         assert regulator.total_message_fines == 0.0
 
-    def test_message_monitoring(self):
+    def test_message_monitoring(self) -> None:
         """Test message monitoring and violation detection."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
         regulator = ChatRegulator(
@@ -387,7 +388,7 @@ class TestChatRegulator:
         assert result["fines_applied"] >= 0
         assert "violation_details" in result
 
-    def test_violation_summary(self):
+    def test_violation_summary(self) -> None:
         """Test violation summary generation."""
         detector = LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
         regulator = ChatRegulator(
@@ -410,7 +411,7 @@ class TestChatRegulator:
         assert "violation_steps" in summary
         assert "violations_by_agent" in summary
 
-    def test_reset_functionality(self):
+    def test_reset_functionality(self) -> None:
         """Test that reset clears regulator state."""
         detector = LLMDetector(model_type="stubbed", seed=42)
         regulator = ChatRegulator(detector)
@@ -431,7 +432,7 @@ class TestChatRegulator:
 class TestIntegration:
     """Integration tests for the complete chat system."""
 
-    def test_message_pipeline_integration(self):
+    def test_message_pipeline_integration(self) -> None:
         """Test the complete message pipeline from generation to detection."""
         # Create chat agents
         agents = [
@@ -462,7 +463,7 @@ class TestIntegration:
         assert monitoring_result["messages_analyzed"] == len(messages)
         assert "classifications" in monitoring_result
 
-    def test_deterministic_behavior_with_seed(self):
+    def test_deterministic_behavior_with_seed(self) -> None:
         """Test that behavior is deterministic with fixed seeds."""
         # Create agents with same seed
         agent1 = CollusiveChatAgent(agent_id=0, seed=42)
@@ -478,7 +479,7 @@ class TestIntegration:
         # Messages should be identical with same seed
         assert message1 == message2
 
-    def test_episode_logging_compatibility(self):
+    def test_episode_logging_compatibility(self) -> None:
         """Test that chat messages can be integrated with episode logging."""
         # This test ensures the chat system is compatible with existing logging
         agents = [
@@ -508,13 +509,13 @@ class TestIntegration:
 
 # Fixtures for testing
 @pytest.fixture
-def sample_cartel_env():
+def sample_cartel_env() -> CartelEnv:
     """Provide a sample CartelEnv for testing."""
     return CartelEnv(n_firms=2, price_min=10, price_max=100, seed=42)
 
 
 @pytest.fixture
-def sample_chat_agents():
+def sample_chat_agents() -> List[ChatFirmAgent]:
     """Provide sample chat agents for testing."""
     return [
         ChatFirmAgent(agent_id=0, message_frequency=1.0, seed=42),
@@ -523,13 +524,13 @@ def sample_chat_agents():
 
 
 @pytest.fixture
-def sample_llm_detector():
+def sample_llm_detector() -> LLMDetector:
     """Provide a sample LLMDetector for testing."""
     return LLMDetector(model_type="stubbed", confidence_threshold=0.5, seed=42)
 
 
 @pytest.fixture
-def sample_chat_regulator(sample_llm_detector):
+def sample_chat_regulator(sample_llm_detector: LLMDetector) -> ChatRegulator:
     """Provide a sample ChatRegulator for testing."""
     return ChatRegulator(
         llm_detector=sample_llm_detector,
@@ -540,7 +541,7 @@ def sample_chat_regulator(sample_llm_detector):
 
 # Test data fixtures
 @pytest.fixture
-def collusive_messages():
+def collusive_messages() -> List[str]:
     """Provide sample collusive messages for testing."""
     return [
         "We should coordinate our pricing strategy to maximize profits.",
@@ -552,7 +553,7 @@ def collusive_messages():
 
 
 @pytest.fixture
-def non_collusive_messages():
+def non_collusive_messages() -> List[str]:
     """Provide sample non-collusive messages for testing."""
     return [
         "I'm focused on delivering the best value to customers.",
