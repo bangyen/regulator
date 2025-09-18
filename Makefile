@@ -16,4 +16,4 @@ type: ## type-check
 test: ## run tests
 	python -m pytest
 
-all: fmt lint test
+all: fmt lint type test
