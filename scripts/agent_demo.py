@@ -18,8 +18,8 @@ import numpy as np
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from agents.firm_agents import BestResponseAgent, RandomAgent
-from cartel.cartel_env import CartelEnv
+from src.agents.firm_agents import BestResponseAgent, RandomAgent
+from src.cartel.cartel_env import CartelEnv
 
 
 def setup_logging() -> None:
@@ -112,7 +112,7 @@ def run_agent_demo() -> None:
 
         # Store episode data
         episode_prices.append(prices.copy())
-        episode_profits.append(rewards.copy())
+        episode_profits.append(rewards.copy().tolist())
         episode_demand_shocks.append(info["demand_shock"])
 
         step += 1
