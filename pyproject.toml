@@ -6,16 +6,16 @@ build-backend = "setuptools.build_meta"
 py-modules = []
 
 [project]
-name = "package-name"
+name = "regulator"
 version = "0.1.0"
-description = "A Python package template"
+description = "A Python package for simulating market competition and detecting collusive behavior using machine learning"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Bang Yen", email = "bangyen@example.com"},
 ]
-keywords = ["python", "template", "package"]
+keywords = ["python", "economics", "collusion", "detection", "machine-learning", "simulation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -36,6 +36,8 @@ dependencies = [
     "pandas>=1.3.0",
     "plotly>=5.0.0",
     "streamlit>=1.28.0",
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -52,12 +54,12 @@ ml = [
 ]
 
 [project.scripts]
-package-name = "package_name.cli:main"
+regulator = "regulator_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/package-name"
-Repository = "https://github.com/yourusername/package-name"
-Issues = "https://github.com/yourusername/package-name/issues"
+Homepage = "https://github.com/bangyen/regulator"
+Repository = "https://github.com/bangyen/regulator"
+Issues = "https://github.com/bangyen/regulator/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
