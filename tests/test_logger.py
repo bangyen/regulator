@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.logging.logger import Logger
+from src.episode_logging.logger import Logger
 
 
 class TestLogger:
