@@ -10,7 +10,7 @@ import math
 import numpy as np
 import pytest
 
-from env.cartel_env import CartelEnv
+from src.cartel.cartel_env import CartelEnv
 
 
 class TestCartelEnv:

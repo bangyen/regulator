@@ -6,7 +6,7 @@ This script demonstrates how to use the CartelEnv for simulating
 oligopolistic price competition.
 """
 
-from env.cartel_env import CartelEnv
+from src.cartel.cartel_env import CartelEnv
 
 
 def main() -> None:
