@@ -9,25 +9,20 @@ experiments with various agent types, regulator configurations, and analysis.
 import argparse
 import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-# Add the project root to the Python path so src imports work
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import after path manipulation
-from src.agents.firm_agents import (  # noqa: E402
+# Import from the package
+from agents.firm_agents import (
     BaseAgent,
     RandomAgent,
     BestResponseAgent,
     TitForTatAgent,
 )
-from src.agents.regulator import Regulator  # noqa: E402
-from src.cartel.cartel_env import CartelEnv  # noqa: E402
-from src.episode_logging.episode_runner import (  # noqa: E402
+from agents.regulator import Regulator
+from cartel.cartel_env import CartelEnv
+from episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
 

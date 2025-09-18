@@ -10,16 +10,12 @@ and profits throughout the episode.
 import logging
 from typing import List
 
-import sys
-from pathlib import Path
 
 import numpy as np
 
-# Add the src directory to the Python path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from src.agents.firm_agents import BestResponseAgent, RandomAgent
-from src.cartel.cartel_env import CartelEnv
+# Import from the package
+from agents.firm_agents import BestResponseAgent, RandomAgent
+from cartel.cartel_env import CartelEnv
 
 
 def setup_logging() -> None:

@@ -17,10 +17,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-# Add src to path for imports
-import sys
-
-sys.path.append(str(Path(__file__).parent.parent / "src"))
+# Dashboard imports
 
 
 def load_episode_data(log_file: Path) -> Dict[str, Any]:

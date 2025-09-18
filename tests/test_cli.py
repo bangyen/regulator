@@ -7,7 +7,6 @@ experiment execution, and result validation.
 
 import json
 import math
-import sys
 import tempfile
 from pathlib import Path
 
@@ -15,11 +14,8 @@ from typing import Any, Dict
 
 import pytest
 
-# Add the project root to the Python path so src imports work
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-from scripts.run_experiment import (  # noqa: E402
+# Import from the package
+from scripts.run_experiment import (
     calculate_welfare_metrics,
     create_agent,
     create_regulator,

@@ -18,11 +18,7 @@ import plotly.graph_objects as go
 import pytest
 
 # Import dashboard functions
-import sys
-
-sys.path.append(str(Path(__file__).parent.parent / "dashboard"))
-
-from app import (
+from dashboard.app import (
     calculate_surplus,
     create_price_trajectory_plot,
     create_profit_plot,

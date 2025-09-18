@@ -6,18 +6,13 @@ argument parsing, and error handling.
 """
 
 import subprocess
-import sys
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
 
-# Add the project root to the Python path so src imports work
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-from src.regulator.cli import main, experiment, train, episode, dashboard  # noqa: E402
+# Import from the package
+from regulator.cli import main, experiment, train, episode, dashboard
 
 
 class TestRegulatorCLI:
@@ -298,7 +293,7 @@ class TestRegulatorCLIIntegration:
         # Test experiment help
         result = runner.invoke(experiment, ["--help"])
         assert result.exit_code == 0
-        assert "--n-episodes" in result.output
+        assert "--steps" in result.output
 
         # Test train help
         result = runner.invoke(train, ["--help"])
