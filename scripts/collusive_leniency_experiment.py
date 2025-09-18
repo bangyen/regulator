@@ -420,8 +420,8 @@ def run_collusive_leniency_experiment(
             "avg_consumer_surplus": float(
                 np.mean([ep["consumer_surplus"] for ep in episodes])
             ),
-            "avg_producer_surplus": np.mean(
-                [ep["producer_surplus"] for ep in episodes]
+            "avg_producer_surplus": float(
+                np.mean([ep["producer_surplus"] for ep in episodes])
             ),
         }
 
