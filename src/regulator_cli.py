@@ -34,50 +34,46 @@ def main() -> None:
 
 
 @main.command()
-@click.option("--n-episodes", default=10, help="Number of episodes to run")
-@click.option("--n-firms", default=3, help="Number of firms in the market")
-@click.option("--max-steps", default=100, help="Maximum steps per episode")
+@click.option("--steps", default=100, help="Number of steps to run")
 @click.option(
-    "--agent-types", default="random,tit_for_tat", help="Comma-separated agent types"
+    "--firms", default="random,tit_for_tat", help="Comma-separated agent types"
 )
 @click.option(
-    "--regulator-config", default="rule_based", help="Regulator configuration"
+    "--regulator",
+    default="rule_based",
+    help="Regulator configuration (ml, rule_based, none)",
 )
 @click.option("--seed", default=42, help="Random seed")
-@click.option("--output-dir", default="logs", help="Output directory for logs")
+@click.option("--log-dir", default="logs", help="Output directory for logs")
+@click.option("--episode-id", help="Custom episode ID (auto-generated if not provided)")
 def experiment(
-    n_episodes: int,
-    n_firms: int,
-    max_steps: int,
-    agent_types: str,
-    regulator_config: str,
+    steps: int,
+    firms: str,
+    regulator: str,
     seed: int,
-    output_dir: str,
+    log_dir: str,
+    episode_id: Optional[str],
 ) -> None:
-    """Run a multi-episode experiment."""
-    click.echo(f"Running experiment with {n_episodes} episodes...")
-
-    # Parse agent types
-    agents = [agent.strip() for agent in agent_types.split(",")]
+    """Run a single episode experiment."""
+    click.echo("Running experiment...")
 
     # Set up arguments for run_experiment
     sys.argv = [
         "run_experiment.py",
-        "--n-episodes",
-        str(n_episodes),
-        "--n-firms",
-        str(n_firms),
-        "--max-steps",
-        str(max_steps),
         "--firms",
-        *agents,
-        "--regulator-config",
-        regulator_config,
+        firms,
+        "--steps",
+        str(steps),
+        "--regulator",
+        regulator,
         "--seed",
         str(seed),
-        "--output-dir",
-        output_dir,
+        "--log-dir",
+        log_dir,
     ]
+
+    if episode_id:
+        sys.argv.extend(["--episode-id", episode_id])
 
     try:
         run_experiment_main()
@@ -90,7 +86,7 @@ def experiment(
 @main.command()
 @click.option("--n-episodes", default=50, help="Number of episodes to train on")
 @click.option(
-    "--model-type", default="random_forest", help="Model type (random_forest, lightgbm)"
+    "--model-type", default="logistic", help="Model type (logistic, lightgbm)"
 )
 @click.option("--existing-logs", help="Path to existing log files")
 @click.option("--output-dir", default="ml_detector_output", help="Output directory")
