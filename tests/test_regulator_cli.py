@@ -26,26 +26,22 @@ class TestRegulatorCLI:
 
     def test_experiment_command_basic(self) -> None:
         """Test basic experiment command execution."""
-        with patch("src.regulator.cli.run_experiment_main") as mock_run:
+        with patch("regulator_cli.run_experiment") as mock_run:
             mock_run.return_value = None
 
             runner = CliRunner()
             result = runner.invoke(
                 experiment,
                 [
-                    "--n-episodes",
-                    "2",
-                    "--n-firms",
-                    "2",
-                    "--max-steps",
+                    "--steps",
                     "5",
-                    "--agent-types",
+                    "--firms",
                     "random,tit_for_tat",
-                    "--regulator-config",
+                    "--regulator",
                     "rule_based",
                     "--seed",
                     "42",
-                    "--output-dir",
+                    "--log-dir",
                     "test_logs",
                 ],
             )
@@ -56,26 +52,22 @@ class TestRegulatorCLI:
 
     def test_experiment_command_with_exception(self) -> None:
         """Test experiment command with exception handling."""
-        with patch("src.regulator.cli.run_experiment_main") as mock_run:
+        with patch("regulator_cli.run_experiment") as mock_run:
             mock_run.side_effect = Exception("Test error")
 
             runner = CliRunner()
             result = runner.invoke(
                 experiment,
                 [
-                    "--n-episodes",
-                    "1",
-                    "--n-firms",
-                    "2",
-                    "--max-steps",
+                    "--steps",
                     "5",
-                    "--agent-types",
+                    "--firms",
                     "random",
-                    "--regulator-config",
+                    "--regulator",
                     "rule_based",
                     "--seed",
                     "42",
-                    "--output-dir",
+                    "--log-dir",
                     "test_logs",
                 ],
             )
@@ -85,7 +77,7 @@ class TestRegulatorCLI:
 
     def test_train_command_basic(self) -> None:
         """Test basic train command execution."""
-        with patch("src.regulator.cli.train_ml_main") as mock_train:
+        with patch("regulator_cli.train_ml_detector") as mock_train:
             mock_train.return_value = None
 
             runner = CliRunner()
@@ -95,7 +87,7 @@ class TestRegulatorCLI:
                     "--n-episodes",
                     "10",
                     "--model-type",
-                    "random_forest",
+                    "logistic",
                     "--output-dir",
                     "test_output",
                 ],
@@ -107,7 +99,7 @@ class TestRegulatorCLI:
 
     def test_train_command_with_existing_logs(self) -> None:
         """Test train command with existing logs parameter."""
-        with patch("src.regulator.cli.train_ml_main") as mock_train:
+        with patch("regulator_cli.train_ml_detector") as mock_train:
             mock_train.return_value = None
 
             runner = CliRunner()
@@ -131,7 +123,7 @@ class TestRegulatorCLI:
 
     def test_train_command_with_exception(self) -> None:
         """Test train command with exception handling."""
-        with patch("src.regulator.cli.train_ml_main") as mock_train:
+        with patch("regulator_cli.train_ml_detector") as mock_train:
             mock_train.side_effect = Exception("Training failed")
 
             runner = CliRunner()
@@ -152,7 +144,7 @@ class TestRegulatorCLI:
 
     def test_episode_command_basic(self) -> None:
         """Test basic episode command execution."""
-        with patch("src.regulator.cli.run_episode") as mock_run:
+        with patch("regulator_cli.run_episode") as mock_run:
             mock_run.return_value = {"episode_id": "test_123"}
 
             runner = CliRunner()
@@ -176,7 +168,7 @@ class TestRegulatorCLI:
 
     def test_episode_command_with_n_firms(self) -> None:
         """Test episode command with specified number of firms."""
-        with patch("src.regulator.cli.run_episode") as mock_run:
+        with patch("regulator_cli.run_episode") as mock_run:
             mock_run.return_value = {"episode_id": "test_456"}
 
             runner = CliRunner()
@@ -202,7 +194,7 @@ class TestRegulatorCLI:
 
     def test_episode_command_with_exception(self) -> None:
         """Test episode command with exception handling."""
-        with patch("src.regulator.cli.run_episode") as mock_run:
+        with patch("regulator_cli.run_episode") as mock_run:
             mock_run.side_effect = Exception("Episode failed")
 
             runner = CliRunner()

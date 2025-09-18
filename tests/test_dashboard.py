@@ -257,7 +257,7 @@ class TestDashboardIntegration:
     def test_dashboard_app_imports(self) -> None:
         """Test that dashboard app can be imported without errors."""
         try:
-            import app
+            import dashboard.app as app
 
             assert hasattr(app, "main")
             assert hasattr(app, "load_episode_data")
@@ -285,7 +285,7 @@ class TestDashboardIntegration:
             mock_exists.return_value = False
 
             try:
-                import app
+                import dashboard.app as app
 
                 # This should not crash
                 app.main()
