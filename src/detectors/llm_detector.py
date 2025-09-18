@@ -7,10 +7,22 @@ with the ability to swap in real LLM models later.
 """
 
 import json
+import os
 import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+try:
+    import openai
+
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 
 class LLMDetector:
@@ -176,15 +188,50 @@ class LLMDetector:
 
     def _initialize_llm_model(self) -> None:
         """
-        Initialize the real LLM model.
+        Initialize the real LLM model with OpenAI integration.
 
-        This method will be implemented when integrating with actual LLM APIs.
-        For now, it raises a NotImplementedError.
+        This method sets up the OpenAI client and validates the API key.
         """
-        raise NotImplementedError(
-            "Real LLM model integration not yet implemented. "
-            "Use model_type='stubbed' for testing."
-        )
+        if not OPENAI_AVAILABLE:
+            raise ImportError(
+                "OpenAI package not available. Install with: pip install openai"
+            )
+
+        # Get API key from environment
+        api_key = os.getenv("OPENAI_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_KEY environment variable not set. "
+                "Please set it in your .env file or environment."
+            )
+
+        # Initialize OpenAI client
+        self.client = openai.OpenAI(api_key=api_key)
+
+        # Test the connection
+        try:
+            # Simple test call to verify API key works
+            self.client.models.list()
+        except Exception as e:
+            raise ValueError(f"Failed to initialize OpenAI client: {e}")
+
+        # Set up the system prompt for collusion detection
+        self.system_prompt = """You are an expert economic analyst specializing in detecting collusive behavior in market communications. 
+
+Your task is to analyze messages between firms and determine if they contain evidence of collusive intent. Collusive behavior includes:
+- Price fixing agreements
+- Market sharing arrangements  
+- Coordinated production decisions
+- Bid rigging
+- Information sharing that facilitates collusion
+
+Respond with a JSON object containing:
+- "is_collusive": boolean (true if collusive, false otherwise)
+- "confidence": float (0.0 to 1.0, confidence in the assessment)
+- "reasoning": string (brief explanation of your assessment)
+- "evidence": string (specific phrases or patterns that support your conclusion)
+
+Be conservative in your assessments - only flag clear evidence of collusive intent."""
 
     def classify_message(
         self,
@@ -326,11 +373,86 @@ class LLMDetector:
         Returns:
             Dictionary containing classification results
         """
-        # This will be implemented when integrating with real LLM APIs
-        raise NotImplementedError(
-            "Real LLM model classification not yet implemented. "
-            "Use model_type='stubbed' for testing."
-        )
+        # Prepare the user message with context
+        user_message = f"""Analyze this message between firms for collusive intent:
+
+Message: "{message}"
+Sender: Firm {sender_id}
+Receiver: Firm {receiver_id}
+Step: {step}"""
+
+        if context:
+            user_message += f"\nContext: {json.dumps(context, indent=2)}"
+
+        try:
+            # Call OpenAI API
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=0.1,  # Low temperature for consistent results
+                max_tokens=500,
+            )
+
+            # Parse the response
+            response_content = response.choices[0].message.content
+            if response_content is None:
+                raise ValueError("Empty response from OpenAI API")
+            response_text = response_content.strip()
+
+            # Try to parse as JSON
+            try:
+                result_data = json.loads(response_text)
+            except json.JSONDecodeError:
+                # Fallback if response isn't valid JSON
+                result_data = {
+                    "is_collusive": False,
+                    "confidence": 0.5,
+                    "reasoning": "Could not parse LLM response",
+                    "evidence": response_text,
+                }
+
+            # Extract results
+            is_collusive = result_data.get("is_collusive", False)
+            confidence = float(result_data.get("confidence", 0.5))
+            reasoning = result_data.get("reasoning", "No reasoning provided")
+            evidence = result_data.get("evidence", "No evidence provided")
+
+            # Ensure confidence is in valid range
+            confidence = max(0.0, min(1.0, confidence))
+
+        except Exception:
+            # Fallback to stubbed model if LLM fails
+            return self._classify_with_stubbed_model(
+                message, sender_id, receiver_id, step, context
+            )
+
+        # Create result
+        result = {
+            "message": message,
+            "sender_id": sender_id,
+            "receiver_id": receiver_id,
+            "step": step,
+            "is_collusive": is_collusive,
+            "collusive_probability": confidence if is_collusive else (1.0 - confidence),
+            "confidence": confidence,
+            "reasoning": reasoning,
+            "evidence": evidence,
+            "model_type": self.model_type,
+            "context": context or {},
+        }
+
+        # Update statistics
+        self.total_messages_analyzed += 1
+        if is_collusive:
+            self.collusive_messages_detected += 1
+
+        # Store in history
+        self.detection_history.append(result)
+
+        return result
 
     def classify_messages_batch(
         self,

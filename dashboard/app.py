@@ -501,22 +501,152 @@ def main() -> None:
         st.divider()
         st.header("Episode Replay")
 
-        if st.button("🎬 Replay Episode"):
-            st.info("Episode replay functionality would be implemented here")
-            # This could include:
-            # - Step-by-step animation
-            # - Interactive timeline
-            # - Export functionality
+        # Create replay controls
+        col1, col2, col3, col4 = st.columns(4)
 
-        # Data export
-        st.subheader("Export Data")
+        with col1:
+            if st.button("🎬 Start Replay"):
+                st.session_state.replay_active = True
+                st.session_state.replay_step = 0
+
+        with col2:
+            if st.button("⏸️ Pause"):
+                st.session_state.replay_active = False
+
+        with col3:
+            if st.button("⏹️ Stop"):
+                st.session_state.replay_active = False
+                st.session_state.replay_step = 0
+
+        with col4:
+            if st.button("🔄 Reset"):
+                st.session_state.replay_step = 0
+
+        # Replay controls
+        if "replay_active" not in st.session_state:
+            st.session_state.replay_active = False
+        if "replay_step" not in st.session_state:
+            st.session_state.replay_step = 0
+
+        # Step selector
+        max_steps = len(episode_data["steps"]) - 1
+        selected_step = st.slider(
+            "Select Step",
+            min_value=0,
+            max_value=max_steps,
+            value=st.session_state.replay_step,
+            key="step_slider",
+        )
+
+        # Update replay step when slider changes
+        if selected_step != st.session_state.replay_step:
+            st.session_state.replay_step = selected_step
+
+        # Display current step information
+        if episode_data["steps"]:
+            current_step_data = episode_data["steps"][st.session_state.replay_step]
+
+            st.subheader(f"Step {st.session_state.replay_step + 1}")
+
+            # Create columns for step information
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Prices", f"{current_step_data.get('prices', 'N/A')}")
+                st.metric("Profits", f"{current_step_data.get('profits', 'N/A')}")
+
+            with col2:
+                st.metric(
+                    "Consumer Surplus",
+                    f"{current_step_data.get('consumer_surplus', 'N/A')}",
+                )
+                st.metric(
+                    "Producer Surplus",
+                    f"{current_step_data.get('producer_surplus', 'N/A')}",
+                )
+
+            with col3:
+                st.metric("Total Fines", f"{current_step_data.get('total_fines', 0)}")
+                st.metric(
+                    "Violations", f"{current_step_data.get('violations_detected', 0)}"
+                )
+
+            # Display step-specific visualizations
+            if st.checkbox("Show Step-by-Step Visualization"):
+                # Create a focused plot for the current step
+                import plotly.graph_objects as go
+
+                # Price trajectory up to current step
+                steps_to_show = episode_data["steps"][
+                    : st.session_state.replay_step + 1
+                ]
+                step_numbers = list(range(1, len(steps_to_show) + 1))
+
+                fig = go.Figure()
+
+                # Add price lines for each firm
+                n_firms = len(steps_to_show[0].get("prices", []))
+                for firm_id in range(n_firms):
+                    prices = [
+                        step.get("prices", [0] * n_firms)[firm_id]
+                        for step in steps_to_show
+                    ]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=step_numbers,
+                            y=prices,
+                            mode="lines+markers",
+                            name=f"Firm {firm_id + 1}",
+                            line=dict(width=2),
+                            marker=dict(size=6),
+                        )
+                    )
+
+                # Highlight current step
+                if steps_to_show:
+                    current_prices = steps_to_show[-1].get("prices", [])
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[len(steps_to_show)],
+                            y=current_prices,
+                            mode="markers",
+                            name="Current Step",
+                            marker=dict(size=12, color="red", symbol="star"),
+                            showlegend=True,
+                        )
+                    )
+
+                fig.update_layout(
+                    title=f"Price Trajectory (Steps 1-{len(steps_to_show)})",
+                    xaxis_title="Step",
+                    yaxis_title="Price",
+                    hovermode="x unified",
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Auto-advance replay
+            if (
+                st.session_state.replay_active
+                and st.session_state.replay_step < max_steps
+            ):
+                import time
+
+                time.sleep(0.5)  # Pause between steps
+                st.session_state.replay_step += 1
+                st.rerun()
+
+        # Export functionality
         if st.button("📥 Download Episode Data"):
-            # Convert to JSON for download
-            json_data = json.dumps(episode_data, indent=2)
+            import json
+
+            # Create downloadable JSON
+            json_data = json.dumps(episode_data, indent=2, default=str)
+
             st.download_button(
                 label="Download JSON",
                 data=json_data,
-                file_name=f"{selected_file.stem}_data.json",
+                file_name=f"episode_{episode_data.get('episode_id', 'unknown')}.json",
                 mime="application/json",
             )
 

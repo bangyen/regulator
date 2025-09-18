@@ -8,15 +8,18 @@ A Python package for simulating market competition and detecting collusive behav
 - **Agent Framework**: Multiple agent types (random, tit-for-tat, best response)
 - **Regulator System**: Real-time monitoring and penalty application
 - **ML Collusion Detection**: Machine learning-based collusion detection
+- **LLM Detection**: OpenAI-powered natural language collusion detection
 - **Comprehensive Logging**: Structured episode logging and analysis
+- **Interactive Dashboard**: Streamlit-based visualization and analysis
+- **CLI Interface**: Command-line tools for experiments and training
 - **Modern tooling**: Black, Ruff, MyPy, Pytest
 
 ## Quick Start
 
 1. **Clone and setup**:
    ```bash
-   git clone <your-repo-url>
-   cd your-package-name
+   git clone https://github.com/bangyen/regulator.git
+   cd regulator
    make init
    ```
 
@@ -27,6 +30,27 @@ A Python package for simulating market competition and detecting collusive behav
    make type   # Type check
    make test   # Run tests
    make all    # Run all checks
+   ```
+
+3. **Set up environment variables**:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your OpenAI API key
+   ```
+
+4. **Use the CLI**:
+   ```bash
+   # Run an experiment
+   regulator experiment --n-episodes 10 --n-firms 3
+   
+   # Train ML detector
+   regulator train --n-episodes 50 --model-type lightgbm
+   
+   # Run single episode
+   regulator episode --firms "random,tit_for_tat" --steps 50
+   
+   # Launch dashboard
+   regulator dashboard
    ```
 
 ## ML Collusion Detector
@@ -45,6 +69,25 @@ python scripts/train_ml_detector.py --model-type lightgbm --n-episodes 50
 ```
 
 The ML detector extracts 26 features from episode logs and achieves ≥0.8 AUROC on synthetic datasets.
+
+## LLM Collusion Detector
+
+Use OpenAI's GPT models to detect collusive behavior in natural language communications:
+
+```bash
+# Use LLM detector in experiments
+python scripts/chat_demo.py --llm-model gpt-4o-mini
+
+# Test LLM detection
+python -c "
+from src.detectors.llm_detector import LLMDetector
+detector = LLMDetector(model_type='llm')
+result = detector.classify_message('Let\\'s coordinate our pricing', 0, 1, 1)
+print(result)
+"
+```
+
+The LLM detector analyzes messages for collusive intent and provides confidence scores and reasoning.
 
 ## Project Structure
 
