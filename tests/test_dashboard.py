@@ -198,11 +198,11 @@ class TestDashboardFunctions:
         # Verify plot object
         assert isinstance(fig, go.Figure)
 
-        # Verify subplots (2 rows)
-        assert len(fig.data) >= 4  # At least 4 traces (3 violations + 1 fines)
+        # Simplified plot now shows only total fines trace
+        assert len(fig.data) == 1
 
         # Verify plot title
-        assert "Regulator Monitoring" in fig.layout.title.text
+        assert "Regulator Flags" in fig.layout.title.text
 
     def test_create_surplus_plot(self) -> None:
         """Test surplus plot creation."""
@@ -230,7 +230,7 @@ class TestDashboardFunctions:
         assert len(fig.data) == 2
 
         # Verify plot title
-        assert "Consumer vs Producer Surplus" in fig.layout.title.text
+        assert "Surplus Analysis" in fig.layout.title.text
 
     def test_create_profit_plot(self) -> None:
         """Test profit plot creation."""
@@ -248,7 +248,7 @@ class TestDashboardFunctions:
         assert len(fig.data) == 2
 
         # Verify plot title
-        assert "Individual Firm Profits" in fig.layout.title.text
+        assert "Profit Analysis" in fig.layout.title.text
 
 
 class TestDashboardIntegration:
