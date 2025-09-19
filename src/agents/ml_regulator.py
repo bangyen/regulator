@@ -114,7 +114,7 @@ class MLRegulator(Regulator):
         """
         if len(price_history) < 2:
             # Return zero features if insufficient history
-            return np.zeros(20)
+            return np.zeros(20, dtype=np.float32)
 
         # Convert to numpy array for easier manipulation
         prices = np.array(price_history)
@@ -125,10 +125,10 @@ class MLRegulator(Regulator):
         # 1. Price statistics
         features.extend(
             [
-                np.mean(prices),  # Average price across all firms and time
-                np.std(prices),  # Price volatility
-                np.min(prices),  # Minimum price
-                np.max(prices),  # Maximum price
+                float(np.mean(prices)),  # Average price across all firms and time
+                float(np.std(prices)),  # Price volatility
+                float(np.min(prices)),  # Minimum price
+                float(np.max(prices)),  # Maximum price
             ]
         )
 
@@ -139,7 +139,7 @@ class MLRegulator(Regulator):
                 for j in range(i + 1, min(n_firms, 3)):
                     if len(prices) > 1:
                         corr = np.corrcoef(prices[:, i], prices[:, j])[0, 1]
-                        features.append(corr if not np.isnan(corr) else 0.0)
+                        features.append(float(corr) if not np.isnan(corr) else 0.0)
                     else:
                         features.append(0.0)
         else:
@@ -148,9 +148,9 @@ class MLRegulator(Regulator):
         # 3. Price dispersion features
         for step_prices in prices[-3:]:  # Last 3 steps
             if len(step_prices) > 1:
-                features.append(np.std(step_prices))  # Price dispersion
+                features.append(float(np.std(step_prices)))  # Price dispersion
                 features.append(
-                    np.max(step_prices) - np.min(step_prices)
+                    float(np.max(step_prices) - np.min(step_prices))
                 )  # Price range
             else:
                 features.extend([0.0, 0.0])
@@ -164,7 +164,7 @@ class MLRegulator(Regulator):
                     # Linear trend coefficient
                     x = np.arange(len(firm_prices))
                     trend = (
-                        np.polyfit(x, firm_prices, 1)[0]
+                        float(np.polyfit(x, firm_prices, 1)[0])
                         if len(firm_prices) > 1
                         else 0.0
                     )
@@ -180,8 +180,8 @@ class MLRegulator(Regulator):
             price_changes = np.diff(prices, axis=0)
             if len(price_changes) > 0:
                 # Synchronization: how similar are price changes across firms
-                sync_score = 1.0 - np.mean(np.std(price_changes, axis=1)) / (
-                    np.mean(np.abs(price_changes)) + 1e-6
+                sync_score = 1.0 - float(np.mean(np.std(price_changes, axis=1))) / (
+                    float(np.mean(np.abs(price_changes))) + 1e-6
                 )
                 features.append(sync_score)
             else:

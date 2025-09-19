@@ -331,7 +331,7 @@ class CartelEnv(gym.Env):
         # Apply price change constraints for market stability first
         if self.current_step > 0:  # Skip constraint on first step
             price_changes = np.abs(action - self.previous_prices)
-            max_change = np.max(price_changes)
+            max_change: float = float(np.max(price_changes))
 
             if max_change > self.max_price_change:
                 # Scale down price changes to maintain stability
@@ -493,8 +493,8 @@ class CartelEnv(gym.Env):
 
         # If total constrained demand is less than original demand,
         # redistribute the shortfall proportionally among firms
-        total_original = np.sum(quantities)
-        total_constrained = np.sum(constrained_quantities)
+        total_original: float = float(np.sum(quantities))
+        total_constrained: float = float(np.sum(constrained_quantities))
 
         if total_constrained < total_original and total_constrained > 0:
             # Redistribute the shortfall proportionally
@@ -502,7 +502,7 @@ class CartelEnv(gym.Env):
             redistribution = shortfall * (constrained_quantities / total_constrained)
             constrained_quantities += redistribution
 
-        return constrained_quantities
+        return constrained_quantities.astype(np.float32)
 
     def _check_firm_viability(self, profits: np.ndarray) -> None:
         """
@@ -572,19 +572,19 @@ class CartelEnv(gym.Env):
         # Update dynamic elasticity for next period
         if self.use_dynamic_elasticity:
             self.current_elasticity = self._calculate_dynamic_elasticity(
-                market_price, total_demand
+                float(market_price), float(total_demand)
             )
 
         # Store history for dynamic elasticity calculation
-        self.price_history.append(market_price)
-        self.demand_history.append(total_demand)
+        self.price_history.append(float(market_price))
+        self.demand_history.append(float(total_demand))
 
         # Keep only recent history to avoid memory issues
         if len(self.price_history) > 20:
             self.price_history = self.price_history[-20:]
             self.demand_history = self.demand_history[-20:]
 
-        return total_demand
+        return float(total_demand)
 
     def _calculate_market_shares(
         self, prices: np.ndarray
@@ -621,11 +621,11 @@ class CartelEnv(gym.Env):
             utilities = price_factor + quality_factor + loyalty_factor + service_factor
 
             # Numerical stability: subtract max utility to prevent overflow
-            max_utility = np.max(utilities)
+            max_utility: float = float(np.max(utilities))
             exp_utilities = np.exp(utilities - max_utility)
 
             # Normalize to get market shares
-            total_utility = np.sum(exp_utilities)
+            total_utility: float = float(np.sum(exp_utilities))
             if total_utility > 0:
                 market_shares: np.ndarray = exp_utilities / total_utility
             else:
@@ -670,7 +670,7 @@ class CartelEnv(gym.Env):
                 )
 
                 # Normalize to get market shares
-                total_attractiveness_sum = np.sum(total_attractiveness)
+                total_attractiveness_sum: float = float(np.sum(total_attractiveness))
                 if total_attractiveness_sum > 0:
                     market_shares = total_attractiveness / total_attractiveness_sum
                 else:
@@ -688,7 +688,7 @@ class CartelEnv(gym.Env):
                 competitiveness = competitiveness**self.competition_intensity
 
                 # Normalize to get market shares
-                total_competitiveness = np.sum(competitiveness)
+                total_competitiveness: float = float(np.sum(competitiveness))
                 if total_competitiveness > 0:
                     market_shares = competitiveness / total_competitiveness
                 else:
@@ -808,7 +808,7 @@ class CartelEnv(gym.Env):
                             np.nan
                         )  # Cannot observe this competitor's price
 
-        return observed_prices
+        return observed_prices.astype(np.float32)
 
     def get_observed_prices(self, prices: np.ndarray) -> np.ndarray:
         """

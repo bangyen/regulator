@@ -219,7 +219,7 @@ class SimplifiedCartelEnv(gym.Env):
         if self.use_capacity_constraints and self.capacity_array is not None:
             quantities = np.minimum(quantities, self.capacity_array)
             # Recalculate market shares after capacity constraints
-            total_quantity = np.sum(quantities)
+            total_quantity: float = float(np.sum(quantities))
             if total_quantity > 0:
                 market_shares = quantities / total_quantity
             else:
@@ -298,7 +298,7 @@ class SimplifiedCartelEnv(gym.Env):
         competitiveness = competitiveness**self.competition_intensity
 
         # Normalize to get market shares
-        total_competitiveness = np.sum(competitiveness)
+        total_competitiveness: float = float(np.sum(competitiveness))
         if total_competitiveness > 0:
             market_shares = competitiveness / total_competitiveness
         else:
