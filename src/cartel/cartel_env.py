@@ -502,7 +502,8 @@ class CartelEnv(gym.Env):
             redistribution = shortfall * (constrained_quantities / total_constrained)
             constrained_quantities += redistribution
 
-        return constrained_quantities.astype(np.float32)
+        result: np.ndarray = constrained_quantities.astype(np.float32)
+        return result
 
     def _check_firm_viability(self, profits: np.ndarray) -> None:
         """
@@ -567,7 +568,7 @@ class CartelEnv(gym.Env):
                 base_demand *= elasticity_factor
 
         total_demand = base_demand + self.current_demand_shock
-        total_demand = float(max(0, total_demand))
+        total_demand_final: float = float(max(0, total_demand))
 
         # Update dynamic elasticity for next period
         if self.use_dynamic_elasticity:
@@ -584,7 +585,7 @@ class CartelEnv(gym.Env):
             self.price_history = self.price_history[-20:]
             self.demand_history = self.demand_history[-20:]
 
-        return float(total_demand)
+        return float(total_demand_final)
 
     def _calculate_market_shares(
         self, prices: np.ndarray
@@ -808,7 +809,8 @@ class CartelEnv(gym.Env):
                             np.nan
                         )  # Cannot observe this competitor's price
 
-        return observed_prices.astype(np.float32)
+        result: np.ndarray = observed_prices.astype(np.float32)
+        return result
 
     def get_observed_prices(self, prices: np.ndarray) -> np.ndarray:
         """
