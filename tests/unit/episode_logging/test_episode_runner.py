@@ -55,7 +55,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -127,7 +127,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -183,7 +183,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -236,7 +236,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -293,7 +293,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -340,7 +340,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -391,7 +391,7 @@ class TestRunEpisodeWithLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -446,7 +446,7 @@ class TestRunEpisodeWithRegulatorLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -521,7 +521,7 @@ class TestRunEpisodeWithRegulatorLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )
@@ -590,7 +590,7 @@ class TestRunEpisodeWithRegulatorLogging:
                     "demand_shock": 0.1,
                     "market_price": np.mean(action),
                     "total_demand": 100.0,
-                    "individual_quantity": 50.0,
+                    "individual_quantities": np.array([50.0, 50.0]),
                     "total_profits": np.array([100.0, 110.0]),
                 },
             )

@@ -93,7 +93,7 @@ class Logger:
         demand_shock: float,
         market_price: float,
         total_demand: float,
-        individual_quantity: float,
+        individual_quantity: Union[float, np.ndarray],
         total_profits: np.ndarray,
         regulator_flags: Optional[Dict[str, Any]] = None,
         additional_info: Optional[Dict[str, Any]] = None,
@@ -131,7 +131,11 @@ class Logger:
             "demand_shock": float(demand_shock),
             "market_price": float(market_price),
             "total_demand": float(total_demand),
-            "individual_quantity": float(individual_quantity),
+            "individual_quantity": (
+                [float(q) for q in individual_quantity.tolist()]
+                if isinstance(individual_quantity, np.ndarray)
+                else float(individual_quantity)
+            ),
             "total_profits": [float(p) for p in total_profits.tolist()],
         }
 
