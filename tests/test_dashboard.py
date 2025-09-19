@@ -370,7 +370,8 @@ class TestDashboardIntegration:
 
             flags_fig = create_regulator_flags_plot(episode_data["steps"])
             assert isinstance(flags_fig, go.Figure)
-            assert len(flags_fig.data) >= 4  # Multiple violation types + fines
+            # Simplified plot now shows only total fines trace
+            assert len(flags_fig.data) == 1
 
             surplus_fig = create_surplus_plot(episode_data["steps"])
             assert isinstance(surplus_fig, go.Figure)
