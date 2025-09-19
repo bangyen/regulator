@@ -114,7 +114,8 @@ class MLRegulator(Regulator):
         """
         if len(price_history) < 2:
             # Return zero features if insufficient history
-            return np.zeros(20, dtype=np.float32)
+            result_zero: np.ndarray = np.zeros(20, dtype=np.float32)
+            return result_zero
 
         # Convert to numpy array for easier manipulation
         prices = np.array(price_history)
@@ -196,7 +197,8 @@ class MLRegulator(Regulator):
         elif len(features) > target_size:
             features = features[:target_size]
 
-        return np.array(features, dtype=np.float32)
+        result_features: np.ndarray = np.array(features, dtype=np.float32)
+        return result_features
 
     def _detect_ml_anomalies(self, features: np.ndarray) -> Tuple[bool, float]:
         """
