@@ -6,7 +6,7 @@ training models, and executing episodes.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 
@@ -223,7 +223,7 @@ def run_experiment(
     """
     n_firms = len(firms)
 
-    # Default environment parameters
+    # Default environment parameters with enhanced economic features
     default_env_params = {
         "n_firms": n_firms,
         "max_steps": steps,
@@ -234,25 +234,77 @@ def run_experiment(
         "price_min": 1.0,
         "price_max": 100.0,
         "seed": seed,
+        # Enhanced economic features enabled by default
+        "use_logit_market_shares": True,  # More realistic market shares
+        "use_enhanced_market_shares": True,  # Multi-factor market share model
+        "use_capacity_constraints": True,  # Production capacity limits
+        "use_economies_of_scale": True,  # Cost advantages at scale
+        "use_dynamic_elasticity": True,  # Varying price sensitivity
+        "use_fixed_costs": True,  # Realistic cost structure
+        "use_information_asymmetry": True,  # Market frictions
+        "use_market_entry_exit": True,  # Dynamic market structure
+        "capacity": [80.0, 120.0, 100.0] if n_firms == 3 else [100.0] * n_firms,
+        "fixed_cost": 50.0,
+        "scale_elasticity": 0.8,
+        "elasticity_sensitivity": 0.3,
+        "exit_threshold": -50.0,
+        "max_consecutive_losses": 3,
     }
 
     if env_params:
         default_env_params.update(env_params)
 
-    # Create environment
+    # Create environment with enhanced economic features
     env = CartelEnv(
-        n_firms=int(default_env_params["n_firms"]),
-        max_steps=int(default_env_params["max_steps"]),
-        marginal_cost=float(default_env_params["marginal_cost"]),
-        demand_intercept=float(default_env_params["demand_intercept"]),
-        demand_slope=float(default_env_params["demand_slope"]),
-        shock_std=float(default_env_params["shock_std"]),
-        price_min=float(default_env_params["price_min"]),
-        price_max=float(default_env_params["price_max"]),
+        n_firms=int(cast(int, default_env_params["n_firms"])),
+        max_steps=int(cast(int, default_env_params["max_steps"])),
+        marginal_cost=float(cast(float, default_env_params["marginal_cost"])),
+        demand_intercept=float(cast(float, default_env_params["demand_intercept"])),
+        demand_slope=float(cast(float, default_env_params["demand_slope"])),
+        shock_std=float(cast(float, default_env_params["shock_std"])),
+        price_min=float(cast(float, default_env_params["price_min"])),
+        price_max=float(cast(float, default_env_params["price_max"])),
         seed=(
-            int(default_env_params["seed"])
+            int(cast(int, default_env_params["seed"]))
             if default_env_params["seed"] is not None
             else None
+        ),
+        # Enhanced economic features
+        use_logit_market_shares=bool(
+            default_env_params.get("use_logit_market_shares", True)
+        ),
+        use_enhanced_market_shares=bool(
+            default_env_params.get("use_enhanced_market_shares", True)
+        ),
+        use_capacity_constraints=bool(
+            default_env_params.get("use_capacity_constraints", True)
+        ),
+        use_economies_of_scale=bool(
+            default_env_params.get("use_economies_of_scale", True)
+        ),
+        use_dynamic_elasticity=bool(
+            default_env_params.get("use_dynamic_elasticity", True)
+        ),
+        use_fixed_costs=bool(default_env_params.get("use_fixed_costs", True)),
+        use_information_asymmetry=bool(
+            default_env_params.get("use_information_asymmetry", True)
+        ),
+        use_market_entry_exit=bool(
+            default_env_params.get("use_market_entry_exit", True)
+        ),
+        capacity=cast(Optional[List[float]], default_env_params.get("capacity", None)),
+        fixed_cost=float(cast(float, default_env_params.get("fixed_cost", 50.0))),
+        scale_elasticity=float(
+            cast(float, default_env_params.get("scale_elasticity", 0.8))
+        ),
+        elasticity_sensitivity=float(
+            cast(float, default_env_params.get("elasticity_sensitivity", 0.3))
+        ),
+        exit_threshold=float(
+            cast(float, default_env_params.get("exit_threshold", -50.0))
+        ),
+        max_consecutive_losses=int(
+            cast(int, default_env_params.get("max_consecutive_losses", 3))
         ),
     )
 
