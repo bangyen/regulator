@@ -197,7 +197,6 @@ class TestCartelEnv:
             demand_slope=-1.0,
             shock_std=0.0,  # No randomness
             competition_intensity=1.0,  # Linear competition for predictable results
-            market_share_model="inverse_price",  # Use original model for predictable results
             seed=42,
         )
 
@@ -213,26 +212,22 @@ class TestCartelEnv:
         # Total demand = 75 + 0 (no shock) = 75
         # Market shares with competition_intensity=1.0:
         #   competitiveness = [1/20, 1/30] = [0.05, 0.0333...]
-        #   normalized shares = [0.05/(0.05+0.0333), 0.0333/(0.05+0.0333)] ≈ [0.59, 0.41]
-        # Individual quantities = [75 * 0.59, 75 * 0.41] = [44.25, 30.75]
-        # Firm 1 profit = (20 - 10) * 44.25 = 442.5
-        # Firm 2 profit = (30 - 10) * 30.75 = 615
+        #   normalized shares = [0.05/(0.05+0.0333), 0.0333/(0.05+0.0333)] ≈ [0.6, 0.4]
+        # Individual quantities = [75 * 0.6, 75 * 0.4] = [45, 30]
+        # Firm 1 profit = (20 - 10) * 45 = 450
+        # Firm 2 profit = (30 - 10) * 30 = 600
 
         # Calculate expected market shares
+        competitiveness = np.array([1.0 / 20.0, 1.0 / 30.0])
+        expected_shares = competitiveness / np.sum(competitiveness)
+        expected_quantities = expected_shares * 75.0
+        expected_rewards = (prices - 10.0) * expected_quantities
 
-        # The actual expected values are: [442.5, 615.0]
-        # This is due to floating point precision in market share calculation
-        # Use the actual calculated values for comparison
-        actual_expected_rewards = np.array([442.5, 615.0], dtype=np.float32)
-        assert np.allclose(
-            rewards, actual_expected_rewards, rtol=1e-2
-        )  # More relaxed tolerance
+        assert np.allclose(rewards, expected_rewards, rtol=1e-3)  # Relaxed tolerance
         assert np.allclose(info["market_price"], 25.0)
         assert np.allclose(info["total_demand"], 75.0)
-        # Use the actual calculated values for comparison
-        actual_expected_quantities = np.array([44.25, 30.75], dtype=np.float32)
         assert np.allclose(
-            info["individual_quantities"], actual_expected_quantities, rtol=1e-3
+            info["individual_quantities"], expected_quantities, rtol=1e-3
         )
 
     def test_step_reward_calculation_edge_cases(self) -> None:
