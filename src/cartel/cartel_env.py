@@ -155,19 +155,17 @@ class CartelEnv(gym.Env):
         # Clip actions to valid price range
         prices = np.clip(action, self.price_min, self.price_max).astype(np.float32)
 
-        # Calculate market demand and individual quantities
+        # Calculate market demand using the consistent method
         market_price = np.mean(prices)  # Average market price
-        base_demand = self.demand_intercept + self.demand_slope * market_price
-        total_demand = max(0, base_demand + self.current_demand_shock)
+        total_demand = self._calculate_demand(prices)
 
         # Allocate demand among firms (equal split for simplicity)
-        individual_quantity = max(
-            0.0, float(base_demand + self.current_demand_shock)
-        ) / float(self.n_firms)
+        individual_quantity = total_demand / float(self.n_firms)
 
-        # Calculate profits for each firm
+        # Calculate profits for each firm (allow negative profits for economic realism)
         profits = (prices - self.marginal_cost) * individual_quantity
-        profits = np.maximum(profits, 0)  # Ensure non-negative profits
+        # Remove profit flooring to show true economic outcomes
+        # profits = np.maximum(profits, 0)  # Ensure non-negative profits
 
         # Update state
         self.previous_prices = prices.copy()
@@ -233,5 +231,7 @@ class CartelEnv(gym.Env):
             Array of profits for each firm
         """
         profits = (prices - self.marginal_cost) * quantities
-        result: np.ndarray = np.maximum(profits, 0)  # Ensure non-negative profits
-        return result.astype(np.float32)
+        # Allow negative profits for economic realism
+        # result: np.ndarray = np.maximum(profits, 0)  # Ensure non-negative profits
+        result: np.ndarray = profits.astype(np.float32)
+        return result

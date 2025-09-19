@@ -154,8 +154,9 @@ class Regulator:
         """
         Detect if firms are engaging in parallel pricing behavior.
 
-        Parallel pricing is detected when all firms' prices are within the threshold
-        for at least the minimum number of consecutive steps.
+        Parallel pricing is detected when:
+        1. All firms have identical prices (immediate detection), OR
+        2. All firms' prices are within the threshold for at least the minimum number of consecutive steps
 
         Args:
             step: Current step number
@@ -163,11 +164,19 @@ class Regulator:
         Returns:
             True if parallel pricing violation detected, False otherwise
         """
-        # Need at least parallel_steps of history
+        # Check current step for identical pricing (immediate detection)
+        if len(self.price_history) > 0:
+            current_prices = self.price_history[-1]
+            if len(current_prices) >= 2:
+                # Check if all prices are identical (exact match)
+                if len(set(current_prices)) == 1:
+                    return True  # All firms have identical prices - clear collusion
+
+        # Need at least parallel_steps of history for threshold-based detection
         if len(self.price_history) < self.parallel_steps:
             return False
 
-        # Check the last parallel_steps steps
+        # Check the last parallel_steps steps for threshold-based parallel pricing
         recent_prices = self.price_history[-self.parallel_steps :]
 
         # For each step, check if all prices are within threshold

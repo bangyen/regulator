@@ -60,6 +60,7 @@ def calculate_surplus(
     total_demand: float,
     demand_intercept: float = 100.0,
     demand_slope: float = -1.0,
+    marginal_cost: float = 10.0,
 ) -> Tuple[float, float]:
     """
     Calculate consumer surplus and producer surplus.
@@ -70,21 +71,25 @@ def calculate_surplus(
         total_demand: Total market demand
         demand_intercept: Demand curve intercept
         demand_slope: Demand curve slope
+        marginal_cost: Marginal cost per unit
 
     Returns:
         Tuple of (consumer_surplus, producer_surplus)
     """
     # Consumer surplus: area under demand curve above market price
-    # Assuming linear demand: Q = a - b*P, so P = (a - Q)/b
-    if demand_slope != 0:
-        max_price = demand_intercept / abs(demand_slope)
-        consumer_surplus = 0.5 * (max_price - market_price) * total_demand
+    # For demand curve Q = a + b*P where b < 0 (downward sloping)
+    # Consumer surplus = 0.5 * (a - P) * Q
+    if demand_slope < 0:  # Normal downward-sloping demand
+        consumer_surplus = 0.5 * (demand_intercept - market_price) * total_demand
     else:
-        consumer_surplus = 0.0
+        # Upward-sloping demand (unusual but possible)
+        consumer_surplus = 0.5 * (market_price - demand_intercept) * total_demand
+
+    # Ensure non-negative consumer surplus
+    consumer_surplus = max(0.0, consumer_surplus)
 
     # Producer surplus: total revenue minus variable costs
-    # Assuming marginal cost = 10 (from environment params)
-    marginal_cost = 10.0
+    # Producer surplus = (market_price - marginal_cost) * total_demand
     producer_surplus = (market_price - marginal_cost) * total_demand
 
     return consumer_surplus, producer_surplus
@@ -306,6 +311,7 @@ def create_surplus_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     # Get demand parameters from header if available
     demand_intercept = 100.0
     demand_slope = -1.0
+    marginal_cost = 10.0
 
     for step in steps:
         prices = step["prices"]
@@ -313,7 +319,12 @@ def create_surplus_plot(steps: List[Dict[str, Any]]) -> go.Figure:
         total_demand = step.get("total_demand", 0.0)
 
         consumer_surplus, producer_surplus = calculate_surplus(
-            prices, market_price, total_demand, demand_intercept, demand_slope
+            prices,
+            market_price,
+            total_demand,
+            demand_intercept,
+            demand_slope,
+            marginal_cost,
         )
 
         consumer_surpluses.append(consumer_surplus)
