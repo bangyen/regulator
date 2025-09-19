@@ -6,7 +6,7 @@ by setting prices, with demand shocks affecting market outcomes. The environment
 models oligopolistic competition with constant marginal costs and demand curves.
 """
 
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -291,6 +291,10 @@ class CartelEnv(gym.Env):
         self.demand_history = []
         self.current_elasticity = self.price_elasticity
 
+        # Reset demand shock history
+        self._shock_history: List[float] = []
+        self._previous_shock: Optional[float] = None
+
         # Create initial observation
         observation = np.concatenate(
             [self.previous_prices, [self.current_demand_shock]]
@@ -341,7 +345,7 @@ class CartelEnv(gym.Env):
 
         # Update state first (including demand shock for this step)
         self.previous_prices = prices.copy()
-        self.current_demand_shock = self.np_random.normal(0, self.shock_std)
+        self.current_demand_shock = self._generate_economic_demand_shock()
 
         # Calculate market demand using the enhanced method
         market_price = np.mean(prices)  # Average market price
@@ -817,3 +821,49 @@ class CartelEnv(gym.Env):
             Array of observed prices with information frictions applied
         """
         return self._add_information_frictions(prices)
+
+    def _generate_economic_demand_shock(self) -> float:
+        """
+        Generate economically realistic demand shocks.
+
+        This method creates demand shocks that are more realistic than simple
+        Gaussian noise, incorporating economic factors like:
+        - Persistence (shocks tend to persist over time)
+        - Mean reversion (shocks eventually return to baseline)
+        - Economic cycles (business cycle effects)
+
+        Returns:
+            Demand shock value
+        """
+        # Base shock from normal distribution
+        base_shock = self.np_random.normal(0, self.shock_std)
+
+        # Add persistence: current shock depends on previous shock
+        if hasattr(self, "_previous_shock") and self._previous_shock is not None:
+            persistence_factor = 0.3  # 30% of previous shock persists
+            base_shock += persistence_factor * self._previous_shock
+
+        # Add mean reversion: shocks tend to return to zero over time
+        if hasattr(self, "_shock_history") and len(self._shock_history) > 0:
+            recent_shocks = self._shock_history[-5:]  # Last 5 shocks
+            mean_reversion = float(-0.1 * np.mean(recent_shocks))  # 10% mean reversion
+            base_shock += mean_reversion
+
+        # Add business cycle component (simplified)
+        cycle_period = 20  # 20-step business cycle
+        cycle_phase = (self.current_step % cycle_period) / cycle_period * 2 * np.pi
+        cycle_component = 0.5 * self.shock_std * np.sin(cycle_phase)
+        base_shock += cycle_component
+
+        # Store shock history for persistence and mean reversion
+        if not hasattr(self, "_shock_history"):
+            self._shock_history = []
+
+        self._shock_history.append(base_shock)
+        self._previous_shock = base_shock
+
+        # Keep only recent history to avoid memory issues
+        if len(self._shock_history) > 20:
+            self._shock_history = self._shock_history[-20:]
+
+        return float(base_shock)

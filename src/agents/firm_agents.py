@@ -168,11 +168,12 @@ class BestResponseAgent(BaseAgent):
 
     def _calculate_nash_equilibrium_price(self, env: CartelEnv) -> float:
         """
-        Calculate the Nash equilibrium price for the static game.
+        Calculate the Nash equilibrium price for the static game with enhanced accuracy.
 
         For symmetric firms with demand D = a + b*p_market and marginal cost c,
         where market price = (p1 + p2 + ... + pn) / n,
-        the Nash equilibrium price is: p* = (a + 2*c) / (3*b) for 2 firms
+        and market shares are determined by competitiveness,
+        the Nash equilibrium price is derived from profit maximization.
 
         Args:
             env: The CartelEnv environment instance
@@ -185,10 +186,36 @@ class BestResponseAgent(BaseAgent):
         c = env.marginal_cost
         n = env.n_firms
 
-        # Nash equilibrium price for symmetric firms
-        # For n firms: p* = (a + n*c) / ((n+1)*|b|)
-        # This generalizes the 2-firm case: p* = (a + 2*c) / (3*|b|)
-        nash_price = (a + n * c) / ((n + 1) * abs(b))
+        # Enhanced Nash equilibrium calculation
+        # For competitiveness-based market shares: s_i = (1/p_i^α) / Σ(1/p_j^α)
+        # where α = competition_intensity
+
+        # For symmetric Nash equilibrium, all firms set the same price p*
+        # Market share for each firm = 1/n
+        # Total demand = a + b*p*
+        # Individual quantity = (a + b*p*) / n
+        # Profit = (p* - c) * (a + b*p*) / n
+
+        # Taking derivative with respect to p* and setting to zero:
+        # dπ/dp* = (a + b*p*)/n + (p* - c)*b/n = 0
+        # (a + b*p*) + (p* - c)*b = 0
+        # a + b*p* + b*p* - b*c = 0
+        # a + 2*b*p* - b*c = 0
+        # 2*b*p* = b*c - a
+        # p* = (b*c - a) / (2*b)
+
+        # For b < 0 (downward sloping demand):
+        # p* = (|b|*c + a) / (2*|b|)
+
+        if b < 0:
+            nash_price = (abs(b) * c + a) / (2 * abs(b))
+        else:
+            # This shouldn't happen with proper validation, but handle it
+            nash_price = (a + n * c) / ((n + 1) * abs(b))
+
+        # Ensure the price is economically reasonable
+        # Price should be above marginal cost for positive profits
+        nash_price = max(nash_price, c + 1.0)  # At least 1 unit above marginal cost
 
         # Clip to valid price range
         nash_price = max(env.price_min, min(env.price_max, nash_price))
