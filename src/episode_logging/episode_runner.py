@@ -229,10 +229,23 @@ def run_episode_with_regulator_logging(
     """
     # Create logger if not provided
     if logger is None:
+        # Extract environment parameters
+        env_params = {
+            "price_min": env.price_min,
+            "price_max": env.price_max,
+            "marginal_cost": env.marginal_cost,
+            "demand_intercept": env.demand_intercept,
+            "demand_slope": env.demand_slope,
+            "shock_std": env.shock_std,
+            "max_steps": env.max_steps,
+        }
+
         logger = Logger(
             log_dir=log_dir,
             episode_id=episode_id,
             n_firms=env.n_firms,
+            agent_types=agent_types,
+            environment_params=env_params,
         )
 
     # Reset environment and agents

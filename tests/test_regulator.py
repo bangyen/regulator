@@ -24,10 +24,10 @@ class TestRegulatorInitialization:
         """Test Regulator initialization with default parameters."""
         regulator = Regulator()
 
-        assert regulator.parallel_threshold == 2.0
-        assert regulator.parallel_steps == 3
-        assert regulator.structural_break_threshold == 10.0
-        assert regulator.fine_amount == 50.0
+        assert regulator.parallel_threshold == 5.0
+        assert regulator.parallel_steps == 5
+        assert regulator.structural_break_threshold == 15.0
+        assert regulator.fine_amount == 25.0
         assert regulator.price_history == []
         assert regulator.parallel_violations == []
         assert regulator.structural_break_violations == []
@@ -376,8 +376,8 @@ class TestApplyPenalties:
         expected_rewards = np.array([50.0, 100.0, 150.0])
         assert np.array_equal(modified_rewards, expected_rewards)
 
-    def test_apply_penalties_prevents_negative_rewards(self) -> None:
-        """Test that apply_penalties prevents rewards from going below zero."""
+    def test_apply_penalties_allows_negative_rewards(self) -> None:
+        """Test that apply_penalties allows negative rewards for economic realism."""
         regulator = Regulator(fine_amount=50.0)
         rewards = np.array([30.0, 40.0, 200.0])
         detection_results = {
@@ -386,9 +386,8 @@ class TestApplyPenalties:
 
         modified_rewards = regulator.apply_penalties(rewards, detection_results)
 
-        expected_rewards = np.array([0.0, 0.0, 150.0])
+        expected_rewards = np.array([-20.0, -10.0, 150.0])
         assert np.array_equal(modified_rewards, expected_rewards)
-        assert np.all(modified_rewards >= 0.0)
 
     def test_apply_penalties_different_fine_amounts(self) -> None:
         """Test apply_penalties with different fine amounts per firm."""

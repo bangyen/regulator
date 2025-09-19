@@ -155,6 +155,10 @@ class CartelEnv(gym.Env):
         # Clip actions to valid price range
         prices = np.clip(action, self.price_min, self.price_max).astype(np.float32)
 
+        # Update state first (including demand shock for this step)
+        self.previous_prices = prices.copy()
+        self.current_demand_shock = self.np_random.normal(0, self.shock_std)
+
         # Calculate market demand using the consistent method
         market_price = np.mean(prices)  # Average market price
         total_demand = self._calculate_demand(prices)
@@ -166,10 +170,6 @@ class CartelEnv(gym.Env):
         profits = (prices - self.marginal_cost) * individual_quantity
         # Remove profit flooring to show true economic outcomes
         # profits = np.maximum(profits, 0)  # Ensure non-negative profits
-
-        # Update state
-        self.previous_prices = prices.copy()
-        self.current_demand_shock = self.np_random.normal(0, self.shock_std)
         self.total_profits += profits
         self.current_step += 1
 
