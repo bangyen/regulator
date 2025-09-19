@@ -223,7 +223,7 @@ def run_experiment(
     """
     n_firms = len(firms)
 
-    # Default environment parameters with enhanced economic features
+    # Default environment parameters with simplified economic model
     default_env_params = {
         "n_firms": n_firms,
         "max_steps": steps,
@@ -234,27 +234,17 @@ def run_experiment(
         "price_min": 1.0,
         "price_max": 100.0,
         "seed": seed,
-        # Enhanced economic features enabled by default
-        "use_logit_market_shares": True,  # More realistic market shares
-        "use_enhanced_market_shares": True,  # Multi-factor market share model
-        "use_capacity_constraints": True,  # Production capacity limits
-        "use_economies_of_scale": True,  # Cost advantages at scale
-        "use_dynamic_elasticity": True,  # Varying price sensitivity
+        # Simplified economic features - only essential ones
         "use_fixed_costs": True,  # Realistic cost structure
-        "use_information_asymmetry": True,  # Market frictions
-        "use_market_entry_exit": True,  # Dynamic market structure
-        "capacity": [80.0, 120.0, 100.0] if n_firms == 3 else [100.0] * n_firms,
+        "use_capacity_constraints": False,  # Optional capacity limits
         "fixed_cost": 50.0,
-        "scale_elasticity": 0.8,
-        "elasticity_sensitivity": 0.3,
-        "exit_threshold": -50.0,
-        "max_consecutive_losses": 3,
+        "capacity": None,  # No capacity constraints by default
     }
 
     if env_params:
         default_env_params.update(env_params)
 
-    # Create environment with enhanced economic features
+    # Create environment with simplified economic features
     env = CartelEnv(
         n_firms=int(cast(int, default_env_params["n_firms"])),
         max_steps=int(cast(int, default_env_params["max_steps"])),
@@ -269,43 +259,19 @@ def run_experiment(
             if default_env_params["seed"] is not None
             else None
         ),
-        # Enhanced economic features
-        use_logit_market_shares=bool(
-            default_env_params.get("use_logit_market_shares", True)
-        ),
-        use_enhanced_market_shares=bool(
-            default_env_params.get("use_enhanced_market_shares", True)
-        ),
+        # Simplified economic features - disable complex ones
+        use_logit_market_shares=False,
+        use_enhanced_market_shares=False,
         use_capacity_constraints=bool(
-            default_env_params.get("use_capacity_constraints", True)
+            default_env_params.get("use_capacity_constraints", False)
         ),
-        use_economies_of_scale=bool(
-            default_env_params.get("use_economies_of_scale", True)
-        ),
-        use_dynamic_elasticity=bool(
-            default_env_params.get("use_dynamic_elasticity", True)
-        ),
+        use_economies_of_scale=False,
+        use_dynamic_elasticity=False,
         use_fixed_costs=bool(default_env_params.get("use_fixed_costs", True)),
-        use_information_asymmetry=bool(
-            default_env_params.get("use_information_asymmetry", True)
-        ),
-        use_market_entry_exit=bool(
-            default_env_params.get("use_market_entry_exit", True)
-        ),
+        use_information_asymmetry=False,
+        use_market_entry_exit=False,
         capacity=cast(Optional[List[float]], default_env_params.get("capacity", None)),
         fixed_cost=float(cast(float, default_env_params.get("fixed_cost", 50.0))),
-        scale_elasticity=float(
-            cast(float, default_env_params.get("scale_elasticity", 0.8))
-        ),
-        elasticity_sensitivity=float(
-            cast(float, default_env_params.get("elasticity_sensitivity", 0.3))
-        ),
-        exit_threshold=float(
-            cast(float, default_env_params.get("exit_threshold", -50.0))
-        ),
-        max_consecutive_losses=int(
-            cast(int, default_env_params.get("max_consecutive_losses", 3))
-        ),
     )
 
     # Create agents
