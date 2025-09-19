@@ -27,6 +27,8 @@ class Logger:
         log_dir: Union[str, Path] = "logs",
         episode_id: Optional[str] = None,
         n_firms: int = 3,
+        agent_types: Optional[List[str]] = None,
+        environment_params: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Initialize the Logger.
@@ -35,9 +37,13 @@ class Logger:
             log_dir: Directory to save log files
             episode_id: Unique identifier for this episode (auto-generated if None)
             n_firms: Number of firms in the environment
+            agent_types: List of agent type names for logging
+            environment_params: Environment parameters for logging
         """
         self.log_dir = Path(log_dir)
         self.n_firms = n_firms
+        self.agent_types = agent_types
+        self.environment_params = environment_params
 
         # Create log directory if it doesn't exist
         self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -67,6 +73,14 @@ class Logger:
             "n_firms": self.n_firms,
             "log_file": str(self.log_file),
         }
+
+        # Add agent types if provided
+        if self.agent_types is not None:
+            header["agent_types"] = self.agent_types
+
+        # Add environment parameters if provided
+        if self.environment_params is not None:
+            header["environment_params"] = self.environment_params
 
         with open(self.log_file, "w", encoding="utf-8") as f:
             f.write(json.dumps(header) + "\n")

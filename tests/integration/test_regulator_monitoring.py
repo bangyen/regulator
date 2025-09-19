@@ -269,11 +269,11 @@ class TestRegulatorMonitoringIntegration:
             n_firms=3, max_steps=10, shock_std=10.0, seed=42  # High variance
         )
 
-        # Create agents
+        # Create agents (use different seeds to avoid identical behavior)
         agents = [
             BestResponseAgent(agent_id=0, seed=42),
-            BestResponseAgent(agent_id=1, seed=42),
-            BestResponseAgent(agent_id=2, seed=42),
+            BestResponseAgent(agent_id=1, seed=43),
+            BestResponseAgent(agent_id=2, seed=44),
         ]
 
         # Create regulator
@@ -297,11 +297,11 @@ class TestRegulatorMonitoringIntegration:
         # Create environment
         env = CartelEnv(n_firms=3, max_steps=20, seed=42)
 
-        # Create agents likely to show violations
+        # Create agents likely to show violations (use different seeds to avoid perfect collusion)
         agents = [
             TitForTatAgent(agent_id=0, seed=42),
-            TitForTatAgent(agent_id=1, seed=42),
-            TitForTatAgent(agent_id=2, seed=42),
+            TitForTatAgent(agent_id=1, seed=43),
+            TitForTatAgent(agent_id=2, seed=44),
         ]
 
         # Create regulator

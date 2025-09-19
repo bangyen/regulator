@@ -27,10 +27,10 @@ class Regulator:
 
     def __init__(
         self,
-        parallel_threshold: float = 2.0,
-        parallel_steps: int = 3,
-        structural_break_threshold: float = 10.0,
-        fine_amount: float = 50.0,
+        parallel_threshold: float = 5.0,  # Increased from 2.0 to be less sensitive
+        parallel_steps: int = 5,  # Increased from 3 to require more consecutive steps
+        structural_break_threshold: float = 15.0,  # Increased from 10.0 to be less sensitive
+        fine_amount: float = 25.0,  # Reduced from 50.0 to be less punitive
         leniency_enabled: bool = True,
         leniency_reduction: float = 0.5,
         seed: Optional[int] = None,
@@ -236,8 +236,8 @@ class Regulator:
         penalties: np.ndarray = detection_results["fines_applied"]
         modified_rewards: np.ndarray = rewards - penalties
 
-        # Ensure rewards don't go below zero
-        modified_rewards = np.maximum(modified_rewards, 0.0)
+        # Allow negative rewards for economic realism (firms can have losses)
+        # modified_rewards = np.maximum(modified_rewards, 0.0)
 
         return modified_rewards.astype(np.float32)
 
