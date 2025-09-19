@@ -5,7 +5,7 @@ A Streamlit-based dashboard for visualizing and analyzing regulator experiment e
 ## Features
 
 - **Price Trajectories**: Interactive plots showing individual firm prices and market price over time
-- **Regulator Flags**: Visualization of monitoring results including parallel violations, structural break violations, and chat violations
+- **Regulator Flags**: Visualization of monitoring results focused on total fines over time
 - **Surplus Analysis**: Consumer surplus vs producer surplus analysis over time
 - **Profit Analysis**: Individual firm profit trajectories
 - **Episode Replay**: Framework for replaying episodes step-by-step
@@ -45,9 +45,8 @@ A Streamlit-based dashboard for visualizing and analyzing regulator experiment e
 - Interactive hover information
 
 #### Regulator Flags Tab
-- Violation tracking over time (parallel, structural break, chat)
-- Fines applied over time
-- Subplot layout for easy comparison
+- Fines applied over time (total fines)
+- Simplified layout for clarity
 
 #### Surplus Analysis Tab
 - Consumer surplus (green, filled)

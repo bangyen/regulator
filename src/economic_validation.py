@@ -249,14 +249,27 @@ class EconomicValidator:
         final_total_profits = steps[-1].get("total_profits", [])
         if final_total_profits and len(final_total_profits) > 0:
             # Sum of all step profits should equal final total profits
+            # Note: step profits include regulator penalties, so we need to account for that
             step_profits_sum = np.zeros(len(final_total_profits))
+            total_penalties = np.zeros(len(final_total_profits))
+
             for step in steps:
                 step_profits = step.get("profits", [])
+                regulator_flags = step.get("regulator_flags", {})
+                fines_applied = regulator_flags.get("fines_applied", [])
+
                 if len(step_profits) == len(final_total_profits):
                     step_profits_sum += step_profits
 
+                if len(fines_applied) == len(final_total_profits):
+                    total_penalties += fines_applied
+
+            # Calculate expected total profits: sum of step profits (after penalties) + total penalties
+            # This should equal the original total profits (before penalties)
+            expected_total_profits = step_profits_sum + total_penalties
+
             for i, (final, calculated) in enumerate(
-                zip(final_total_profits, step_profits_sum)
+                zip(final_total_profits, expected_total_profits)
             ):
                 # Use a very lenient tolerance for profit aggregation due to potential differences
                 # in how profits are calculated vs accumulated (e.g., different cost structures)
@@ -264,7 +277,7 @@ class EconomicValidator:
                 max_diff = max(abs(final) * 0.2, 1000.0)
                 if abs(final - calculated) > max_diff:
                     errors.append(
-                        f"Firm {i} total profits {final} doesn't match sum of step profits {calculated}"
+                        f"Firm {i} total profits {final} doesn't match sum of step profits {calculated} (step profits: {step_profits_sum[i]:.2f}, penalties: {total_penalties[i]:.2f})"
                     )
 
         # Check that demand shocks are reasonable
