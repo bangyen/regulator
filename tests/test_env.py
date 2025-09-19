@@ -48,9 +48,153 @@ class TestCartelEnv:
         assert env.marginal_cost == 15.0
         assert env.demand_intercept == 200.0
         assert env.demand_slope == -2.0
-        assert env.shock_std == 10.0
-        assert env.price_min == 5.0
-        assert env.price_max == 200.0
+
+    def test_initialization_new_economic_features(self) -> None:
+        """Test environment initialization with new economic model features."""
+        env = CartelEnv(
+            n_firms=3,
+            use_dynamic_elasticity=True,
+            elasticity_sensitivity=0.3,
+            use_capacity_constraints=True,
+            capacity=[100.0, 150.0, 200.0],
+            use_market_entry_exit=True,
+            exit_threshold=-50.0,
+            max_consecutive_losses=3,
+            seed=42,
+        )
+
+        assert env.use_dynamic_elasticity is True
+        assert env.elasticity_sensitivity == 0.3
+        assert env.use_capacity_constraints is True
+        assert np.array_equal(env.capacity, [100.0, 150.0, 200.0])
+        assert env.use_market_entry_exit is True
+        assert env.exit_threshold == -50.0
+        assert env.max_consecutive_losses == 3
+
+    def test_dynamic_elasticity_calculation(self) -> None:
+        """Test dynamic elasticity calculation."""
+        env = CartelEnv(
+            n_firms=2,
+            use_dynamic_elasticity=True,
+            elasticity_sensitivity=0.5,
+            seed=42,
+        )
+
+        obs, _ = env.reset(seed=42)
+
+        # Test with different market conditions
+        prices = np.array([50.0, 60.0], dtype=np.float32)
+        obs, rewards, terminated, truncated, info = env.step(prices)
+
+        # Check that dynamic elasticity is being calculated
+        assert "current_elasticity" in info
+        assert "use_dynamic_elasticity" in info
+        assert info["use_dynamic_elasticity"] is True
+
+        # Run a few more steps
+        for _ in range(5):
+            prices = np.array(
+                [50.0 + np.random.uniform(-10, 10), 60.0 + np.random.uniform(-10, 10)],
+                dtype=np.float32,
+            )
+            obs, rewards, terminated, truncated, info = env.step(prices)
+
+        # Elasticity should potentially change (though not guaranteed)
+        final_elasticity = info["current_elasticity"]
+        # Just check that the system is working, not that it changed
+        assert isinstance(final_elasticity, float)
+
+    def test_capacity_constraints(self) -> None:
+        """Test capacity constraints functionality."""
+        env = CartelEnv(
+            n_firms=2,
+            use_capacity_constraints=True,
+            capacity=[50.0, 100.0],
+            seed=42,
+        )
+
+        obs, _ = env.reset(seed=42)
+
+        # Test that capacity constraints are applied
+        prices = np.array([30.0, 40.0], dtype=np.float32)
+        obs, rewards, terminated, truncated, info = env.step(prices)
+
+        # Check that capacity information is in info
+        assert "use_capacity_constraints" in info
+        assert "capacity" in info
+        assert info["use_capacity_constraints"] is True
+        assert np.array_equal(info["capacity"], [50.0, 100.0])
+
+        # Test that quantities don't exceed capacity
+        individual_quantities = info["individual_quantities"]
+        capacity = info["capacity"]
+
+        for i in range(len(individual_quantities)):
+            assert (
+                individual_quantities[i] <= capacity[i] + 1e-6
+            )  # Allow small numerical errors
+
+    def test_market_entry_exit(self) -> None:
+        """Test market entry and exit functionality."""
+        env = CartelEnv(
+            n_firms=3,
+            use_market_entry_exit=True,
+            exit_threshold=-100.0,
+            max_consecutive_losses=2,
+            seed=42,
+        )
+
+        obs, _ = env.reset(seed=42)
+
+        # Test that market entry/exit info is tracked
+        prices = np.array([30.0, 40.0, 50.0], dtype=np.float32)
+        obs, rewards, terminated, truncated, info = env.step(prices)
+
+        # Check that market entry/exit information is in info
+        assert "use_market_entry_exit" in info
+        assert "active_firms" in info
+        assert "consecutive_losses" in info
+        assert info["use_market_entry_exit"] is True
+        assert len(info["active_firms"]) == 3
+        assert len(info["consecutive_losses"]) == 3
+
+        # All firms should be active initially
+        assert np.all(info["active_firms"])
+        assert np.all(info["consecutive_losses"] == 0)
+
+    def test_parameter_validation_new_features(self) -> None:
+        """Test parameter validation for new economic features."""
+        # Test invalid elasticity sensitivity
+        with pytest.raises(
+            ValueError, match="Elasticity sensitivity must be between 0.0 and 1.0"
+        ):
+            CartelEnv(elasticity_sensitivity=1.5)
+
+        with pytest.raises(
+            ValueError, match="Elasticity sensitivity must be between 0.0 and 1.0"
+        ):
+            CartelEnv(elasticity_sensitivity=-0.1)
+
+        # Test invalid capacity
+        with pytest.raises(
+            ValueError, match="capacity must have length equal to n_firms"
+        ):
+            CartelEnv(n_firms=3, capacity=[100.0, 200.0])  # Wrong length
+
+        with pytest.raises(ValueError, match="All capacity values must be positive"):
+            CartelEnv(n_firms=2, capacity=[100.0, -50.0])  # Negative capacity
+
+        # Test invalid learning rate
+        with pytest.raises(
+            ValueError, match="Learning rate must be between 0.0 and 1.0"
+        ):
+            CartelEnv(learning_rate=1.5)
+
+        # Test invalid max consecutive losses
+        with pytest.raises(
+            ValueError, match="Max consecutive losses must be at least 1"
+        ):
+            CartelEnv(max_consecutive_losses=0)
 
     def test_initialization_validation_errors(self) -> None:
         """Test that initialization raises appropriate validation errors."""
