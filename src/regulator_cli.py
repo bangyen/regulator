@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 
 # Import from the package
 from experiments.experiment_runner import run_experiment
-from experiments.trainer import train_ml_detector, run_episode
 
 
 @click.group()
@@ -23,7 +22,7 @@ def main() -> None:
     Regulator: Market Competition & Collusion Detection
 
     A Python package for simulating market competition and detecting
-    collusive behavior using machine learning.
+    collusive behavior using LLM-based chat analysis and rule-based monitoring.
     """
     # Load environment variables
     load_dotenv()
@@ -69,75 +68,6 @@ def experiment(
         click.echo("✅ Experiment completed successfully!")
     except Exception as e:
         click.echo(f"❌ Experiment failed: {e}", err=True)
-        sys.exit(1)
-
-
-@main.command()
-@click.option("--n-episodes", default=50, help="Number of episodes to train on")
-@click.option(
-    "--model-type", default="logistic", help="Model type (logistic, lightgbm)"
-)
-@click.option("--existing-logs", help="Path to existing log files")
-@click.option("--output-dir", default="ml_detector_output", help="Output directory")
-def train(
-    n_episodes: int,
-    model_type: str,
-    existing_logs: Optional[str],
-    output_dir: str,
-) -> None:
-    """Train the ML collusion detector."""
-    click.echo(f"Training ML detector with {model_type}...")
-
-    try:
-        # Call the function directly
-        train_ml_detector(
-            n_episodes=n_episodes,
-            model_type=model_type,
-            existing_logs=existing_logs,
-            output_dir=output_dir,
-        )
-        click.echo("✅ Training completed successfully!")
-    except Exception as e:
-        click.echo(f"❌ Training failed: {e}", err=True)
-        sys.exit(1)
-
-
-@main.command()
-@click.option(
-    "--firms", default="random,tit_for_tat", help="Comma-separated agent types"
-)
-@click.option("--steps", default=50, help="Number of steps")
-@click.option("--n-firms", help="Number of firms (auto-detected if not specified)")
-@click.option("--seed", default=42, help="Random seed")
-@click.option("--log-dir", default="logs", help="Log directory")
-def episode(
-    firms: str,
-    steps: int,
-    n_firms: Optional[int],
-    seed: int,
-    log_dir: str,
-) -> None:
-    """Run a single episode."""
-    click.echo("Running single episode...")
-
-    # Parse agent types
-    agent_types = [agent.strip() for agent in firms.split(",")]
-
-    try:
-        result = run_episode(
-            firms=agent_types,
-            steps=steps,
-            n_firms=n_firms,
-            seed=seed,
-            log_dir=log_dir,
-        )
-        click.echo("✅ Episode completed successfully!")
-        if isinstance(result, dict):
-            click.echo(f"Episode ID: {result.get('episode_id', 'unknown')}")
-        else:
-            click.echo("Episode completed successfully!")
-    except Exception as e:
-        click.echo(f"❌ Episode failed: {e}", err=True)
         sys.exit(1)
 
 

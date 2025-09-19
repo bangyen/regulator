@@ -164,6 +164,34 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
 
     step_numbers = [step["step"] for step in steps]
 
+    # Check if any step has regulator monitoring data
+    has_regulator_data = any(
+        "price_monitoring" in step or "chat_monitoring" in step for step in steps
+    )
+
+    if not has_regulator_data:
+        # Create a message plot when no regulator data is available
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No regulator monitoring data available for this episode.<br>This episode was run without regulator monitoring enabled.",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            xanchor="center",
+            yanchor="middle",
+            showarrow=False,
+            font=dict(size=16, color="gray"),
+        )
+        fig.update_layout(
+            title="Regulator Monitoring Results",
+            height=400,
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            showlegend=False,
+        )
+        return fig
+
     # Initialize violation tracking
     parallel_violations = []
     structural_break_violations = []

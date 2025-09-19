@@ -108,7 +108,7 @@ def run_chat_episode(
         agent.reset()
     message_manager.reset()
     chat_regulator.reset()
-    price_regulator.reset()
+    price_regulator.reset(n_firms=env.n_firms)
 
     episode_results: Dict[str, Any] = {
         "total_steps": n_steps,

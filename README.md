@@ -1,13 +1,12 @@
 # Regulator: Market Competition & Collusion Detection
 
-A Python package for simulating market competition and detecting collusive behavior using machine learning.
+A Python package for simulating market competition and detecting collusive behavior using LLM-based chat analysis and rule-based monitoring.
 
 ## Features
 
 - **Market Simulation**: CartelEnv for oligopolistic price competition
 - **Agent Framework**: Multiple agent types (random, tit-for-tat, best response)
 - **Regulator System**: Real-time monitoring and penalty application
-- **ML Collusion Detection**: Machine learning-based collusion detection
 - **LLM Detection**: OpenAI-powered natural language collusion detection
 - **Comprehensive Logging**: Structured episode logging and analysis
 - **Interactive Dashboard**: Streamlit-based visualization and analysis
@@ -41,34 +40,11 @@ A Python package for simulating market competition and detecting collusive behav
 4. **Use the CLI**:
    ```bash
    # Run an experiment
-   regulator experiment --n-episodes 10 --n-firms 3
-   
-   # Train ML detector
-   regulator train --n-episodes 50 --model-type lightgbm
-   
-   # Run single episode
-   regulator episode --firms "random,tit_for_tat" --steps 50
+   regulator experiment --steps 100 --firms "random,tit_for_tat"
    
    # Launch dashboard
    regulator dashboard
    ```
-
-## ML Collusion Detector
-
-Train and use machine learning models to detect collusive behavior:
-
-```bash
-# Train ML detector with demo episodes
-python scripts/train_ml_detector.py --n-episodes 50
-
-# Train with existing log files
-python scripts/train_ml_detector.py --existing-logs logs/
-
-# Use LightGBM model
-python scripts/train_ml_detector.py --model-type lightgbm --n-episodes 50
-```
-
-The ML detector extracts 26 features from episode logs and achieves ≥0.8 AUROC on synthetic datasets.
 
 ## LLM Collusion Detector
 
@@ -95,12 +71,11 @@ The LLM detector analyzes messages for collusive intent and provides confidence 
 ├── src/
 │   ├── agents/          # Market agents (firms, regulator)
 │   ├── cartel/          # Market environment
-│   ├── detectors/       # ML collusion detection
+│   ├── detectors/       # LLM collusion detection
 │   └── episode_logging/ # Structured logging
 ├── tests/               # Test files
 ├── scripts/             # Utility scripts and demos
 ├── logs/                # Episode logs (gitignored)
-├── ml_detector_output/  # ML training outputs (gitignored)
 ├── Makefile            # Development commands
 └── pyproject.toml      # Package configuration
 ```
