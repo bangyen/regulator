@@ -549,7 +549,7 @@ class CartelEnv(gym.Env):
                     market_price**self.current_elasticity
                 )
             else:
-                base_demand = 0.0
+                base_demand = float(0.0)
         else:
             # Original linear demand curve
             base_demand = self.demand_intercept + self.demand_slope * market_price
