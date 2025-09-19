@@ -545,14 +545,16 @@ class CartelEnv(gym.Env):
             # Constant elasticity demand: D(p) = A * p^(-ε)
             # where A is demand_intercept and ε is price_elasticity
             if market_price > 0:
-                base_demand = self.demand_intercept * (
-                    market_price**self.current_elasticity
+                base_demand = float(
+                    self.demand_intercept * (market_price**self.current_elasticity)
                 )
             else:
                 base_demand = float(0.0)
         else:
             # Original linear demand curve
-            base_demand = self.demand_intercept + self.demand_slope * market_price
+            base_demand = float(
+                self.demand_intercept + self.demand_slope * market_price
+            )
 
             # Apply price elasticity effect for linear demand
             # If prices are higher than baseline, demand decreases more than linearly
