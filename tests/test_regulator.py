@@ -24,9 +24,9 @@ class TestRegulatorInitialization:
         """Test Regulator initialization with default parameters."""
         regulator = Regulator()
 
-        assert regulator.parallel_threshold == 5.0
-        assert regulator.parallel_steps == 5
-        assert regulator.structural_break_threshold == 15.0
+        assert regulator.parallel_threshold == 2.0
+        assert regulator.parallel_steps == 3
+        assert regulator.structural_break_threshold == 10.0
         assert regulator.fine_amount == 25.0
         assert regulator.price_history == []
         assert regulator.parallel_violations == []

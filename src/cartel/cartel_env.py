@@ -32,6 +32,7 @@ class CartelEnv(gym.Env):
         shock_std: float = 5.0,
         price_min: float = 1.0,
         price_max: float = 100.0,
+        max_price_change: float = 20.0,  # Maximum price change per step for stability
         seed: Union[int, None] = None,
     ):
         """
@@ -46,6 +47,7 @@ class CartelEnv(gym.Env):
             shock_std: Standard deviation of demand shocks
             price_min: Minimum allowed price
             price_max: Maximum allowed price
+            max_price_change: Maximum price change per step for market stability
             seed: Random seed for reproducibility
         """
         super().__init__()
@@ -71,6 +73,7 @@ class CartelEnv(gym.Env):
         self.shock_std = shock_std
         self.price_min = price_min
         self.price_max = price_max
+        self.max_price_change = max_price_change
 
         # Initialize random number generator
         self.np_random = np.random.default_rng(seed)
@@ -152,6 +155,18 @@ class CartelEnv(gym.Env):
         if len(action) != self.n_firms:
             raise ValueError(f"Action must have length {self.n_firms}")
 
+        # Apply price change constraints for market stability first
+        if self.current_step > 0:  # Skip constraint on first step
+            price_changes = np.abs(action - self.previous_prices)
+            max_change = np.max(price_changes)
+
+            if max_change > self.max_price_change:
+                # Scale down price changes to maintain stability
+                scale_factor = self.max_price_change / max_change
+                price_deltas = action - self.previous_prices
+                constrained_deltas = price_deltas * scale_factor
+                action = self.previous_prices + constrained_deltas
+
         # Clip actions to valid price range
         prices = np.clip(action, self.price_min, self.price_max).astype(np.float32)
 
@@ -166,10 +181,13 @@ class CartelEnv(gym.Env):
         # Allocate demand among firms (equal split for simplicity)
         individual_quantity = total_demand / float(self.n_firms)
 
-        # Calculate profits for each firm (allow negative profits for economic realism)
+        # Calculate profits for each firm
+        # Formula: (price - marginal_cost) * quantity
+        # Negative profits can occur when:
+        # 1. Price < marginal_cost (firm selling at a loss)
+        # 2. Very low demand leading to insufficient revenue
+        # 3. Fines applied by regulator (handled elsewhere)
         profits = (prices - self.marginal_cost) * individual_quantity
-        # Remove profit flooring to show true economic outcomes
-        # profits = np.maximum(profits, 0)  # Ensure non-negative profits
         self.total_profits += profits
         self.current_step += 1
 
@@ -229,9 +247,13 @@ class CartelEnv(gym.Env):
 
         Returns:
             Array of profits for each firm
+
+        Note:
+            Negative profits are allowed for economic realism. They can occur when:
+            - Price < marginal_cost (firm selling at a loss)
+            - Very low demand leading to insufficient revenue
+            - Fines applied by regulator (handled in penalty application)
         """
         profits = (prices - self.marginal_cost) * quantities
-        # Allow negative profits for economic realism
-        # result: np.ndarray = np.maximum(profits, 0)  # Ensure non-negative profits
         result: np.ndarray = profits.astype(np.float32)
         return result

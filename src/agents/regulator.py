@@ -27,10 +27,10 @@ class Regulator:
 
     def __init__(
         self,
-        parallel_threshold: float = 5.0,  # Increased from 2.0 to be less sensitive
-        parallel_steps: int = 5,  # Increased from 3 to require more consecutive steps
-        structural_break_threshold: float = 15.0,  # Increased from 10.0 to be less sensitive
-        fine_amount: float = 25.0,  # Reduced from 50.0 to be less punitive
+        parallel_threshold: float = 2.0,  # More sensitive to detect collusion
+        parallel_steps: int = 3,  # Fewer steps required for detection
+        structural_break_threshold: float = 10.0,  # More sensitive to price jumps
+        fine_amount: float = 25.0,  # Reasonable fine amount
         leniency_enabled: bool = True,
         leniency_reduction: float = 0.5,
         seed: Optional[int] = None,
@@ -156,7 +156,8 @@ class Regulator:
 
         Parallel pricing is detected when:
         1. All firms have identical prices (immediate detection), OR
-        2. All firms' prices are within the threshold for at least the minimum number of consecutive steps
+        2. All firms' prices are within the threshold for at least the minimum number of consecutive steps, OR
+        3. Price variation is very low (coefficient of variation < 0.05) indicating potential collusion
 
         Args:
             step: Current step number
@@ -171,6 +172,16 @@ class Regulator:
                 # Check if all prices are identical (exact match)
                 if len(set(current_prices)) == 1:
                     return True  # All firms have identical prices - clear collusion
+
+                # Check for very low price variation (coefficient of variation < 0.05)
+                price_mean = np.mean(current_prices)
+                if price_mean > 0:  # Avoid division by zero
+                    price_std = np.std(current_prices)
+                    cv = price_std / price_mean
+                    if (
+                        cv < 0.05 and price_mean > 20
+                    ):  # Very low variation with reasonable prices
+                        return True  # Suspiciously similar prices
 
         # Need at least parallel_steps of history for threshold-based detection
         if len(self.price_history) < self.parallel_steps:

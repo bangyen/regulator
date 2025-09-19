@@ -192,6 +192,7 @@ class TestCartelEnv:
             demand_intercept=100.0,
             demand_slope=-1.0,
             shock_std=0.0,
+            max_price_change=200.0,  # Allow large price changes for this test
             seed=42,
         )
 
@@ -326,6 +327,40 @@ class TestCartelEnv:
         # Check specific values
         expected_profits = (prices - env.marginal_cost) * quantities
         assert np.allclose(profits, expected_profits)
+
+    def test_price_change_constraint(self) -> None:
+        """Test that price changes are constrained for market stability."""
+        env = CartelEnv(
+            n_firms=2,
+            max_price_change=10.0,  # Limit price changes to 10
+            seed=42,
+        )
+
+        obs, _ = env.reset(seed=42)
+
+        # First step: set initial prices
+        initial_prices = np.array([20.0, 25.0], dtype=np.float32)
+        obs, rewards, terminated, truncated, info = env.step(initial_prices)
+
+        # Second step: try to make a large price change
+        large_change_prices = np.array(
+            [50.0, 60.0], dtype=np.float32
+        )  # 30-35 unit changes
+        obs, rewards, terminated, truncated, info = env.step(large_change_prices)
+
+        # Check that prices were constrained
+        actual_prices = info["prices"]
+        price_changes = np.abs(actual_prices - initial_prices)
+        max_change = np.max(price_changes)
+
+        # Price changes should be limited to max_price_change
+        assert (
+            max_change <= env.max_price_change + 1e-6
+        )  # Allow small floating point errors
+
+        # Prices should be different from initial but constrained
+        assert not np.allclose(actual_prices, initial_prices)
+        assert not np.allclose(actual_prices, large_change_prices)
 
     def test_multiple_resets_independence(self) -> None:
         """Test that multiple resets produce independent episodes."""
