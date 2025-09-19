@@ -9,23 +9,19 @@ This dashboard provides interactive visualization of episode logs including:
 """
 
 import json
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import streamlit as st
 
+# Suppress numpy warnings for cleaner output
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="numpy")
+np.seterr(divide="ignore", invalid="ignore")
+
 # Dashboard imports
-try:
-    import sys
-
-    sys.path.append(str(Path(__file__).parent.parent / "src"))
-    from economic_validation import validate_economic_data, check_economic_plausibility
-
-    ECONOMIC_VALIDATION_AVAILABLE = True
-except ImportError:
-    ECONOMIC_VALIDATION_AVAILABLE = False
 
 
 def load_episode_data(log_file: Path) -> Dict[str, Any]:
@@ -97,10 +93,14 @@ def calculate_surplus(
 
     if demand_slope < 0:  # Normal downward-sloping demand
         # Calculate the price where demand would be zero (choke price)
-        choke_price = demand_intercept / abs(demand_slope)
+        # Avoid division by zero
+        if abs(demand_slope) < 1e-10:
+            choke_price = float("inf")  # Very flat demand curve
+        else:
+            choke_price = demand_intercept / abs(demand_slope)
 
         # Consumer surplus = area of triangle above market price
-        if market_price < choke_price:
+        if market_price < choke_price and total_demand > 0:
             consumer_surplus = 0.5 * (choke_price - market_price) * total_demand
         else:
             consumer_surplus = (
@@ -108,7 +108,10 @@ def calculate_surplus(
             )
     else:
         # Upward-sloping demand (unusual but possible)
-        consumer_surplus = 0.5 * (market_price - demand_intercept) * total_demand
+        if total_demand > 0:
+            consumer_surplus = 0.5 * (market_price - demand_intercept) * total_demand
+        else:
+            consumer_surplus = 0.0
 
     # Ensure non-negative consumer surplus
     consumer_surplus = max(0.0, consumer_surplus)
@@ -120,15 +123,20 @@ def calculate_surplus(
     if individual_quantities is not None and len(individual_quantities) == len(prices):
         # Calculate using individual firm data for more accuracy
         total_revenue = sum(
-            price * quantity for price, quantity in zip(prices, individual_quantities)
+            price * quantity
+            for price, quantity in zip(prices, individual_quantities)
+            if quantity > 0  # Only include positive quantities
         )
         total_variable_costs = marginal_cost * sum(individual_quantities)
         producer_surplus = total_revenue - total_variable_costs
     else:
         # Fallback to market-level calculation
-        total_revenue = market_price * total_demand
-        total_variable_costs = marginal_cost * total_demand
-        producer_surplus = total_revenue - total_variable_costs
+        if total_demand > 0:
+            total_revenue = market_price * total_demand
+            total_variable_costs = marginal_cost * total_demand
+            producer_surplus = total_revenue - total_variable_costs
+        else:
+            producer_surplus = 0.0
 
     # Producer surplus can be negative if firms are selling below marginal cost
     # This is economically realistic (firms may accept losses temporarily)
@@ -185,7 +193,8 @@ def create_price_trajectory_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     )
 
     fig.update_layout(
-        title="Price Trajectories Over Time",
+        title="Price Trajectories",
+        title_font_size=24,
         xaxis_title="Step",
         yaxis_title="Price",
         hovermode="x unified",
@@ -241,10 +250,7 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
         )
         return fig
 
-    # Initialize violation tracking
-    parallel_violations = []
-    structural_break_violations = []
-    chat_violations = []
+    # Initialize fines tracking
     total_fines = []
 
     for step in steps:
@@ -252,80 +258,20 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
         if "regulator_flags" in step:
             # New format: regulator_flags contains all monitoring data
             regulator_flags = step.get("regulator_flags", {})
-            parallel_violations.append(
-                1 if regulator_flags.get("parallel_violation", False) else 0
-            )
-            structural_break_violations.append(
-                1 if regulator_flags.get("structural_break_violation", False) else 0
-            )
-            # No chat monitoring in this format
-            chat_violations.append(0)
             # Total fines from regulator_flags
             total_fines.append(sum(regulator_flags.get("fines_applied", [])))
         else:
             # Legacy format: separate price_monitoring and chat_monitoring
             price_monitoring = step.get("price_monitoring", {})
-            parallel_violations.append(
-                1 if price_monitoring.get("parallel_violation", False) else 0
-            )
-            structural_break_violations.append(
-                1 if price_monitoring.get("structural_break_violation", False) else 0
-            )
-
             # Chat monitoring violations
             chat_monitoring = step.get("chat_monitoring", {})
-            chat_violations.append(
-                1 if chat_monitoring.get("collusive_messages", 0) > 0 else 0
-            )
-
             # Total fines
             price_fines = sum(price_monitoring.get("fines_applied", []))
             chat_fines = chat_monitoring.get("fines_applied", 0.0)
             total_fines.append(price_fines + chat_fines)
 
-    fig = make_subplots(
-        rows=2,
-        cols=1,
-        subplot_titles=("Violations Over Time", "Fines Over Time"),
-        vertical_spacing=0.1,
-    )
-
-    # Violations plot
-    fig.add_trace(
-        go.Scatter(
-            x=step_numbers,
-            y=parallel_violations,
-            mode="lines+markers",
-            name="Parallel Violations",
-            line=dict(color="red", width=2),
-        ),
-        row=1,
-        col=1,
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=step_numbers,
-            y=structural_break_violations,
-            mode="lines+markers",
-            name="Structural Break Violations",
-            line=dict(color="orange", width=2),
-        ),
-        row=1,
-        col=1,
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=step_numbers,
-            y=chat_violations,
-            mode="lines+markers",
-            name="Chat Violations",
-            line=dict(color="purple", width=2),
-        ),
-        row=1,
-        col=1,
-    )
+    # Create fines-only plot
+    fig = go.Figure()
 
     # Fines plot
     fig.add_trace(
@@ -336,16 +282,18 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
             name="Total Fines",
             line=dict(color="darkred", width=2),
             fill="tonexty",
-        ),
-        row=2,
-        col=1,
+        )
     )
 
-    fig.update_layout(title="Regulator Monitoring Results", height=600, showlegend=True)
-
-    fig.update_xaxes(title_text="Step", row=2, col=1)
-    fig.update_yaxes(title_text="Violation (0/1)", row=1, col=1)
-    fig.update_yaxes(title_text="Fines", row=2, col=1)
+    # Update layout and axes
+    fig.update_layout(
+        title="Regulator Flags",
+        title_font_size=24,
+        height=400,
+        showlegend=True,
+        xaxis_title="Step",
+        yaxis_title="Fines",
+    )
 
     return fig
 
@@ -416,7 +364,8 @@ def create_surplus_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     )
 
     fig.update_layout(
-        title="Consumer vs Producer Surplus Over Time",
+        title="Surplus Analysis",
+        title_font_size=24,
         xaxis_title="Step",
         yaxis_title="Surplus",
         hovermode="x unified",
@@ -458,7 +407,8 @@ def create_profit_plot(steps: List[Dict[str, Any]]) -> go.Figure:
         )
 
     fig.update_layout(
-        title="Individual Firm Profits Over Time",
+        title="Profit Analysis",
+        title_font_size=24,
         xaxis_title="Step",
         yaxis_title="Profit",
         hovermode="x unified",
@@ -468,116 +418,133 @@ def create_profit_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     return fig
 
 
-def display_economic_validation(episode_data: Dict[str, Any]) -> None:
-    """
-    Display economic validation results.
-
-    Args:
-        episode_data: Dictionary containing episode data
-    """
-    if not ECONOMIC_VALIDATION_AVAILABLE:
-        st.warning("Economic validation module not available")
-        return
-
-    try:
-        # Validate economic data
-        is_valid, errors = validate_economic_data(episode_data)
-
-        # Show validation status
-        if is_valid:
-            st.success("✅ Economic data is VALID - all constraints satisfied")
-        else:
-            st.error("❌ Economic data has ERRORS:")
-            for error in errors:
-                st.error(f"  - {error}")
-
-        # Check economic plausibility
-        plausibility = check_economic_plausibility(episode_data)
-
-        st.subheader("Economic Plausibility")
-
-        if plausibility.get("overall_plausible", False):
-            st.success("✅ Data is economically plausible")
-        else:
-            st.warning("⚠️ Data shows some economic implausibilities")
-
-        # Show detailed statistics
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("Price Statistics")
-            price_stats = plausibility["price_stats"]
-            st.metric("Mean Price", f"{price_stats['mean']:.2f}")
-            st.metric("Price Std Dev", f"{price_stats['std']:.2f}")
-            st.metric(
-                "Price Range", f"{price_stats['min']:.2f} - {price_stats['max']:.2f}"
-            )
-
-            st.subheader("Demand Statistics")
-            demand_stats = plausibility["demand_stats"]
-            st.metric("Mean Demand", f"{demand_stats['mean']:.2f}")
-            st.metric("Zero Demand Steps", demand_stats["zero_demand_steps"])
-
-        with col2:
-            st.subheader("Profit Statistics")
-            profit_stats = plausibility["profit_stats"]
-            st.metric("Mean Profit", f"{profit_stats['mean']:.2f}")
-            st.metric("Negative Profits", profit_stats["negative_profits"])
-            st.metric("Total Negative", f"{profit_stats['total_negative_profits']:.2f}")
-
-            st.subheader("Shock Statistics")
-            shock_stats = plausibility["shock_stats"]
-            st.metric("Mean Shock", f"{shock_stats['mean']:.2f}")
-            st.metric("Shock Std Dev", f"{shock_stats['std']:.2f}")
-
-        # Show plausibility checks
-        st.subheader("Plausibility Checks")
-        checks = plausibility["plausibility_checks"]
-
-        for check_name, result in checks.items():
-            if result:
-                st.success(f"✅ {check_name.replace('_', ' ').title()}")
-            else:
-                st.error(f"❌ {check_name.replace('_', ' ').title()}")
-
-    except Exception as e:
-        st.error(f"Error in economic validation: {str(e)}")
-
-
 def display_episode_summary(episode_data: Dict[str, Any]) -> None:
     """
-    Display essential episode summary information.
+    Display comprehensive episode summary information including enhanced monitoring data.
 
     Args:
         episode_data: Dictionary containing episode data
     """
     header = episode_data.get("header", {})
-    summary = episode_data.get("summary", {})
     steps = episode_data.get("steps", [])
 
     if not header:
         st.error("No episode header found")
         return
 
-    # Show only essential metrics in a compact format
+    # Enhanced episode information - same 4 metrics but more informative
     col1, col2, col3, col4 = st.columns(4)
 
+    # Check if this is an enhanced episode (has market volatility data)
+    has_enhanced_data = any(
+        step.get("regulator_flags", {}).get("market_volatility") is not None
+        for step in steps
+    )
+
     with col1:
-        st.metric("Episode ID", header.get("episode_id", "N/A"))
+        if has_enhanced_data:
+            # Show total violations for enhanced episodes
+            parallel_violations = sum(
+                1
+                for step in steps
+                if step.get("regulator_flags", {}).get("parallel_violation", False)
+            )
+            structural_violations = sum(
+                1
+                for step in steps
+                if step.get("regulator_flags", {}).get(
+                    "structural_break_violation", False
+                )
+            )
+            total_violations = parallel_violations + structural_violations
+            st.metric("Total Violations", total_violations)
+        else:
+            # Show steps for standard episodes
+            st.metric("Steps", len(steps))
 
     with col2:
-        st.metric("Firms", header.get("n_firms", "N/A"))
+        if has_enhanced_data:
+            # Show average market volatility for enhanced episodes
+            market_volatilities = [
+                step.get("regulator_flags", {}).get("market_volatility", 0)
+                for step in steps
+            ]
+            avg_volatility = (
+                sum(market_volatilities) / len(market_volatilities)
+                if market_volatilities
+                else 0
+            )
+            st.metric("Avg Market Volatility", f"{avg_volatility:.3f}")
+        else:
+            # Show total violations for standard episodes
+            parallel_violations = sum(
+                1
+                for step in steps
+                if step.get("regulator_flags", {}).get("parallel_violation", False)
+            )
+            structural_violations = sum(
+                1
+                for step in steps
+                if step.get("regulator_flags", {}).get(
+                    "structural_break_violation", False
+                )
+            )
+            total_violations = parallel_violations + structural_violations
+            st.metric("Total Violations", total_violations)
 
     with col3:
-        st.metric("Steps", len(steps))
+        if has_enhanced_data:
+            # Show total fines for enhanced episodes
+            total_fines = 0
+            for step in steps:
+                fines = step.get("regulator_flags", {}).get("fines_applied", [0])
+                if isinstance(fines, list):
+                    total_fines += sum(fines)
+                else:
+                    total_fines += fines
+            st.metric("Total Fines", f"{total_fines:.2f}")
+        else:
+            # Show total fines for standard episodes
+            total_fines = 0
+            for step in steps:
+                fines = step.get("regulator_flags", {}).get("fines_applied", [0])
+                if isinstance(fines, list):
+                    total_fines += sum(fines)
+                else:
+                    total_fines += fines
+            st.metric("Total Fines", f"{total_fines:.2f}")
 
     with col4:
-        if summary:
-            final_market_price = summary.get("final_market_price")
-            if final_market_price is not None:
-                st.metric("Final Price", f"{final_market_price:.2f}")
-            else:
-                st.metric("Final Price", "N/A")
+        if has_enhanced_data:
+            # Show average penalty multiplier for enhanced episodes
+            penalty_multipliers = []
+            for step in steps:
+                flags = step.get("regulator_flags", {})
+                if "penalty_multipliers" in flags:
+                    penalty_multipliers.extend(flags["penalty_multipliers"])
+            avg_multiplier = (
+                sum(penalty_multipliers) / len(penalty_multipliers)
+                if penalty_multipliers
+                else 0
+            )
+            st.metric("Avg Penalty Multiplier", f"{avg_multiplier:.2f}x")
+        else:
+            # Show violation rate for standard episodes
+            parallel_violations = sum(
+                1
+                for step in steps
+                if step.get("regulator_flags", {}).get("parallel_violation", False)
+            )
+            structural_violations = sum(
+                1
+                for step in steps
+                if step.get("regulator_flags", {}).get(
+                    "structural_break_violation", False
+                )
+            )
+            total_violations = parallel_violations + structural_violations
+            violation_rate = (total_violations / len(steps)) * 100 if steps else 0
+            st.metric("Violation Rate", f"{violation_rate:.1f}%")
 
 
 def main() -> None:
@@ -630,40 +597,27 @@ def main() -> None:
             "💵 Profit Analysis",
         ]
 
-        if ECONOMIC_VALIDATION_AVAILABLE:
-            tab_names.append("🔍 Economic Validation")
-
         tabs = st.tabs(tab_names)
-        tab1, tab2, tab3, tab4 = tabs[:4]
-        tab5 = tabs[4] if ECONOMIC_VALIDATION_AVAILABLE else None
+        tab1, tab2, tab3, tab4 = tabs
 
         with tab1:
-            st.header("Price Trajectories")
             price_fig = create_price_trajectory_plot(episode_data["steps"])
             st.plotly_chart(price_fig, use_container_width=True)
 
         with tab2:
-            st.header("Regulator Monitoring")
             flags_fig = create_regulator_flags_plot(episode_data["steps"])
             st.plotly_chart(flags_fig, use_container_width=True)
 
         with tab3:
-            st.header("Surplus Analysis")
             surplus_fig = create_surplus_plot(episode_data["steps"])
             st.plotly_chart(surplus_fig, use_container_width=True)
 
         with tab4:
-            st.header("Profit Analysis")
             profit_fig = create_profit_plot(episode_data["steps"])
             st.plotly_chart(profit_fig, use_container_width=True)
 
-        if tab5 is not None and ECONOMIC_VALIDATION_AVAILABLE:
-            with tab5:
-                st.header("Economic Validation")
-                display_economic_validation(episode_data)
-
         # Display episode summary at the bottom
-        st.header("Episode Summary")
+        st.subheader("Episode Summary")
         display_episode_summary(episode_data)
 
     except Exception as e:

@@ -26,9 +26,9 @@ class MLRegulator(Regulator):
 
     def __init__(
         self,
-        parallel_threshold: float = 2.0,
-        parallel_steps: int = 3,
-        structural_break_threshold: float = 10.0,
+        parallel_threshold: float = 5.0,  # Less sensitive to reduce false positives
+        parallel_steps: int = 4,  # More steps required for detection
+        structural_break_threshold: float = 30.0,  # Even less sensitive to individual price jumps
         fine_amount: float = 25.0,
         leniency_enabled: bool = True,
         leniency_reduction: float = 0.5,

@@ -302,9 +302,29 @@ def run_episode_with_regulator_logging(
             "structural_break_violation": detection_results[
                 "structural_break_violation"
             ],
-            "fines_applied": detection_results["fines_applied"].tolist(),
+            "fines_applied": (
+                detection_results["fines_applied"]
+                if isinstance(detection_results["fines_applied"], list)
+                else detection_results["fines_applied"].tolist()
+            ),
             "violation_details": detection_results["violation_details"],
         }
+
+        # Add enhanced regulator data if available
+        if "risk_score" in detection_results:
+            regulator_flags["risk_score"] = detection_results["risk_score"]
+        if "market_volatility" in detection_results:
+            regulator_flags["market_volatility"] = detection_results[
+                "market_volatility"
+            ]
+        if "violation_severities" in detection_results:
+            regulator_flags["violation_severities"] = detection_results[
+                "violation_severities"
+            ]
+        if "penalty_multipliers" in detection_results:
+            regulator_flags["penalty_multipliers"] = detection_results[
+                "penalty_multipliers"
+            ]
 
         # Prepare additional info for logging
         additional_info = {
@@ -340,7 +360,11 @@ def run_episode_with_regulator_logging(
             profits_list.append(modified_rewards.copy().tolist())
         fines_list = episode_data["episode_fines"]
         if isinstance(fines_list, list):
-            fines_list.append(detection_results["fines_applied"].copy().tolist())
+            fines = detection_results["fines_applied"]
+            if isinstance(fines, list):
+                fines_list.append(fines.copy())
+            else:
+                fines_list.append(fines.copy().tolist())
         demand_shocks_list = episode_data["episode_demand_shocks"]
         if isinstance(demand_shocks_list, list):
             demand_shocks_list.append(step_info["demand_shock"])
