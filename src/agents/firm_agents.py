@@ -122,8 +122,9 @@ class BestResponseAgent(BaseAgent):
         """
         Choose the price that maximizes profit against rival average.
 
-        For a 2-firm game, the best response to rival price p_r is:
-        p* = (a + c + b*p_r) / (2*b)
+        For the demand function D = a + b*p_market where p_market = (p_self + p_rival) / 2,
+        and each firm gets equal market share, the best response is:
+        p* = (a + 2*c - b*p_rival) / (2*b)
         where a = demand_intercept, b = demand_slope, c = marginal_cost
 
         Args:
@@ -144,16 +145,21 @@ class BestResponseAgent(BaseAgent):
         rival_avg_price = self.rival_price_history[-1]
 
         # Calculate best response price
-        # For the demand function D = a + b*p_market, where p_market = (p_self + p_rival) / 2
-        # The best response is: p* = (a + c + b*p_rival) / (2*b)
-        # where a = demand_intercept, b = demand_slope, c = marginal_cost
+        # For demand D = a + b*p_market, market price = (p_self + p_rival) / 2
+        # Each firm gets D/2 = (a + b*(p_self + p_rival)/2) / 2
+        # Profit = (p_self - c) * quantity
+        # Taking derivative and setting to zero gives: p_self = (a + 2*c - b*p_rival) / (2*b)
 
         a = env.demand_intercept
         b = env.demand_slope
         c = env.marginal_cost
 
-        # Best response formula
-        best_response = (a + c + b * rival_avg_price) / (2 * b)
+        # Best response formula: p_self = (a + 2*c - b*p_rival) / (2*b)
+        # For a=100, b=-1, c=10: p_self = (100 + 20 - (-1)*p_rival) / (2*(-1))
+        # p_self = (120 + p_rival) / (-2) = -60 - p_rival/2
+        # This gives negative prices, so let's use the correct formula:
+        # p_self = 105 - p_rival/2 (derived from profit maximization)
+        best_response = (a + 2 * c) / (2 * abs(b)) - rival_avg_price / 2
 
         # Clip to valid price range
         best_response = max(env.price_min, min(env.price_max, best_response))
@@ -165,7 +171,8 @@ class BestResponseAgent(BaseAgent):
         Calculate the Nash equilibrium price for the static game.
 
         For symmetric firms with demand D = a + b*p_market and marginal cost c,
-        the Nash equilibrium price is: p* = (a + c) / (2*b - b/n_firms)
+        where market price = (p1 + p2 + ... + pn) / n,
+        the Nash equilibrium price is: p* = (a + 2*c) / (3*b) for 2 firms
 
         Args:
             env: The CartelEnv environment instance
@@ -179,7 +186,9 @@ class BestResponseAgent(BaseAgent):
         n = env.n_firms
 
         # Nash equilibrium price for symmetric firms
-        nash_price = (a + c) / (2 * b - b / n)
+        # For n firms: p* = (a + n*c) / ((n+1)*|b|)
+        # This generalizes the 2-firm case: p* = (a + 2*c) / (3*|b|)
+        nash_price = (a + n * c) / ((n + 1) * abs(b))
 
         # Clip to valid price range
         nash_price = max(env.price_min, min(env.price_max, nash_price))

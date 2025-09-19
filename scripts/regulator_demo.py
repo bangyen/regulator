@@ -70,7 +70,7 @@ def run_regulator_demo(
     obs, _ = env.reset(seed=seed)
     for agent in agents:
         agent.reset()
-    regulator.reset()
+    regulator.reset(n_firms=n_firms)
 
     # Track simulation results
     results: Dict[str, Any] = {
