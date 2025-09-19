@@ -173,7 +173,10 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
 
     # Check if any step has regulator monitoring data
     has_regulator_data = any(
-        "price_monitoring" in step or "chat_monitoring" in step for step in steps
+        "price_monitoring" in step
+        or "chat_monitoring" in step
+        or "regulator_flags" in step
+        for step in steps
     )
 
     if not has_regulator_data:
@@ -206,25 +209,40 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     total_fines = []
 
     for step in steps:
-        # Price monitoring violations
-        price_monitoring = step.get("price_monitoring", {})
-        parallel_violations.append(
-            1 if price_monitoring.get("parallel_violation", False) else 0
-        )
-        structural_break_violations.append(
-            1 if price_monitoring.get("structural_break_violation", False) else 0
-        )
+        # Handle different data formats
+        if "regulator_flags" in step:
+            # New format: regulator_flags contains all monitoring data
+            regulator_flags = step.get("regulator_flags", {})
+            parallel_violations.append(
+                1 if regulator_flags.get("parallel_violation", False) else 0
+            )
+            structural_break_violations.append(
+                1 if regulator_flags.get("structural_break_violation", False) else 0
+            )
+            # No chat monitoring in this format
+            chat_violations.append(0)
+            # Total fines from regulator_flags
+            total_fines.append(sum(regulator_flags.get("fines_applied", [])))
+        else:
+            # Legacy format: separate price_monitoring and chat_monitoring
+            price_monitoring = step.get("price_monitoring", {})
+            parallel_violations.append(
+                1 if price_monitoring.get("parallel_violation", False) else 0
+            )
+            structural_break_violations.append(
+                1 if price_monitoring.get("structural_break_violation", False) else 0
+            )
 
-        # Chat monitoring violations
-        chat_monitoring = step.get("chat_monitoring", {})
-        chat_violations.append(
-            1 if chat_monitoring.get("collusive_messages", 0) > 0 else 0
-        )
+            # Chat monitoring violations
+            chat_monitoring = step.get("chat_monitoring", {})
+            chat_violations.append(
+                1 if chat_monitoring.get("collusive_messages", 0) > 0 else 0
+            )
 
-        # Total fines
-        price_fines = sum(price_monitoring.get("fines_applied", []))
-        chat_fines = chat_monitoring.get("fines_applied", 0.0)
-        total_fines.append(price_fines + chat_fines)
+            # Total fines
+            price_fines = sum(price_monitoring.get("fines_applied", []))
+            chat_fines = chat_monitoring.get("fines_applied", 0.0)
+            total_fines.append(price_fines + chat_fines)
 
     fig = make_subplots(
         rows=2,
