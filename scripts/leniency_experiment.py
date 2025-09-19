@@ -15,13 +15,13 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from src.agents.regulator import Regulator
-from src.agents.firm_agents import (
+from agents.regulator import Regulator
+from agents.firm_agents import (
     TitForTatAgent,
     WhistleblowerTitForTatAgent,
 )
-from src.cartel.cartel_env import CartelEnv
-from src.agents.leniency import LeniencyProgram
+from cartel.cartel_env import CartelEnv
+from agents.leniency import LeniencyProgram
 
 
 def run_episode_with_leniency(

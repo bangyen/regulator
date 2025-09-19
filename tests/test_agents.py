@@ -194,11 +194,8 @@ class TestBestResponseAgent:
         price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
         # For 2-firm symmetric game with D = 100 - p_market, c = 10
-        # Nash equilibrium: p* = (a + c) / (2*b - b/n) = (100 + 10) / (2*(-1) - (-1)/2) = 110 / (-2 + 0.5) = 110 / (-1.5) = -73.33
-        # But this would be negative, so it gets clipped to price_min = 1.0
-        expected_nash = max(
-            env.price_min, min(env.price_max, (100 + 10) / (2 * (-1) - (-1) / 2))
-        )
+        # Corrected Nash equilibrium: p* = (a + n*c) / ((n+1)*|b|) = (100 + 2*10) / ((2+1)*1) = 120 / 3 = 40.0
+        expected_nash = (100 + 2 * 10) / ((2 + 1) * 1)
 
         assert math.isclose(price, expected_nash)
 
@@ -221,13 +218,9 @@ class TestBestResponseAgent:
 
         price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
-        # Analytical best response: p* = (a + c + b*p_rival) / (2*b)
-        # p* = (100 + 10 + (-1)*30) / (2*(-1)) = (110 - 30) / (-2) = 80 / (-2) = -40
-        # But this is negative, so it gets clipped to price_min = 1.0
-        expected_best_response = max(
-            env.price_min,
-            min(env.price_max, (100 + 10 + (-1) * rival_price) / (2 * (-1))),
-        )
+        # Corrected best response: p* = (a + 2*c) / (2*|b|) - p_rival/2
+        # p* = (100 + 2*10) / (2*1) - 30/2 = 120/2 - 15 = 60 - 15 = 45.0
+        expected_best_response = (100 + 2 * 10) / (2 * 1) - rival_price / 2
 
         assert math.isclose(price, expected_best_response)
 
@@ -250,13 +243,9 @@ class TestBestResponseAgent:
 
         price = agent.choose_price(observation=np.array([0.0, 0.0, 0.0]), env=env)
 
-        # Analytical best response: p* = (a + c + b*p_rival) / (2*b)
-        # p* = (200 + 5 + (-2)*20) / (2*(-2)) = (205 - 40) / (-4) = 165 / (-4) = -41.25
-        # Still negative, so clipped to price_min
-        expected_best_response = max(
-            env.price_min,
-            min(env.price_max, (200 + 5 + (-2) * rival_price) / (2 * (-2))),
-        )
+        # Corrected best response: p* = (a + 2*c) / (2*|b|) - p_rival/2
+        # p* = (200 + 2*5) / (2*2) - 20/2 = 210/4 - 10 = 52.5 - 10 = 42.5
+        expected_best_response = (200 + 2 * 5) / (2 * 2) - rival_price / 2
 
         assert math.isclose(price, expected_best_response)
 
@@ -298,11 +287,8 @@ class TestBestResponseAgent:
         nash_price = agent._calculate_nash_equilibrium_price(env)
 
         # For n=3, c=15, a=150, b=-1.5:
-        # p* = (a + c) / (2*b - b/n) = (150 + 15) / (2*(-1.5) - (-1.5)/3) = 165 / (-3 + 0.5) = 165 / (-2.5) = -66
-        # Clipped to price_min = 1.0
-        expected_nash = max(
-            env.price_min, min(env.price_max, (150 + 15) / (2 * (-1.5) - (-1.5) / 3))
-        )
+        # Corrected Nash equilibrium: p* = (a + n*c) / ((n+1)*|b|) = (150 + 3*15) / ((3+1)*1.5) = 195 / 6 = 32.5
+        expected_nash = (150 + 3 * 15) / ((3 + 1) * 1.5)
 
         assert math.isclose(nash_price, expected_nash)
 

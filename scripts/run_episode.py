@@ -183,7 +183,7 @@ def run_episode(
             demand_shock=step_info["demand_shock"],
             market_price=step_info["market_price"],
             total_demand=step_info["total_demand"],
-            individual_quantity=step_info["individual_quantity"],
+            individual_quantity=step_info["individual_quantities"],
             total_profits=step_info["total_profits"],
             additional_info={
                 "agent_types": firms,

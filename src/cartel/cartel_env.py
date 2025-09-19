@@ -714,7 +714,7 @@ class CartelEnv(gym.Env):
         variable_costs = self.marginal_costs * quantities
 
         # Apply learning curves: costs decrease with cumulative production
-        # Learning curve: cost = base_cost * (cumulative_production / reference_production)^(-learning_rate)
+        # Learning curve: cost = base_cost * (cumulative_production / reference_production)^(log2(learning_rate))
         if np.any(self.cumulative_production > 0):
             # Learning curve: costs decrease as cumulative production increases
             # learning_rate = 0.8 means 20% cost reduction per doubling of production
@@ -723,7 +723,8 @@ class CartelEnv(gym.Env):
             production_ratio = np.maximum(
                 self.cumulative_production / reference_production, 1e-6
             )
-            learning_factor = np.power(production_ratio, -np.log2(self.learning_rate))
+            # Fix: learning_rate should reduce costs, so use positive log2(learning_rate)
+            learning_factor = np.power(production_ratio, np.log2(self.learning_rate))
             variable_costs = variable_costs * learning_factor
 
         if self.use_economies_of_scale:
