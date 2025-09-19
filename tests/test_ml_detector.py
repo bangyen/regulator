@@ -74,7 +74,7 @@ class TestFeatureExtractor:
                 "demand_shock": demand_shock,
                 "market_price": market_price,
                 "total_demand": total_demand,
-                "individual_quantity": individual_quantity,
+                "individual_quantities": individual_quantity,
                 "total_profits": profits,
                 "additional_info": {
                     "agent_types": ["random", "titfortat"],
@@ -353,7 +353,7 @@ class TestSyntheticLabels:
                         "demand_shock": 0.0,
                         "market_price": 52.5 + i * 5,
                         "total_demand": 50.0,
-                        "individual_quantity": 25.0,
+                        "individual_quantities": [25.0, 25.0],
                         "total_profits": [100 + i * 10, 110 + i * 10],
                     }
                     f.write(json.dumps(step_data) + "\n")
@@ -430,7 +430,7 @@ class TestIntegration:
                     "demand_shock": demand_shock,
                     "market_price": market_price,
                     "total_demand": total_demand,
-                    "individual_quantity": individual_quantity,
+                    "individual_quantities": individual_quantity,
                     "total_profits": profits,
                     "additional_info": {
                         "agent_types": ["random", "titfortat"],

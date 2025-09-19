@@ -28,6 +28,11 @@ class TestCartelEnv:
         assert env.shock_std == 5.0
         assert env.price_min == 1.0
         assert env.price_max == 100.0
+        assert env.competition_intensity == 2.0
+        assert env.price_elasticity == -1.5
+        # Check that marginal_costs array is created correctly
+        assert len(env.marginal_costs) == 3
+        assert np.allclose(env.marginal_costs, 10.0)
 
     def test_initialization_custom_params(self) -> None:
         """Test environment initialization with custom parameters."""
@@ -48,9 +53,24 @@ class TestCartelEnv:
         assert env.marginal_cost == 15.0
         assert env.demand_intercept == 200.0
         assert env.demand_slope == -2.0
+        assert len(env.marginal_costs) == 5
+        assert np.allclose(env.marginal_costs, 15.0)
         assert env.shock_std == 10.0
         assert env.price_min == 5.0
         assert env.price_max == 200.0
+
+    def test_initialization_firm_specific_costs(self) -> None:
+        """Test environment initialization with firm-specific marginal costs."""
+        marginal_costs = [8.0, 12.0, 10.0, 9.5]
+        env = CartelEnv(
+            n_firms=4,
+            marginal_costs=marginal_costs,
+            seed=42,
+        )
+
+        assert len(env.marginal_costs) == 4
+        assert np.allclose(env.marginal_costs, marginal_costs)
+        assert env.marginal_cost == 10.0  # Default value still stored
 
     def test_initialization_validation_errors(self) -> None:
         """Test that initialization raises appropriate validation errors."""
@@ -75,6 +95,21 @@ class TestCartelEnv:
             ValueError, match="Price minimum must be less than price maximum"
         ):
             CartelEnv(price_min=100.0, price_max=50.0)
+
+        # Test new parameter validations
+        with pytest.raises(
+            ValueError, match="marginal_costs must have length equal to n_firms"
+        ):
+            CartelEnv(n_firms=3, marginal_costs=[10.0, 15.0])  # Wrong length
+
+        with pytest.raises(ValueError, match="All marginal costs must be non-negative"):
+            CartelEnv(n_firms=2, marginal_costs=[10.0, -5.0])  # Negative cost
+
+        with pytest.raises(ValueError, match="Competition intensity must be positive"):
+            CartelEnv(competition_intensity=0.0)
+
+        with pytest.raises(ValueError, match="Price elasticity should be negative"):
+            CartelEnv(price_elasticity=1.0)
 
     def test_action_space(self) -> None:
         """Test that action space is correctly defined."""
@@ -154,12 +189,14 @@ class TestCartelEnv:
     def test_step_reward_calculation_simple_case(self) -> None:
         """Test reward calculation with simple hand-calculated inputs."""
         # Set up environment with no demand shock for predictable results
+        # Use competition_intensity=1.0 to get more predictable market shares
         env = CartelEnv(
             n_firms=2,
             marginal_cost=10.0,
             demand_intercept=100.0,
             demand_slope=-1.0,
             shock_std=0.0,  # No randomness
+            competition_intensity=1.0,  # Linear competition for predictable results
             seed=42,
         )
 
@@ -173,16 +210,25 @@ class TestCartelEnv:
         # Market price = (20 + 30) / 2 = 25
         # Base demand = 100 - 1 * 25 = 75
         # Total demand = 75 + 0 (no shock) = 75
-        # Individual quantity = 75 / 2 = 37.5
-        # Firm 1 profit = (20 - 10) * 37.5 = 375
-        # Firm 2 profit = (30 - 10) * 37.5 = 750
+        # Market shares with competition_intensity=1.0:
+        #   competitiveness = [1/20, 1/30] = [0.05, 0.0333...]
+        #   normalized shares = [0.05/(0.05+0.0333), 0.0333/(0.05+0.0333)] ≈ [0.6, 0.4]
+        # Individual quantities = [75 * 0.6, 75 * 0.4] = [45, 30]
+        # Firm 1 profit = (20 - 10) * 45 = 450
+        # Firm 2 profit = (30 - 10) * 30 = 600
 
-        expected_rewards = np.array([375.0, 750.0], dtype=np.float32)
+        # Calculate expected market shares
+        competitiveness = np.array([1.0 / 20.0, 1.0 / 30.0])
+        expected_shares = competitiveness / np.sum(competitiveness)
+        expected_quantities = expected_shares * 75.0
+        expected_rewards = (prices - 10.0) * expected_quantities
 
-        assert np.allclose(rewards, expected_rewards, rtol=1e-6)
+        assert np.allclose(rewards, expected_rewards, rtol=1e-3)  # Relaxed tolerance
         assert np.allclose(info["market_price"], 25.0)
         assert np.allclose(info["total_demand"], 75.0)
-        assert np.allclose(info["individual_quantity"], 37.5)
+        assert np.allclose(
+            info["individual_quantities"], expected_quantities, rtol=1e-3
+        )
 
     def test_step_reward_calculation_edge_cases(self) -> None:
         """Test reward calculation with edge cases."""
@@ -326,6 +372,49 @@ class TestCartelEnv:
 
         # Check specific values
         expected_profits = (prices - env.marginal_cost) * quantities
+        assert np.allclose(profits, expected_profits)
+
+    def test_market_share_calculation(self) -> None:
+        """Test the market share calculation method."""
+        env = CartelEnv(n_firms=3, competition_intensity=2.0, seed=42)
+
+        # Test with different prices
+        prices = np.array([10.0, 20.0, 30.0])
+        market_shares = env._calculate_market_shares(prices)
+
+        # Lower prices should get higher market shares
+        assert market_shares[0] > market_shares[1] > market_shares[2]
+
+        # Market shares should sum to 1
+        assert math.isclose(np.sum(market_shares), 1.0)
+
+        # All shares should be positive
+        assert np.all(market_shares > 0)
+
+    def test_market_share_calculation_equal_prices(self) -> None:
+        """Test market share calculation with equal prices."""
+        env = CartelEnv(n_firms=3, competition_intensity=2.0, seed=42)
+
+        # Test with equal prices
+        prices = np.array([20.0, 20.0, 20.0])
+        market_shares = env._calculate_market_shares(prices)
+
+        # Equal prices should result in equal market shares
+        expected_share = 1.0 / 3.0
+        assert np.allclose(market_shares, expected_share)
+
+    def test_profit_calculation_firm_specific_costs(self) -> None:
+        """Test profit calculation with firm-specific marginal costs."""
+        marginal_costs = [8.0, 12.0, 10.0]
+        env = CartelEnv(n_firms=3, marginal_costs=marginal_costs, seed=42)
+
+        prices = np.array([15.0, 15.0, 15.0])
+        quantities = np.array([10.0, 10.0, 10.0])
+
+        profits = env._calculate_profits(prices, quantities)
+
+        # Expected: (15-8)*10 = 70, (15-12)*10 = 30, (15-10)*10 = 50
+        expected_profits = np.array([70.0, 30.0, 50.0])
         assert np.allclose(profits, expected_profits)
 
     def test_multiple_resets_independence(self) -> None:

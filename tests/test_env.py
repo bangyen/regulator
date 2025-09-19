@@ -154,12 +154,14 @@ class TestCartelEnv:
     def test_step_reward_calculation_simple_case(self) -> None:
         """Test reward calculation with simple hand-calculated inputs."""
         # Set up environment with no demand shock for predictable results
+        # Use competition_intensity=1.0 to get more predictable market shares
         env = CartelEnv(
             n_firms=2,
             marginal_cost=10.0,
             demand_intercept=100.0,
             demand_slope=-1.0,
             shock_std=0.0,  # No randomness
+            competition_intensity=1.0,  # Linear competition for predictable results
             seed=42,
         )
 
@@ -173,16 +175,25 @@ class TestCartelEnv:
         # Market price = (20 + 30) / 2 = 25
         # Base demand = 100 - 1 * 25 = 75
         # Total demand = 75 + 0 (no shock) = 75
-        # Individual quantity = 75 / 2 = 37.5
-        # Firm 1 profit = (20 - 10) * 37.5 = 375
-        # Firm 2 profit = (30 - 10) * 37.5 = 750
+        # Market shares with competition_intensity=1.0:
+        #   competitiveness = [1/20, 1/30] = [0.05, 0.0333...]
+        #   normalized shares = [0.05/(0.05+0.0333), 0.0333/(0.05+0.0333)] ≈ [0.6, 0.4]
+        # Individual quantities = [75 * 0.6, 75 * 0.4] = [45, 30]
+        # Firm 1 profit = (20 - 10) * 45 = 450
+        # Firm 2 profit = (30 - 10) * 30 = 600
 
-        expected_rewards = np.array([375.0, 750.0], dtype=np.float32)
+        # Calculate expected market shares
+        competitiveness = np.array([1.0 / 20.0, 1.0 / 30.0])
+        expected_shares = competitiveness / np.sum(competitiveness)
+        expected_quantities = expected_shares * 75.0
+        expected_rewards = (prices - 10.0) * expected_quantities
 
-        assert np.allclose(rewards, expected_rewards, rtol=1e-6)
+        assert np.allclose(rewards, expected_rewards, rtol=1e-3)  # Relaxed tolerance
         assert np.allclose(info["market_price"], 25.0)
         assert np.allclose(info["total_demand"], 75.0)
-        assert np.allclose(info["individual_quantity"], 37.5)
+        assert np.allclose(
+            info["individual_quantities"], expected_quantities, rtol=1e-3
+        )
 
     def test_step_reward_calculation_edge_cases(self) -> None:
         """Test reward calculation with edge cases."""

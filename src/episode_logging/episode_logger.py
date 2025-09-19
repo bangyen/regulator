@@ -93,7 +93,7 @@ class EpisodeLogger(Logger):
         demand_shock: float,
         market_price: float,
         total_demand: float,
-        individual_quantity: float,
+        individual_quantity: Union[float, np.ndarray],
         total_profits: np.ndarray,
         regulator_flags: Optional[Dict[str, Any]] = None,
         additional_info: Optional[Dict[str, Any]] = None,
