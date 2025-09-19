@@ -192,6 +192,7 @@ class TestCartelEnv:
             demand_intercept=100.0,
             demand_slope=-1.0,
             shock_std=0.0,
+            max_price_change=200.0,  # Allow large price changes for this test
             seed=42,
         )
 
