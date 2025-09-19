@@ -245,7 +245,7 @@ class EnhancedRegulator(Regulator):
 
         if len(current_prices) == len(prev_prices):
             price_changes = np.abs(current_prices - prev_prices)
-            max_change = np.max(price_changes)
+            max_change: float = float(np.max(price_changes))
             return bool(max_change > adjusted_threshold)
 
         return False
