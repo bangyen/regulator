@@ -12,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 
 # Import from the package
-from regulator_cli import main, experiment, train, episode, dashboard
+from regulator_cli import main, experiment, dashboard
 
 
 class TestRegulatorCLI:
@@ -65,146 +65,6 @@ class TestRegulatorCLI:
                     "random",
                     "--regulator",
                     "rule_based",
-                    "--seed",
-                    "42",
-                    "--log-dir",
-                    "test_logs",
-                ],
-            )
-
-            # Should exit with error code
-            assert result.exit_code == 1
-
-    def test_train_command_basic(self) -> None:
-        """Test basic train command execution."""
-        with patch("regulator_cli.train_ml_detector") as mock_train:
-            mock_train.return_value = None
-
-            runner = CliRunner()
-            result = runner.invoke(
-                train,
-                [
-                    "--n-episodes",
-                    "10",
-                    "--model-type",
-                    "logistic",
-                    "--output-dir",
-                    "test_output",
-                ],
-            )
-
-            # Verify the function was called and command succeeded
-            assert result.exit_code == 0
-            mock_train.assert_called_once()
-
-    def test_train_command_with_existing_logs(self) -> None:
-        """Test train command with existing logs parameter."""
-        with patch("regulator_cli.train_ml_detector") as mock_train:
-            mock_train.return_value = None
-
-            runner = CliRunner()
-            result = runner.invoke(
-                train,
-                [
-                    "--n-episodes",
-                    "10",
-                    "--model-type",
-                    "lightgbm",
-                    "--existing-logs",
-                    "/path/to/logs",
-                    "--output-dir",
-                    "test_output",
-                ],
-            )
-
-            # Verify the function was called and command succeeded
-            assert result.exit_code == 0
-            mock_train.assert_called_once()
-
-    def test_train_command_with_exception(self) -> None:
-        """Test train command with exception handling."""
-        with patch("regulator_cli.train_ml_detector") as mock_train:
-            mock_train.side_effect = Exception("Training failed")
-
-            runner = CliRunner()
-            result = runner.invoke(
-                train,
-                [
-                    "--n-episodes",
-                    "10",
-                    "--model-type",
-                    "random_forest",
-                    "--output-dir",
-                    "test_output",
-                ],
-            )
-
-            # Should exit with error code
-            assert result.exit_code == 1
-
-    def test_episode_command_basic(self) -> None:
-        """Test basic episode command execution."""
-        with patch("regulator_cli.run_episode") as mock_run:
-            mock_run.return_value = {"episode_id": "test_123"}
-
-            runner = CliRunner()
-            result = runner.invoke(
-                episode,
-                [
-                    "--firms",
-                    "random,tit_for_tat",
-                    "--steps",
-                    "10",
-                    "--seed",
-                    "42",
-                    "--log-dir",
-                    "test_logs",
-                ],
-            )
-
-            # Verify the function was called and command succeeded
-            assert result.exit_code == 0
-            mock_run.assert_called_once()
-
-    def test_episode_command_with_n_firms(self) -> None:
-        """Test episode command with specified number of firms."""
-        with patch("regulator_cli.run_episode") as mock_run:
-            mock_run.return_value = {"episode_id": "test_456"}
-
-            runner = CliRunner()
-            result = runner.invoke(
-                episode,
-                [
-                    "--firms",
-                    "random,random,random",
-                    "--steps",
-                    "5",
-                    "--n-firms",
-                    "3",
-                    "--seed",
-                    "123",
-                    "--log-dir",
-                    "test_logs",
-                ],
-            )
-
-            # Verify the function was called and command succeeded
-            assert result.exit_code == 0
-            mock_run.assert_called_once()
-
-    def test_episode_command_with_exception(self) -> None:
-        """Test episode command with exception handling."""
-        with patch("regulator_cli.run_episode") as mock_run:
-            mock_run.side_effect = Exception("Episode failed")
-
-            runner = CliRunner()
-            result = runner.invoke(
-                episode,
-                [
-                    "--firms",
-                    "random",
-                    "--steps",
-                    "10",
                     "--seed",
                     "42",
                     "--log-dir",
@@ -286,16 +146,6 @@ class TestRegulatorCLIIntegration:
         result = runner.invoke(experiment, ["--help"])
         assert result.exit_code == 0
         assert "--steps" in result.output
-
-        # Test train help
-        result = runner.invoke(train, ["--help"])
-        assert result.exit_code == 0
-        assert "--model-type" in result.output
-
-        # Test episode help
-        result = runner.invoke(episode, ["--help"])
-        assert result.exit_code == 0
-        assert "--firms" in result.output
 
         # Test dashboard help
         result = runner.invoke(dashboard, ["--help"])
