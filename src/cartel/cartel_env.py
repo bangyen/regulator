@@ -564,8 +564,8 @@ class CartelEnv(gym.Env):
             if market_price > baseline_price:
                 # Apply elasticity penalty for high prices
                 price_ratio = market_price / baseline_price
-                elasticity_factor = price_ratio ** (
-                    self.current_elasticity + 1
+                elasticity_factor = float(
+                    price_ratio ** (self.current_elasticity + 1)
                 )  # +1 to account for linear term
                 base_demand *= elasticity_factor
 
