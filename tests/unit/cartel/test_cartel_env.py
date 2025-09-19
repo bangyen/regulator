@@ -197,12 +197,12 @@ class TestCartelEnv:
 
         obs, _ = env.reset(seed=42)
 
-        # Test case: prices below marginal cost (should give zero profit)
+        # Test case: prices below marginal cost (should give negative profit)
         prices = np.array([5.0, 8.0], dtype=np.float32)
         next_obs, rewards, terminated, truncated, info = env.step(prices)
 
-        # Both firms should have zero profit since price < marginal cost
-        assert np.allclose(rewards, 0.0)
+        # Both firms should have negative profit since price < marginal cost
+        assert np.all(rewards < 0.0)
 
         # Test case: very high prices (demand should be zero)
         prices = np.array([150.0, 200.0], dtype=np.float32)
@@ -312,7 +312,7 @@ class TestCartelEnv:
         assert np.allclose(profits, expected_profits)
 
     def test_profit_calculation_negative_profits(self) -> None:
-        """Test that negative profits are clamped to zero."""
+        """Test that negative profits are allowed for economic realism."""
         env = CartelEnv(n_firms=2, marginal_cost=20.0, seed=42)
 
         prices = np.array([10.0, 15.0])  # Below marginal cost
@@ -320,8 +320,12 @@ class TestCartelEnv:
 
         profits = env._calculate_profits(prices, quantities)
 
-        # Should be zero since prices < marginal cost
-        assert np.allclose(profits, 0.0)
+        # Should be negative since prices < marginal cost
+        assert np.all(profits < 0.0)
+
+        # Check specific values
+        expected_profits = (prices - env.marginal_cost) * quantities
+        assert np.allclose(profits, expected_profits)
 
     def test_multiple_resets_independence(self) -> None:
         """Test that multiple resets produce independent episodes."""

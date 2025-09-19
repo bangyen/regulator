@@ -70,24 +70,29 @@ class TestParallelPricingDetection:
     """Test suite for parallel pricing detection functionality."""
 
     def test_parallel_pricing_detection_insufficient_history(self) -> None:
-        """Test that parallel pricing detection returns False with insufficient history."""
+        """Test that parallel pricing detection works with insufficient history for identical prices."""
         regulator = Regulator(parallel_steps=3)
 
         # Test with no history
         result = regulator._detect_parallel_pricing(step=0)
         assert result is False
 
-        # Test with insufficient history
+        # Test with insufficient history but identical prices (should detect immediately)
         regulator.price_history = [np.array([10.0, 10.0, 10.0])]
         result = regulator._detect_parallel_pricing(step=1)
-        assert result is False
+        assert result is True  # Identical prices should be detected immediately
+
+        # Test with insufficient history and non-identical prices
+        regulator.price_history = [np.array([10.0, 11.0, 12.0])]
+        result = regulator._detect_parallel_pricing(step=1)
+        assert result is False  # Non-identical prices need more history
 
         regulator.price_history = [
             np.array([10.0, 10.0, 10.0]),
             np.array([10.0, 10.0, 10.0]),
         ]
         result = regulator._detect_parallel_pricing(step=2)
-        assert result is False
+        assert result is True  # Two steps of identical prices should be detected
 
     def test_parallel_pricing_detection_success(self) -> None:
         """Test that parallel pricing is detected when conditions are met."""
