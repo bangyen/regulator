@@ -39,6 +39,7 @@ class CartelEnv(gym.Env):
         # Enhanced economic model parameters
         use_enhanced_demand: bool = False,  # Enable constant elasticity demand
         use_logit_market_shares: bool = False,  # Enable logit-based market shares
+        use_enhanced_market_shares: bool = False,  # Enable enhanced multi-factor market shares
         use_fixed_costs: bool = False,  # Enable fixed costs
         fixed_cost: float = 50.0,  # Per-period fixed cost per firm
         use_economies_of_scale: bool = False,  # Enable economies of scale
@@ -158,6 +159,7 @@ class CartelEnv(gym.Env):
         # Enhanced economic model parameters
         self.use_enhanced_demand = use_enhanced_demand
         self.use_logit_market_shares = use_logit_market_shares
+        self.use_enhanced_market_shares = use_enhanced_market_shares
         self.use_fixed_costs = use_fixed_costs
         self.fixed_cost = fixed_cost
         self.use_economies_of_scale = use_economies_of_scale
@@ -225,6 +227,40 @@ class CartelEnv(gym.Env):
             []
         )  # Store demand history for dynamic elasticity
         self.current_elasticity = price_elasticity  # Current dynamic elasticity
+
+        # Enhanced market share model attributes
+        self.firm_quality_scores = np.random.uniform(
+            0.7, 1.3, n_firms
+        )  # Product quality scores
+        self.firm_loyalty_scores = np.random.uniform(
+            0.6, 1.2, n_firms
+        )  # Brand loyalty scores
+        self.firm_service_scores = np.random.uniform(
+            0.8, 1.2, n_firms
+        )  # Service quality scores
+
+        # Consumer segmentation
+        self.consumer_segments = {
+            "price_sensitive": {
+                "weight": 0.4,
+                "price_elasticity": -2.0,
+                "quality_weight": 0.2,
+            },
+            "quality_focused": {
+                "weight": 0.3,
+                "price_elasticity": -0.8,
+                "quality_weight": 0.8,
+            },
+            "brand_loyal": {
+                "weight": 0.3,
+                "price_elasticity": -0.5,
+                "quality_weight": 0.5,
+            },
+        }
+
+        # Learning curve attributes
+        self.cumulative_production = np.zeros(n_firms, dtype=np.float32)
+        self.learning_rate = 0.8  # 20% cost reduction per doubling of production
 
     def reset(
         self, seed: Union[int, None] = None, options: Union[Dict[str, Any], None] = None
@@ -550,7 +586,7 @@ class CartelEnv(gym.Env):
         self, prices: np.ndarray
     ) -> np.ndarray[Any, np.dtype[np.float32]]:
         """
-        Calculate market shares based on price competition.
+        Calculate market shares based on multi-factor competition model.
 
         Args:
             prices: Array of prices set by each firm
@@ -559,10 +595,26 @@ class CartelEnv(gym.Env):
             Array of market shares for each firm
         """
         if self.use_logit_market_shares:
-            # Logit-based market shares: s_i = exp(-λ*p_i) / Σ_j exp(-λ*p_j)
-            # where λ is the price sensitivity parameter
-            lambda_param = 0.1  # Price sensitivity (can be made configurable)
-            utilities = -lambda_param * prices
+            # Enhanced logit-based market shares with multiple factors
+            # s_i = exp(β₁*price_i + β₂*quality_i + β₃*loyalty_i + β₄*service_i) / Σ_j exp(...)
+
+            # Price factor (negative coefficient - lower price is better)
+            price_factor = -0.1 * prices
+
+            # Quality factor (firm-specific quality scores)
+            quality_scores = getattr(self, "firm_quality_scores", np.ones(self.n_firms))
+            quality_factor = 0.3 * quality_scores
+
+            # Brand loyalty factor (persistent customer base)
+            loyalty_scores = getattr(self, "firm_loyalty_scores", np.ones(self.n_firms))
+            loyalty_factor = 0.2 * loyalty_scores
+
+            # Service quality factor
+            service_scores = getattr(self, "firm_service_scores", np.ones(self.n_firms))
+            service_factor = 0.1 * service_scores
+
+            # Combined utility
+            utilities = price_factor + quality_factor + loyalty_factor + service_factor
 
             # Numerical stability: subtract max utility to prevent overflow
             max_utility = np.max(utilities)
@@ -576,21 +628,70 @@ class CartelEnv(gym.Env):
                 # Fallback to equal shares
                 market_shares = np.ones(self.n_firms, dtype=np.float32) / self.n_firms
         else:
-            # Original competitiveness-based market shares
-            # Convert prices to competitiveness scores (lower price = higher competitiveness)
-            # Add small epsilon to avoid division by zero
-            competitiveness: np.ndarray = 1.0 / (prices + 1e-6)
+            # Check if enhanced market share model is enabled
+            if self.use_enhanced_market_shares:
+                # Enhanced competitiveness-based market shares
+                # Multi-factor model: price competitiveness + quality + loyalty + service
 
-            # Apply competition intensity
-            competitiveness = competitiveness**self.competition_intensity
+                # Price competitiveness (40% weight)
+                price_competitiveness = 1.0 / (prices + 1e-6)
+                price_competitiveness = price_competitiveness ** (
+                    self.competition_intensity * 0.4
+                )
 
-            # Normalize to get market shares
-            total_competitiveness = np.sum(competitiveness)
-            if total_competitiveness > 0:
-                market_shares = competitiveness / total_competitiveness
+                # Quality scores (30% weight) - firm-specific product quality
+                quality_scores = getattr(
+                    self, "firm_quality_scores", np.ones(self.n_firms)
+                )
+                quality_factor = quality_scores**0.3
+
+                # Brand loyalty (20% weight) - persistent customer base
+                loyalty_scores = getattr(
+                    self, "firm_loyalty_scores", np.ones(self.n_firms)
+                )
+                loyalty_factor = loyalty_scores**0.2
+
+                # Service quality (10% weight) - customer satisfaction
+                service_scores = getattr(
+                    self, "firm_service_scores", np.ones(self.n_firms)
+                )
+                service_factor = service_scores**0.1
+
+                # Weighted combination
+                total_attractiveness = (
+                    price_competitiveness
+                    * quality_factor
+                    * loyalty_factor
+                    * service_factor
+                )
+
+                # Normalize to get market shares
+                total_attractiveness_sum = np.sum(total_attractiveness)
+                if total_attractiveness_sum > 0:
+                    market_shares = total_attractiveness / total_attractiveness_sum
+                else:
+                    # Fallback to equal shares if all attractiveness is zero
+                    market_shares = (
+                        np.ones(self.n_firms, dtype=np.float32) / self.n_firms
+                    )
             else:
-                # Fallback to equal shares if all prices are very high
-                market_shares = np.ones(self.n_firms, dtype=np.float32) / self.n_firms
+                # Original competitiveness-based market shares
+                # Convert prices to competitiveness scores (lower price = higher competitiveness)
+                # Add small epsilon to avoid division by zero
+                competitiveness: np.ndarray = 1.0 / (prices + 1e-6)
+
+                # Apply competition intensity
+                competitiveness = competitiveness**self.competition_intensity
+
+                # Normalize to get market shares
+                total_competitiveness = np.sum(competitiveness)
+                if total_competitiveness > 0:
+                    market_shares = competitiveness / total_competitiveness
+                else:
+                    # Fallback to equal shares if all prices are very high
+                    market_shares = (
+                        np.ones(self.n_firms, dtype=np.float32) / self.n_firms
+                    )
 
         return market_shares.astype(np.float32)
 
@@ -598,7 +699,7 @@ class CartelEnv(gym.Env):
         self, quantities: np.ndarray
     ) -> np.ndarray[Any, np.dtype[np.float32]]:
         """
-        Calculate total costs for each firm including fixed costs and economies of scale.
+        Calculate total costs for each firm including fixed costs, economies of scale, and learning curves.
 
         Args:
             quantities: Array of quantities sold by each firm
@@ -606,8 +707,24 @@ class CartelEnv(gym.Env):
         Returns:
             Array of total costs for each firm
         """
-        # Variable costs based on marginal costs
+        # Update cumulative production for learning curves
+        self.cumulative_production += quantities
+
+        # Base variable costs based on marginal costs
         variable_costs = self.marginal_costs * quantities
+
+        # Apply learning curves: costs decrease with cumulative production
+        # Learning curve: cost = base_cost * (cumulative_production / reference_production)^(-learning_rate)
+        if np.any(self.cumulative_production > 0):
+            # Learning curve: costs decrease as cumulative production increases
+            # learning_rate = 0.8 means 20% cost reduction per doubling of production
+            reference_production = 10.0  # Reference production level
+            # Calculate learning factor: higher cumulative production = lower costs
+            production_ratio = np.maximum(
+                self.cumulative_production / reference_production, 1e-6
+            )
+            learning_factor = np.power(production_ratio, -np.log2(self.learning_rate))
+            variable_costs = variable_costs * learning_factor
 
         if self.use_economies_of_scale:
             # Apply economies of scale: c(q) = c₀ * q^β where β < 1
