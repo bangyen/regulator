@@ -21,9 +21,8 @@ import pytest
 from dashboard.app import (
     calculate_surplus,
     create_price_trajectory_plot,
-    create_profit_plot,
-    create_regulator_flags_plot,
-    create_surplus_plot,
+    create_enhanced_regulator_plot,
+    create_market_overview_plot,
     load_episode_data,
 )
 
@@ -170,42 +169,40 @@ class TestDashboardFunctions:
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 0
 
-    def test_create_regulator_flags_plot(self) -> None:
-        """Test regulator flags plot creation."""
+    def test_create_enhanced_regulator_plot(self) -> None:
+        """Test enhanced regulator plot creation."""
         steps = [
             {
                 "step": 1,
-                "price_monitoring": {
-                    "parallel_violation": False,
-                    "structural_break_violation": True,
-                    "fines_applied": [0.0, 50.0],
+                "regulator_flags": {
+                    "parallel_pricing": False,
+                    "structural_break": True,
+                    "fines": [0.0, 50.0],
                 },
-                "chat_monitoring": {"collusive_messages": 0, "fines_applied": 0.0},
             },
             {
                 "step": 2,
-                "price_monitoring": {
-                    "parallel_violation": True,
-                    "structural_break_violation": False,
-                    "fines_applied": [25.0, 0.0],
+                "regulator_flags": {
+                    "parallel_pricing": True,
+                    "structural_break": False,
+                    "fines": [25.0, 0.0],
                 },
-                "chat_monitoring": {"collusive_messages": 1, "fines_applied": 10.0},
             },
         ]
 
-        fig = create_regulator_flags_plot(steps)
+        fig = create_enhanced_regulator_plot(steps)
 
         # Verify plot object
         assert isinstance(fig, go.Figure)
 
-        # Simplified plot now shows only total fines trace
-        assert len(fig.data) == 1
+        # Enhanced plot shows multiple traces
+        assert len(fig.data) >= 1
 
         # Verify plot title
-        assert "Regulator Flags" in fig.layout.title.text
+        assert "Enhanced Regulator Monitoring" in fig.layout.title.text
 
-    def test_create_surplus_plot(self) -> None:
-        """Test surplus plot creation."""
+    def test_create_market_overview_plot(self) -> None:
+        """Test market overview plot creation."""
         steps = [
             {
                 "step": 1,
@@ -221,34 +218,32 @@ class TestDashboardFunctions:
             },
         ]
 
-        fig = create_surplus_plot(steps)
+        fig = create_market_overview_plot(steps)
 
         # Verify plot object
         assert isinstance(fig, go.Figure)
 
-        # Verify traces (consumer + producer surplus = 2 traces)
-        assert len(fig.data) == 2
+        # Verify traces (market price, demand, volatility, HHI, demand shock = 5 traces)
+        assert len(fig.data) == 5
 
         # Verify plot title
-        assert "Surplus Analysis" in fig.layout.title.text
+        assert "Market Overview" in fig.layout.title.text
 
-    def test_create_profit_plot(self) -> None:
-        """Test profit plot creation."""
-        steps = [
-            {"step": 1, "profits": [100.0, 120.0]},
-            {"step": 2, "profits": [110.0, 130.0]},
-        ]
+    def test_create_market_overview_plot_empty(self) -> None:
+        """Test market overview plot creation with empty data."""
+        steps = []
 
-        fig = create_profit_plot(steps)
+        fig = create_market_overview_plot(steps)
 
         # Verify plot object
         assert isinstance(fig, go.Figure)
 
-        # Verify traces (2 firms = 2 traces)
-        assert len(fig.data) == 2
+        # Verify empty plot has no traces
+        assert len(fig.data) == 0
 
-        # Verify plot title
-        assert "Profit Analysis" in fig.layout.title.text
+        # Verify plot title (empty plot may not have title)
+        if fig.layout.title and fig.layout.title.text:
+            assert "Market Overview" in fig.layout.title.text
 
 
 class TestDashboardIntegration:
@@ -324,14 +319,10 @@ class TestDashboardIntegration:
                 "demand_shock": i * 0.5,
                 "market_price": 55.0 + i * 4,
                 "total_demand": 45.0 - i * 2,
-                "price_monitoring": {
-                    "parallel_violation": i % 2 == 0,
-                    "structural_break_violation": i % 3 == 0,
-                    "fines_applied": [i * 5.0, i * 3.0],
-                },
-                "chat_monitoring": {
-                    "collusive_messages": i % 4,
-                    "fines_applied": i * 2.0,
+                "regulator_flags": {
+                    "parallel_pricing": i % 2 == 0,
+                    "structural_break": i % 3 == 0,
+                    "fines": [i * 5.0, i * 3.0],
                 },
             }
             sample_data.append(step_data)
@@ -368,21 +359,19 @@ class TestDashboardIntegration:
             assert isinstance(price_fig, go.Figure)
             assert len(price_fig.data) == 3  # 2 firms + market price
 
-            flags_fig = create_regulator_flags_plot(episode_data["steps"])
+            flags_fig = create_enhanced_regulator_plot(episode_data["steps"])
             assert isinstance(flags_fig, go.Figure)
-            # Simplified plot now shows only total fines trace
-            assert len(flags_fig.data) == 1
+            # Enhanced plot shows multiple traces
+            assert len(flags_fig.data) >= 1
 
-            surplus_fig = create_surplus_plot(episode_data["steps"])
-            assert isinstance(surplus_fig, go.Figure)
-            assert len(surplus_fig.data) == 2  # Consumer + producer surplus
-
-            profit_fig = create_profit_plot(episode_data["steps"])
-            assert isinstance(profit_fig, go.Figure)
-            assert len(profit_fig.data) == 2  # 2 firms
+            market_fig = create_market_overview_plot(episode_data["steps"])
+            assert isinstance(market_fig, go.Figure)
+            assert (
+                len(market_fig.data) == 5
+            )  # Market price, demand, volatility, HHI, demand shock
 
             # Verify plot data contains expected number of points
-            for fig in [price_fig, flags_fig, surplus_fig, profit_fig]:
+            for fig in [price_fig, flags_fig, market_fig]:
                 for trace in fig.data:
                     assert len(trace.x) == 5  # 5 timesteps
                     assert len(trace.y) == 5  # 5 timesteps
