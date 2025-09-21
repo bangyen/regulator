@@ -1,4 +1,6 @@
 .PHONY: init fmt lint type test all dashboard install
+VENV = venv/bin/activate
+
 init: ## install tooling
 	python -m pip install -U pip
 	pip install -e ".[dev]"
@@ -9,19 +11,19 @@ install: ## install package
 	pip install -e .
 
 fmt:  ## format code
-	black .
+	. $(VENV) && black .
 
 lint: ## lint code
-	ruff check .
+	. $(VENV) && ruff check .
 
 type: ## type-check
-	mypy src/
+	. $(VENV) && mypy src/
 
 test: ## run tests
-	python -m pytest
+	. $(VENV) && python -m pytest
 
 dashboard: ## run the dashboard
-	streamlit run dashboard/app.py
+	. $(VENV) && streamlit run dashboard/app.py
 
 all: fmt lint type test
 

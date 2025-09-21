@@ -280,7 +280,7 @@ def run_episode_with_regulator_logging(
         action = np.array(prices, dtype=np.float32)
 
         # Regulator monitors the step
-        detection_results = regulator.monitor_step(action, step)
+        detection_results = regulator.monitor_step(action, step, info)
 
         # Take step in environment
         next_obs, rewards, terminated, truncated, step_info = env.step(action)
