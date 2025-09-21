@@ -111,9 +111,6 @@ result = ml_regulator.monitor_step(prices, step, info)
 ```bash
 # Run leniency experiment comparing with/without leniency
 python scripts/leniency_experiment.py --episodes 50 --leniency-reduction 0.5
-
-# Run collusive leniency experiment
-python scripts/collusive_leniency_experiment.py --episodes 30 --fine-amount 100
 ```
 
 ### Economic Validation
@@ -133,8 +130,8 @@ if not is_valid:
 Use OpenAI's GPT models to detect collusive behavior in natural language communications:
 
 ```bash
-# Use LLM detector in experiments
-python scripts/chat_demo.py --llm-model gpt-4o-mini
+# Generate episodes with real LLM messages
+python scripts/real_llm_messages.py
 
 # Test LLM detection
 python -c "
@@ -148,11 +145,8 @@ print(result)
 ### Enhanced Economic Modeling
 
 ```bash
-# Run enhanced economic demo with dynamic features
-python scripts/enhanced_economic_demo.py
-
-# Train ML detector on episode logs
-python scripts/train_ml_detector.py --log-dir logs --model-type lightgbm
+# Analyze episode data and messages
+python scripts/analyze_episodes.py --view-messages --limit 10
 ```
 
 ## Project Structure
@@ -177,12 +171,12 @@ python scripts/train_ml_detector.py --log-dir logs --model-type lightgbm
 │   ├── experiments/          # Experiment runners
 │   ├── economic_validation.py # Economic consistency validation
 │   └── regulator_cli.py      # CLI interface
-├── scripts/                  # Utility scripts and demos
-│   ├── enhanced_economic_demo.py
-│   ├── leniency_experiment.py
-│   ├── collusive_leniency_experiment.py
-│   ├── train_ml_detector.py
-│   └── chat_demo.py
+├── scripts/                  # Core utility scripts
+│   ├── run_episode.py        # Single episode runner
+│   ├── run_experiment.py     # Full experiment runner
+│   ├── leniency_experiment.py # Leniency program experiments
+│   ├── real_llm_messages.py  # LLM-based message generation
+│   └── analyze_episodes.py   # Episode analysis utility
 ├── tests/                    # Comprehensive test suite
 │   ├── unit/                 # Unit tests
 │   └── integration/          # Integration tests
