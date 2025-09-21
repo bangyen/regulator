@@ -298,86 +298,153 @@ def create_regulator_flags_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     return fig
 
 
-def create_surplus_plot(steps: List[Dict[str, Any]]) -> go.Figure:
+def create_market_overview_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     """
-    Create plot showing consumer surplus vs producer surplus over time.
+    Create a comprehensive market overview showing key market metrics.
 
     Args:
         steps: List of step data dictionaries
 
     Returns:
-        Plotly figure object
+        Plotly figure object with subplots
     """
     if not steps:
         return go.Figure()
 
     step_numbers = [step["step"] for step in steps]
-    consumer_surpluses = []
-    producer_surpluses = []
 
-    # Get demand parameters from header if available
-    demand_intercept = 100.0
-    demand_slope = -1.0
-    marginal_cost = 10.0
+    # Extract market data
+    market_prices = [step["market_price"] for step in steps]
+    total_demands = [step.get("total_demand", 0.0) for step in steps]
+    demand_shocks = [step.get("demand_shock", 0.0) for step in steps]
 
+    # Calculate price volatility (rolling standard deviation)
+    price_volatility = []
+    window_size = min(5, len(market_prices))
+    for i in range(len(market_prices)):
+        start_idx = max(0, i - window_size + 1)
+        window_prices = market_prices[start_idx : i + 1]
+        if len(window_prices) > 1:
+            volatility = np.std(window_prices)
+        else:
+            volatility = 0.0
+        price_volatility.append(volatility)
+
+    # Calculate market concentration (Herfindahl-Hirschman Index)
+    market_concentration = []
     for step in steps:
         prices = step["prices"]
-        market_price = step["market_price"]
-        total_demand = step.get("total_demand", 0.0)
-        individual_quantities = step.get("individual_quantity", None)
+        if len(prices) > 0:
+            # Calculate market shares based on prices (simplified)
+            total_price = sum(prices)
+            if total_price > 0:
+                shares = [p / total_price for p in prices]
+                hhi = sum(s**2 for s in shares) * 10000  # Scale to 0-10000
+            else:
+                hhi = 0
+        else:
+            hhi = 0
+        market_concentration.append(hhi)
 
-        consumer_surplus, producer_surplus = calculate_surplus(
-            prices,
-            market_price,
-            total_demand,
-            demand_intercept,
-            demand_slope,
-            marginal_cost,
-            individual_quantities,
-        )
+    # Create subplots
+    from plotly.subplots import make_subplots
 
-        consumer_surpluses.append(consumer_surplus)
-        producer_surpluses.append(producer_surplus)
-
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x=step_numbers,
-            y=consumer_surpluses,
-            mode="lines+markers",
-            name="Consumer Surplus",
-            line=dict(color="green", width=2),
-            fill="tonexty",
-        )
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=(
+            "Market Price & Demand",
+            "Price Volatility",
+            "Demand Shocks",
+            "Market Concentration (HHI)",
+        ),
+        specs=[
+            [{"secondary_y": True}, {"secondary_y": False}],
+            [{"secondary_y": False}, {"secondary_y": False}],
+        ],
     )
 
+    # Market Price & Demand
     fig.add_trace(
         go.Scatter(
             x=step_numbers,
-            y=producer_surpluses,
-            mode="lines+markers",
-            name="Producer Surplus",
+            y=market_prices,
+            name="Market Price",
             line=dict(color="blue", width=2),
-            fill="tozeroy",
-        )
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=total_demands,
+            name="Total Demand",
+            line=dict(color="green", width=2),
+        ),
+        row=1,
+        col=1,
+        secondary_y=True,
     )
 
-    fig.update_layout(
-        title="Surplus Analysis",
-        title_font_size=24,
-        xaxis_title="Step",
-        yaxis_title="Surplus",
-        hovermode="x unified",
-        height=500,
+    # Price Volatility
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=price_volatility,
+            name="Price Volatility",
+            line=dict(color="red", width=2),
+            fill="tozeroy",
+        ),
+        row=1,
+        col=2,
     )
+
+    # Demand Shocks
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=demand_shocks,
+            name="Demand Shocks",
+            line=dict(color="orange", width=2),
+            fill="tonexty" if len(demand_shocks) > 0 else None,
+        ),
+        row=2,
+        col=1,
+    )
+
+    # Market Concentration
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=market_concentration,
+            name="Market Concentration",
+            line=dict(color="purple", width=2),
+        ),
+        row=2,
+        col=2,
+    )
+
+    # Update layout
+    fig.update_layout(
+        title="Market Overview", title_font_size=24, height=600, showlegend=True
+    )
+
+    # Update axes
+    fig.update_xaxes(title_text="Step", row=2, col=1)
+    fig.update_xaxes(title_text="Step", row=2, col=2)
+    fig.update_yaxes(title_text="Price", row=1, col=1)
+    fig.update_yaxes(title_text="Demand", row=1, col=1, secondary_y=True)
+    fig.update_yaxes(title_text="Volatility", row=1, col=2)
+    fig.update_yaxes(title_text="Shock", row=2, col=1)
+    fig.update_yaxes(title_text="HHI", row=2, col=2)
 
     return fig
 
 
-def create_profit_plot(steps: List[Dict[str, Any]]) -> go.Figure:
+def create_enhanced_regulator_plot(steps: List[Dict[str, Any]]) -> go.Figure:
     """
-    Create plot showing individual firm profits over time.
+    Create enhanced regulator monitoring plot with continuous risk scores and ML detection.
 
     Args:
         steps: List of step data dictionaries
@@ -389,31 +456,163 @@ def create_profit_plot(steps: List[Dict[str, Any]]) -> go.Figure:
         return go.Figure()
 
     step_numbers = [step["step"] for step in steps]
-    n_firms = len(steps[0]["profits"])
 
-    fig = go.Figure()
+    # Check if any step has regulator monitoring data
+    has_regulator_data = any("regulator_flags" in step for step in steps)
 
-    for i in range(n_firms):
-        firm_profits = [step["profits"][i] for step in steps]
-        fig.add_trace(
-            go.Scatter(
-                x=step_numbers,
-                y=firm_profits,
-                mode="lines+markers",
-                name=f"Firm {i+1} Profits",
-                line=dict(width=2),
-                marker=dict(size=4),
-            )
+    if not has_regulator_data:
+        # Create a message plot when no regulator data is available
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No regulator monitoring data available for this episode.<br>This episode was run without regulator monitoring enabled.",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            xanchor="center",
+            yanchor="middle",
+            showarrow=False,
+            font=dict(size=16, color="gray"),
+        )
+        fig.update_layout(
+            title="Enhanced Regulator Monitoring",
+            height=400,
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            showlegend=False,
+        )
+        return fig
+
+    # Create subplots for comprehensive monitoring view
+    from plotly.subplots import make_subplots
+
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=(
+            "Fines Applied",
+            "Risk Scores",
+            "Market Volatility",
+            "Violation Types",
+        ),
+        specs=[
+            [{"secondary_y": False}, {"secondary_y": False}],
+            [{"secondary_y": False}, {"secondary_y": False}],
+        ],
+    )
+
+    # Extract monitoring data
+    total_fines = []
+    risk_scores = []
+    market_volatilities = []
+    parallel_violations = []
+    structural_violations = []
+
+    for step in steps:
+        regulator_flags = step.get("regulator_flags", {})
+
+        # Total fines
+        fines = regulator_flags.get("fines_applied", [0])
+        if isinstance(fines, list):
+            total_fines.append(sum(fines))
+        else:
+            total_fines.append(fines)
+
+        # Risk scores (if available)
+        risk_score = regulator_flags.get("risk_score", 0.0)
+        risk_scores.append(risk_score)
+
+        # Market volatility (if available)
+        market_volatility = regulator_flags.get("market_volatility", 0.0)
+        market_volatilities.append(market_volatility)
+
+        # Violation types
+        parallel_violations.append(
+            1 if regulator_flags.get("parallel_violation", False) else 0
+        )
+        structural_violations.append(
+            1 if regulator_flags.get("structural_break_violation", False) else 0
         )
 
-    fig.update_layout(
-        title="Profit Analysis",
-        title_font_size=24,
-        xaxis_title="Step",
-        yaxis_title="Profit",
-        hovermode="x unified",
-        height=500,
+    # Fines Applied
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=total_fines,
+            mode="lines+markers",
+            name="Total Fines",
+            line=dict(color="darkred", width=2),
+            fill="tonexty",
+        ),
+        row=1,
+        col=1,
     )
+
+    # Risk Scores
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=risk_scores,
+            mode="lines+markers",
+            name="Risk Score",
+            line=dict(color="orange", width=2),
+        ),
+        row=1,
+        col=2,
+    )
+
+    # Market Volatility
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=market_volatilities,
+            mode="lines+markers",
+            name="Market Volatility",
+            line=dict(color="purple", width=2),
+        ),
+        row=2,
+        col=1,
+    )
+
+    # Violation Types
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=parallel_violations,
+            mode="markers",
+            name="Parallel Violations",
+            marker=dict(color="red", size=8, symbol="circle"),
+        ),
+        row=2,
+        col=2,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=step_numbers,
+            y=structural_violations,
+            mode="markers",
+            name="Structural Violations",
+            marker=dict(color="blue", size=8, symbol="diamond"),
+        ),
+        row=2,
+        col=2,
+    )
+
+    # Update layout
+    fig.update_layout(
+        title="Enhanced Regulator Monitoring",
+        title_font_size=24,
+        height=600,
+        showlegend=True,
+    )
+
+    # Update axes
+    fig.update_xaxes(title_text="Step", row=2, col=1)
+    fig.update_xaxes(title_text="Step", row=2, col=2)
+    fig.update_yaxes(title_text="Fines", row=1, col=1)
+    fig.update_yaxes(title_text="Risk Score", row=1, col=2)
+    fig.update_yaxes(title_text="Volatility", row=2, col=1)
+    fig.update_yaxes(title_text="Violations", row=2, col=2)
 
     return fig
 
@@ -592,29 +791,24 @@ def main() -> None:
         # Create tabs for different visualizations
         tab_names = [
             "📈 Price Trajectories",
-            "🚨 Regulator Flags",
-            "💰 Surplus Analysis",
-            "💵 Profit Analysis",
+            "🚨 Regulator Monitoring",
+            "📊 Market Overview",
         ]
 
         tabs = st.tabs(tab_names)
-        tab1, tab2, tab3, tab4 = tabs
+        tab1, tab2, tab3 = tabs
 
         with tab1:
             price_fig = create_price_trajectory_plot(episode_data["steps"])
             st.plotly_chart(price_fig, use_container_width=True)
 
         with tab2:
-            flags_fig = create_regulator_flags_plot(episode_data["steps"])
-            st.plotly_chart(flags_fig, use_container_width=True)
+            enhanced_flags_fig = create_enhanced_regulator_plot(episode_data["steps"])
+            st.plotly_chart(enhanced_flags_fig, use_container_width=True)
 
         with tab3:
-            surplus_fig = create_surplus_plot(episode_data["steps"])
-            st.plotly_chart(surplus_fig, use_container_width=True)
-
-        with tab4:
-            profit_fig = create_profit_plot(episode_data["steps"])
-            st.plotly_chart(profit_fig, use_container_width=True)
+            market_overview_fig = create_market_overview_plot(episode_data["steps"])
+            st.plotly_chart(market_overview_fig, use_container_width=True)
 
         # Display episode summary at the bottom
         st.subheader("Episode Summary")
