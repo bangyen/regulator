@@ -6,7 +6,6 @@ agent creation, regulator creation, welfare calculations, and experiment executi
 """
 
 import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -21,10 +20,6 @@ from src.experiments.experiment_runner import (
 )
 
 # Import the actual classes that experiment_runner uses
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
-
 from agents.firm_agents import BaseAgent
 from agents.regulator import Regulator
 from cartel.cartel_env import CartelEnv
