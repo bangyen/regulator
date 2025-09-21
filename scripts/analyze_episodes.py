@@ -6,13 +6,9 @@ Combines message analysis, conversation realism, and episode viewing functionali
 
 import json
 import sys
-from pathlib import Path
 from typing import Dict, Any, Optional
 from collections import defaultdict, Counter
 import argparse
-
-# Add src to path
-sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 
 def load_episode_data(file_path: str) -> Dict[str, Any]:
