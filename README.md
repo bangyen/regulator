@@ -172,8 +172,7 @@ python scripts/analyze_episodes.py --view-messages --limit 10
 │   ├── economic_validation.py # Economic consistency validation
 │   └── regulator_cli.py      # CLI interface
 ├── scripts/                  # Core utility scripts
-│   ├── run_episode.py        # Single episode runner
-│   ├── run_experiment.py     # Full experiment runner
+│   ├── run_experiment.py     # Episode and experiment runner
 │   ├── leniency_experiment.py # Leniency program experiments
 │   ├── real_llm_messages.py  # LLM-based message generation
 │   └── analyze_episodes.py   # Episode analysis utility
