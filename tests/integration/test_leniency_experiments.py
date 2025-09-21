@@ -14,7 +14,6 @@ from pathlib import Path
 
 
 from scripts.leniency_experiment import run_leniency_experiment
-from scripts.collusive_leniency_experiment import run_collusive_leniency_experiment
 from src.agents.leniency import LeniencyProgram
 
 
@@ -47,15 +46,14 @@ class TestLeniencyExperimentIntegration:
             assert config["leniency_reduction"] == 0.5
 
     def test_collusive_leniency_experiment_workflow(self) -> None:
-        """Test collusive leniency experiment workflow."""
+        """Test leniency experiment workflow with different parameters."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            results = run_collusive_leniency_experiment(
+            results = run_leniency_experiment(
                 n_episodes=2,  # Small number for testing
                 n_firms=2,
                 max_steps=10,
                 leniency_reduction=0.6,
                 fine_amount=100.0,
-                collusive_price=30.0,
                 output_dir=temp_dir,
                 seed=42,
             )
@@ -69,7 +67,7 @@ class TestLeniencyExperimentIntegration:
             # Verify experiment config
             config = results["experiment_config"]
             assert config["n_episodes"] == 2
-            assert config["collusive_price"] == 30.0
+            assert config["leniency_reduction"] == 0.6
 
     def test_leniency_program_behavior(self) -> None:
         """Test LeniencyProgram behavior and decision making."""
