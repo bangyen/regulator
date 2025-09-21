@@ -6,7 +6,8 @@ A comprehensive Python package for simulating market competition and detecting c
 
 ### Core Simulation
 - **Market Simulation**: CartelEnv for oligopolistic price competition with dynamic demand elasticity
-- **Agent Framework**: Multiple agent types (random, tit-for-tat, best response, adaptive learning)
+- **Agent Framework**: Multiple agent types (random, tit-for-tat, best response, adaptive learning, chat-enabled)
+- **Chat Integration**: Natural language communication between firms with LLM-based monitoring
 - **Economic Validation**: Built-in economic consistency checks and plausibility validation
 
 ### Detection Systems
@@ -18,6 +19,7 @@ A comprehensive Python package for simulating market competition and detecting c
 ### Advanced Features
 - **Leniency Program**: Whistleblower dynamics and strategic reporting mechanisms
 - **Adaptive Agents**: Learning agents that adapt strategies based on market conditions
+- **Chat Agents**: Natural language communication with collusive and competitive message patterns
 - **Economic Modeling**: Dynamic demand elasticity, capacity constraints, market entry/exit
 - **Monitoring Dashboard**: Enhanced visualization with continuous risk scores and penalty tracking
 
@@ -45,18 +47,12 @@ A comprehensive Python package for simulating market competition and detecting c
    make all    # Run all checks
    ```
 
-3. **Set up environment variables**:
+3. **Set up environment variables** (for LLM detection):
    ```bash
-   cp .env.example .env
-   # Edit .env and add your OpenAI API key
+   echo "OPENAI_API_KEY=your_api_key_here" > .env
    ```
 
-4. **Install optional ML dependencies** (for enhanced ML features):
-   ```bash
-   pip install lightgbm  # For advanced ML detection
-   ```
-
-5. **Use the CLI**:
+4. **Use the CLI**:
    ```bash
    # Run an experiment
    regulator experiment --steps 100 --firms "random,tit_for_tat"
@@ -125,21 +121,34 @@ if not is_valid:
     print("Economic inconsistency detected!")
 ```
 
-### LLM Collusion Detector
+### Chat Agents and LLM Detection
 
-Use OpenAI's GPT models to detect collusive behavior in natural language communications:
+Use chat-enabled agents with natural language communication and LLM-based collusion detection:
 
-```bash
-# Test LLM detection
-python -c "
-from src.detectors.llm_detector import LLMDetector
-detector = LLMDetector(model_type='llm')
-result = detector.classify_message('Let\\'s coordinate our pricing', 0, 1, 1)
-print(result)
-"
+```python
+from src.agents.chat_firm import CollusiveChatAgent, CompetitiveChatAgent, ChatMessageManager
+from src.detectors.llm_detector import LLMDetector, ChatRegulator
+
+# Create chat agents
+collusive_agent = CollusiveChatAgent(agent_id=0, message_frequency=0.5)
+competitive_agent = CompetitiveChatAgent(agent_id=1, message_frequency=0.3)
+
+# Create message manager
+manager = ChatMessageManager([collusive_agent, competitive_agent])
+
+# Create LLM detector and regulator
+detector = LLMDetector(model_type='llm', confidence_threshold=0.7)
+chat_regulator = ChatRegulator(detector, message_fine_amount=25.0)
+
+# Collect and monitor messages
+messages = manager.collect_messages(step=1, observation=obs, env=env)
+result = chat_regulator.monitor_messages(messages, step=1)
+print(f"Messages analyzed: {result['messages_analyzed']}")
+print(f"Collusive messages detected: {result['collusive_count']}")
 ```
 
-### Enhanced Economic Modeling
+
+### Episode Analysis
 
 ```bash
 # Analyze episode data and messages
@@ -154,13 +163,15 @@ python scripts/analyze_episodes.py --view-messages --limit 10
 │   │   ├── enhanced_regulator.py    # Enhanced regulator with graduated penalties
 │   │   ├── ml_regulator.py         # ML-enhanced regulator
 │   │   ├── adaptive_agent.py       # Learning agents
+│   │   ├── chat_firm.py           # Chat-enabled firm agents with natural language
 │   │   ├── leniency.py            # Leniency program implementation
+│   │   ├── regulator.py           # Base regulator implementation
 │   │   └── firm_agents.py         # Various firm agent types
 │   ├── cartel/              # Market environment
 │   │   ├── cartel_env.py          # Main simulation environment
 │   │   └── simplified_cartel_env.py
 │   ├── detectors/            # Detection systems
-│   │   ├── llm_detector.py        # LLM-based detection
+│   │   ├── llm_detector.py        # LLM-based detection with chat monitoring
 │   │   └── ml_detector.py         # ML-based detection
 │   ├── monitoring/           # Monitoring and visualization
 │   │   └── enhanced_dashboard.py  # Advanced monitoring dashboard
@@ -204,6 +215,14 @@ Strategic whistleblower dynamics featuring:
 - **Fine Reductions**: Configurable penalty reductions for cooperation
 - **Strategic Timing**: Agents decide when to report based on risk assessment
 
+### Chat Integration and Natural Language Processing
+Advanced communication monitoring featuring:
+- **Chat Agents**: Collusive and competitive message generation with configurable frequency
+- **Message Management**: Centralized message collection and distribution system
+- **LLM Monitoring**: Real-time analysis of natural language communications
+- **Chat Regulator**: Specialized regulator for message-based collusion detection
+- **Evidence Collection**: Message history and classification tracking for investigations
+
 ### Economic Validation
 Built-in economic consistency checks:
 - **Demand Curve Validation**: Ensures price-quantity relationships are consistent
@@ -222,11 +241,16 @@ Built-in economic consistency checks:
    - Modify ML model parameters
    - Customize leniency program settings
 
-3. **Add new agent types** in `src/agents/firm_agents.py`
+3. **Add new agent types** in `src/agents/firm_agents.py` or `src/agents/chat_firm.py`
 
 4. **Extend detection methods** in `src/detectors/`
 
-5. **Write tests** in `tests/`
+5. **Customize chat behavior** in `src/agents/chat_firm.py`:
+   - Modify message templates and generation logic
+   - Adjust message frequency and communication patterns
+   - Add new chat agent types
+
+6. **Write tests** in `tests/`
 
 ## License
 
