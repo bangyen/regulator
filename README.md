@@ -130,9 +130,6 @@ if not is_valid:
 Use OpenAI's GPT models to detect collusive behavior in natural language communications:
 
 ```bash
-# Generate episodes with real LLM messages
-python scripts/real_llm_messages.py
-
 # Test LLM detection
 python -c "
 from src.detectors.llm_detector import LLMDetector
@@ -174,7 +171,6 @@ python scripts/analyze_episodes.py --view-messages --limit 10
 ├── scripts/                  # Core utility scripts
 │   ├── run_experiment.py     # Episode and experiment runner
 │   ├── leniency_experiment.py # Leniency program experiments
-│   ├── real_llm_messages.py  # LLM-based message generation
 │   └── analyze_episodes.py   # Episode analysis utility
 ├── tests/                    # Comprehensive test suite
 │   ├── unit/                 # Unit tests
