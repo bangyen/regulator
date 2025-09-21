@@ -93,6 +93,9 @@ def create_regulator(regulator_config: str, seed: Optional[int] = None) -> Regul
             fine_amount=0.0,
             seed=seed,
         )
+    elif regulator_config == "disabled":
+        # Completely disable regulator
+        return None
     else:
         raise ValueError(f"Unknown regulator config: {regulator_config}")
 
@@ -298,7 +301,7 @@ def run_experiment(
         agent = create_agent(agent_type, agent_id=i, seed=seed + i)
         agents.append(agent)
 
-    # Create regulator
+    # Create regulator (if enabled)
     regulator = create_regulator(regulator_config, seed=seed)
 
     # Generate episode ID if not provided
@@ -313,15 +316,104 @@ def run_experiment(
     print(f"Seed: {seed}")
     print("-" * 60)
 
-    # Run episode with regulator
-    results = run_episode_with_regulator_logging(
-        env=env,
-        agents=agents,
-        regulator=regulator,
-        log_dir=log_dir,
-        episode_id=episode_id,
-        agent_types=firms,
-    )
+    # Run episode (with or without regulator)
+    if regulator is not None:
+        results = run_episode_with_regulator_logging(
+            env=env,
+            agents=agents,
+            regulator=regulator,
+            log_dir=log_dir,
+            episode_id=episode_id,
+            agent_types=firms,
+        )
+    else:
+        # Run basic episode without regulator (like run_episode.py)
+        from episode_logging.logger import Logger
+
+        logger = Logger(
+            log_dir=log_dir,
+            episode_id=episode_id,
+            n_firms=len(agents),
+        )
+
+        # Reset environment and agents
+        obs, info = env.reset(seed=seed)
+        for agent in agents:
+            agent.reset()
+
+        step = 0
+        while step < default_env_params["max_steps"]:
+            # Each agent chooses a price
+            prices = []
+            for i, agent in enumerate(agents):
+                price = agent.choose_price(obs, env, info)
+                prices.append(price)
+
+            action = np.array(prices, dtype=np.float32)
+
+            # Take step in environment
+            next_obs, rewards, terminated, truncated, step_info = env.step(action)
+
+            # Update agent histories
+            for i, agent in enumerate(agents):
+                rival_prices = np.array(
+                    [prices[j] for j in range(len(prices)) if j != i]
+                )
+                agent.update_history(prices[i], rival_prices)
+
+            # Log step data
+            logger.log_step(
+                step=step + 1,
+                prices=step_info["prices"],
+                profits=rewards,
+                demand_shock=step_info["demand_shock"],
+                market_price=step_info["market_price"],
+                total_demand=step_info["total_demand"],
+                individual_quantity=step_info["individual_quantities"],
+                total_profits=step_info["total_profits"],
+                additional_info={
+                    "agent_types": firms,
+                    "agent_prices": prices,
+                },
+            )
+
+            # Update for next iteration
+            obs = next_obs
+            info = step_info
+            step += 1
+
+            # Check termination
+            if terminated or truncated:
+                break
+
+        # Log episode end
+        episode_summary = {
+            "total_steps": step,
+            "final_market_price": float(step_info["market_price"]),
+            "total_profits": [float(p) for p in step_info["total_profits"].tolist()],
+            "agent_types": firms,
+            "environment_params": default_env_params,
+        }
+
+        logger.log_episode_end(
+            terminated=terminated,
+            truncated=truncated,
+            final_rewards=step_info["total_profits"],
+            episode_summary=episode_summary,
+        )
+
+        # Create results structure compatible with regulator version
+        results = {
+            "log_file": str(logger.get_log_file_path()),
+            "episode_data": {
+                "total_steps": step,
+                "violations": {"parallel": 0, "structural_break": 0},
+                "total_fines": 0.0,
+                "episode_prices": [step_info["prices"] for _ in range(step)],
+                "episode_profits": [step_info["total_profits"] for _ in range(step)],
+            },
+            "episode_summary": episode_summary,
+        }
 
     # Add experiment metadata
     results["episode_id"] = episode_id
@@ -372,6 +464,7 @@ Examples:
   python scripts/run_experiment.py --firms random,bestresponse,titfortat --steps 100 --regulator ml
   python scripts/run_experiment.py --firms random,random --steps 50 --regulator rule_based --seed 123
   python scripts/run_experiment.py --firms titfortat,titfortat --steps 200 --regulator none
+  python scripts/run_experiment.py --firms random,titfortat --steps 50 --regulator disabled  # Basic episode without regulator
         """,
     )
 
@@ -393,8 +486,8 @@ Examples:
         "--regulator",
         type=str,
         default="rule_based",
-        choices=["ml", "rule_based", "none"],
-        help="Regulator configuration (default: rule_based)",
+        choices=["ml", "rule_based", "none", "disabled"],
+        help="Regulator configuration (default: rule_based). Use 'disabled' for basic episodes without regulator.",
     )
 
     parser.add_argument(
