@@ -145,7 +145,7 @@ def print_experiment_summary(
         avg_prices = []
         for step_data in episode_data:
             prices = step_data.get("prices", [])
-            if prices:
+            if len(prices) > 0:
                 avg_prices.append(np.mean(prices))
 
         if avg_prices:
@@ -158,7 +158,7 @@ def print_experiment_summary(
         total_profits = []
         for step_data in episode_data:
             profits = step_data.get("profits", [])
-            if profits:
+            if len(profits) > 0:
                 total_profits.append(sum(profits))
 
         if total_profits:
@@ -334,11 +334,13 @@ def run_experiment(
     # Convert numpy types in results
     results = convert_numpy_types(results)  # type: ignore
 
-    # Calculate welfare metrics
-    welfare_metrics = calculate_welfare_metrics(results["episode_data"], env)
+    # Calculate welfare metrics from logger data
+    logger = results["logger"]
+    episode_data = logger.load_episode_data(logger.get_log_file_path())
+    welfare_metrics = calculate_welfare_metrics(episode_data["steps"], env)
     results["welfare_metrics"] = welfare_metrics
 
     # Print summary
-    print_experiment_summary(results, results["episode_data"], welfare_metrics)
+    print_experiment_summary(results, episode_data["steps"], welfare_metrics)
 
     return results  # type: ignore

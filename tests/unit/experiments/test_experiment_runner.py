@@ -276,6 +276,18 @@ class TestRunExperiment:
     def test_run_experiment_basic(self, mock_run_episode: Mock) -> None:
         """Test running a basic experiment."""
         # Mock the episode runner
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {
+            "steps": [
+                {
+                    "prices": [20.0, 25.0],
+                    "profits": [100.0, 120.0],
+                    "market_price": 22.5,
+                    "total_quantity": 77.5,
+                }
+            ]
+        }
         mock_run_episode.return_value = {
             "episode_data": [
                 {
@@ -286,6 +298,7 @@ class TestRunExperiment:
                 }
             ],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -316,9 +329,13 @@ class TestRunExperiment:
     @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_with_env_params(self, mock_run_episode: Mock) -> None:
         """Test running experiment with custom environment parameters."""
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {"steps": []}
         mock_run_episode.return_value = {
             "episode_data": [],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         env_params = {
@@ -346,9 +363,13 @@ class TestRunExperiment:
     @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_auto_episode_id(self, mock_run_episode: Mock) -> None:
         """Test running experiment with auto-generated episode ID."""
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {"steps": []}
         mock_run_episode.return_value = {
             "episode_data": [],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -369,6 +390,18 @@ class TestRunExperiment:
     @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_numpy_type_conversion(self, mock_run_episode: Mock) -> None:
         """Test that numpy types are converted to Python native types."""
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {
+            "steps": [
+                {
+                    "prices": np.array([20.0, 25.0]),
+                    "profits": np.array([100.0, 120.0]),
+                    "market_price": np.float32(22.5),
+                    "total_quantity": np.int32(77),
+                }
+            ]
+        }
         mock_run_episode.return_value = {
             "episode_data": [
                 {
@@ -379,6 +412,7 @@ class TestRunExperiment:
                 }
             ],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -400,9 +434,13 @@ class TestRunExperiment:
     @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_different_agent_types(self, mock_run_episode: Mock) -> None:
         """Test running experiment with different agent types."""
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {"steps": []}
         mock_run_episode.return_value = {
             "episode_data": [],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -424,9 +462,13 @@ class TestRunExperiment:
         self, mock_run_episode: Mock
     ) -> None:
         """Test running experiment with different regulator configurations."""
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {"steps": []}
         mock_run_episode.return_value = {
             "episode_data": [],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         configs = ["rule_based", "ml", "none"]
@@ -451,9 +493,13 @@ class TestRunExperiment:
         self, mock_run_episode: Mock, mock_print: Mock
     ) -> None:
         """Test that experiment prints progress information."""
+        mock_logger = Mock()
+        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
+        mock_logger.load_episode_data.return_value = {"steps": []}
         mock_run_episode.return_value = {
             "episode_data": [],
             "log_file": "/path/to/log.jsonl",
+            "logger": mock_logger,
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
