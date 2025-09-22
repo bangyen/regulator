@@ -787,7 +787,7 @@ class CartelEnv(gym.Env):
             Array of observed prices with noise and limited visibility
         """
         if not self.use_information_asymmetry:
-            return prices.copy()
+            return prices.copy()  # type: ignore[no-any-return]
 
         # Add observation noise
         observation_noise = self.np_random.normal(
