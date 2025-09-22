@@ -26,7 +26,7 @@ jobs:
       
     - name: Build smoke test image
       run: |
-        cd docker && docker build --target cli -t regulator-smoke-test .
+        docker build --target cli -f docker/Dockerfile -t regulator-smoke-test .
         
     - name: Run smoke tests
       run: |
@@ -63,7 +63,7 @@ jobs:
       
     - name: Build dashboard test image
       run: |
-        cd docker && docker build --target production -t regulator-dashboard-test .
+        docker build --target production -f docker/Dockerfile -t regulator-dashboard-test .
         
     - name: Run dashboard import tests
       run: |
@@ -93,7 +93,7 @@ jobs:
       
     - name: Build production image
       run: |
-        cd docker && docker build --target production -t regulator-prod .
+        docker build --target production -f docker/Dockerfile -t regulator-prod .
         
     - name: Test container startup
       run: |
@@ -193,7 +193,8 @@ jobs:
     - name: Build and push production image
       uses: docker/build-push-action@v5
       with:
-        context: ./docker
+        context: .
+        file: ./docker/Dockerfile
         target: production
         push: true
         tags: ${{ steps.meta.outputs.tags }}
@@ -204,7 +205,8 @@ jobs:
     - name: Build and push development image
       uses: docker/build-push-action@v5
       with:
-        context: ./docker
+        context: .
+        file: ./docker/Dockerfile
         target: development
         push: true
         tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev

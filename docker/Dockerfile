@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Regulator application
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -17,36 +17,36 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy requirements first for better caching
-COPY ../pyproject.toml ./
-COPY ../README.md ./
-COPY ../src/ ./src/
+COPY pyproject.toml ./
+COPY README.md ./
+COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
     pip install -e ".[dev,ml]"
 
 # Copy remaining source code
-COPY .. .
+COPY . .
 
 # Create logs directory
 RUN mkdir -p logs
 
 # Development stage
-FROM base as development
+FROM base AS development
 # Install additional dev tools
 RUN pip install jupyter ipython
 EXPOSE 8501
 CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 # Production stage
-FROM base as production
+FROM base AS production
 # Remove dev dependencies for smaller image
 RUN pip uninstall -y pytest pytest-cov black ruff mypy pre-commit jupyter ipython
 EXPOSE 8501
 CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 # CLI stage for running experiments
-FROM base as cli
+FROM base AS cli
 # Remove Streamlit and dashboard dependencies for CLI-only usage
 RUN pip uninstall -y streamlit
 CMD ["python", "-m", "regulator_cli", "--help"]
