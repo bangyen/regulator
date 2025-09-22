@@ -26,7 +26,7 @@ jobs:
       
     - name: Build smoke test image
       run: |
-        docker build --target cli -f docker/Dockerfile -t regulator-smoke-test .
+        docker build --target test -f docker/Dockerfile -t regulator-smoke-test .
         
     - name: Run smoke tests
       run: |

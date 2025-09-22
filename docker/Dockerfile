@@ -45,6 +45,11 @@ RUN pip uninstall -y pytest pytest-cov black ruff mypy pre-commit jupyter ipytho
 EXPOSE 8501
 CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
+# Test stage for running tests (keeps all dependencies)
+FROM base AS test
+# Keep all dependencies for testing
+CMD ["python", "-m", "pytest", "tests/", "-v"]
+
 # CLI stage for running experiments
 FROM base AS cli
 # Remove Streamlit and dashboard dependencies for CLI-only usage
