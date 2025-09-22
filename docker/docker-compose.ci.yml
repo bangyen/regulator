@@ -1,0 +1,68 @@
+# Docker Compose override for CI/CD testing
+# This file extends docker-compose.yml with CI-specific configurations
+
+services:
+  # Override smoke-test service for CI
+  smoke-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - PYTEST_TIMEOUT=300
+    volumes:
+      - ../logs:/app/logs
+      - ../tests:/app/tests
+    command: ["python", "-m", "pytest", "tests/smoke/", "-v", "--tb=short", "--timeout=300"]
+    profiles:
+      - test
+
+  # Override dashboard for CI testing
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - test
+
+  # CI-specific test runner
+  ci-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - PYTEST_TIMEOUT=300
+    volumes:
+      - ../logs:/app/logs
+      - ../tests:/app/tests
+    command: |
+      sh -c "
+        echo 'Running smoke tests...' &&
+        python -m pytest tests/smoke/test_simulation.py -v --tb=short &&
+        echo 'Running dashboard tests...' &&
+        python -m pytest tests/smoke/test_dashboard.py -v --tb=short &&
+        echo 'All tests passed!'
+      "
+    profiles:
+      - ci
+
+networks:
+  default:
+    name: regulator-ci-network
+    external: false

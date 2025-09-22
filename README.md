@@ -49,7 +49,8 @@ A comprehensive Python package for simulating market competition and detecting c
 
 3. **Set up environment variables** (for LLM detection):
    ```bash
-   echo "OPENAI_API_KEY=your_api_key_here" > .env
+   cp env.template .env
+   # Edit .env and add your OpenAI API key
    ```
 
 4. **Use the CLI**:

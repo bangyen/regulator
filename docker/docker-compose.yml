@@ -1,0 +1,80 @@
+services:
+  # Main dashboard service
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    ports:
+      - "8503:8501"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - ../.env
+    volumes:
+      - ../logs:/app/logs
+      - ../dashboard:/app/dashboard
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Development dashboard with hot reload
+  dashboard-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    ports:
+      - "8502:8501"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - ../.env
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+    command: ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.runOnSave=true"]
+    profiles:
+      - dev
+
+  # CLI service for running experiments
+  cli:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: cli
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - ../.env
+    volumes:
+      - ../logs:/app/logs
+      - ../scripts:/app/scripts
+    profiles:
+      - cli
+
+  # Smoke test service for CI
+  smoke-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - ../.env
+    volumes:
+      - ../logs:/app/logs
+      - ../tests:/app/tests
+    command: ["python", "-m", "pytest", "tests/smoke/", "-v"]
+    profiles:
+      - test
+
+networks:
+  default:
+    name: regulator-network
+    external: false
