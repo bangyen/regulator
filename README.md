@@ -67,7 +67,7 @@ A comprehensive Python package for simulating market competition and detecting c
 
 ![Price Trajectories Screenshot](docs/price_trajectories.png)
 
-*This episode replay shows price trajectories from an experiment with 3 firms (Random, TitForTat, Random) over 20 steps. The visualization displays how each firm's pricing strategy evolves over time, with the market price shown as a dashed line.*
+*This episode replay shows price trajectories from an experiment with 3 firms (Random, TitForTat, Random) over 100 steps. The visualization displays how each firm's pricing strategy evolves over time, with the market price shown as a dashed line.*
 
 ### Enhanced Regulator with Graduated Penalties
 
