@@ -63,7 +63,7 @@ jobs:
       
     - name: Build dashboard test image
       run: |
-        docker build --target production -f docker/Dockerfile -t regulator-dashboard-test .
+        docker build --target test -f docker/Dockerfile -t regulator-dashboard-test .
         
     - name: Run dashboard import tests
       run: |
