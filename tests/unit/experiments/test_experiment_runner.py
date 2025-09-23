@@ -20,9 +20,9 @@ from src.experiments.experiment_runner import (
 )
 
 # Import the actual classes that experiment_runner uses
-from agents.firm_agents import BaseAgent
-from agents.regulator import Regulator
-from cartel.cartel_env import CartelEnv
+from src.agents.firm_agents import BaseAgent
+from src.agents.regulator import Regulator
+from src.cartel.cartel_env import CartelEnv
 
 
 class TestCreateAgent:

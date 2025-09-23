@@ -174,7 +174,7 @@ def create_price_trajectory_plot(steps: List[Dict[str, Any]]) -> go.Figure:
                 x=step_numbers,
                 y=firm_prices,
                 mode="lines+markers",
-                name=f"Firm {i+1}",
+                name=f"Firm {i + 1}",
                 line=dict(width=2),
                 marker=dict(size=4),
             )

@@ -12,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 
 # Import from the package
-from regulator_cli import main, experiment, dashboard
+from src.regulator_cli import main, experiment, dashboard
 
 
 class TestRegulatorCLI:
@@ -26,7 +26,7 @@ class TestRegulatorCLI:
 
     def test_experiment_command_basic(self) -> None:
         """Test basic experiment command execution."""
-        with patch("regulator_cli.run_experiment") as mock_run:
+        with patch("src.regulator_cli.run_experiment") as mock_run:
             mock_run.return_value = None
 
             runner = CliRunner()
@@ -52,7 +52,7 @@ class TestRegulatorCLI:
 
     def test_experiment_command_with_exception(self) -> None:
         """Test experiment command with exception handling."""
-        with patch("regulator_cli.run_experiment") as mock_run:
+        with patch("src.regulator_cli.run_experiment") as mock_run:
             mock_run.side_effect = Exception("Test error")
 
             runner = CliRunner()

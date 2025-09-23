@@ -8,17 +8,17 @@ incentives, fine reductions, and the integration with the regulator system.
 import pytest
 import numpy as np
 
-from agents.leniency import (
+from src.agents.leniency import (
     LeniencyProgram,
     LeniencyStatus,
     WhistleblowerAgent,
 )
-from agents.regulator import Regulator
-from agents.firm_agents import (
+from src.agents.regulator import Regulator
+from src.agents.firm_agents import (
     WhistleblowerTitForTatAgent,
     StrategicWhistleblowerAgent,
 )
-from cartel.cartel_env import CartelEnv
+from src.cartel.cartel_env import CartelEnv
 
 
 class TestLeniencyProgram:

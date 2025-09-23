@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from cartel.cartel_env import CartelEnv
-from agents.leniency import LeniencyProgram, WhistleblowerAgent
+from src.cartel.cartel_env import CartelEnv
+from src.agents.leniency import LeniencyProgram, WhistleblowerAgent
 
 
 class BaseAgent(ABC):
