@@ -31,6 +31,8 @@ A comprehensive Python package for simulating market competition and detecting c
 
 ## Quick Start
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bangyen/regulator/blob/main/regulator_demo.ipynb)
+
 1. **Clone and setup**:
    ```bash
    git clone https://github.com/bangyen/regulator.git
