@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional, Deque
 import numpy as np
 from collections import deque
 
-from .firm_agents import BaseAgent
-from cartel.cartel_env import CartelEnv
+from src.agents.firm_agents import BaseAgent
+from src.cartel.cartel_env import CartelEnv
 
 
 class AdaptiveAgent(BaseAgent):

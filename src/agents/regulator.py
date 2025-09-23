@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from agents.leniency import LeniencyProgram, LeniencyStatus
+from src.agents.leniency import LeniencyProgram, LeniencyStatus
 
 
 class Regulator:
@@ -351,9 +351,10 @@ class Regulator:
         if self.leniency_program is None:
             return False
 
-        return self.leniency_program.submit_report(
+        result: bool = self.leniency_program.submit_report(
             firm_id, reported_firms, evidence_strength, step
         )
+        return result
 
     def get_leniency_status(self, firm_id: int) -> LeniencyStatus:
         """
@@ -392,9 +393,10 @@ class Regulator:
         if self.leniency_program is None:
             return 0.0
 
-        return self.leniency_program.get_whistleblower_incentive(
+        result: float = self.leniency_program.get_whistleblower_incentive(
             firm_id, current_fine, collusion_probability
         )
+        return result
 
     def get_leniency_summary(self) -> Dict[str, Any]:
         """
@@ -406,7 +408,7 @@ class Regulator:
         if self.leniency_program is None:
             return {"leniency_enabled": False}
 
-        summary = self.leniency_program.get_program_summary()
+        summary: Dict[str, Any] = self.leniency_program.get_program_summary()
         summary["leniency_enabled"] = True
         return summary
 
@@ -420,4 +422,5 @@ class Regulator:
         if self.leniency_program is None:
             return []
 
-        return self.leniency_program.get_reports_summary()
+        result: List[Dict[str, Any]] = self.leniency_program.get_reports_summary()
+        return result

@@ -313,7 +313,7 @@ class TestDashboardIntegration:
             step_data = {
                 "type": "step",
                 "step": i + 1,
-                "timestamp": f"2025-01-01T00:00:{i+1:02d}",
+                "timestamp": f"2025-01-01T00:00:{i + 1:02d}",
                 "prices": [50.0 + i * 5, 60.0 + i * 3],
                 "profits": [100.0 + i * 10, 120.0 + i * 8],
                 "demand_shock": i * 0.5,

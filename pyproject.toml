@@ -38,6 +38,7 @@ dependencies = [
     "streamlit>=1.28.0",
     "python-dotenv>=1.0.0",
     "openai>=1.0.0",
+    "matplotlib>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -77,9 +78,9 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 explicit_package_bases = true
-mypy_path = "src"
 ignore_missing_imports = true
 namespace_packages = true
+packages = ["src"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

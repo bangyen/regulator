@@ -7,7 +7,7 @@ This module contains functions for training ML models and running episodes.
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from detectors.ml_detector import (
+from src.detectors.ml_detector import (
     CollusionDetector,
     FeatureExtractor,
     generate_synthetic_labels,
