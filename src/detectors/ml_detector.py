@@ -501,20 +501,40 @@ def generate_synthetic_labels(
             profits = np.array([step["profits"] for step in steps_data])
             avg_profit = np.mean(profits)
 
-            # Synthetic labeling logic
-            is_collusive = False
+            # More realistic synthetic labeling logic
+            collusion_score = 0.0
 
-            # High price correlation suggests collusion
-            if price_correlation > 0.7:
-                is_collusive = True
+            # Price correlation factor (0-1)
+            if price_correlation > 0.6:
+                collusion_score += 0.3
+            elif price_correlation > 0.4:
+                collusion_score += 0.15
 
-            # Low price volatility with high profits suggests collusion
-            if price_volatility < 20 and avg_profit > 1000:
-                is_collusive = True
+            # Price volatility factor (0-1)
+            if price_volatility < 15:
+                collusion_score += 0.25
+            elif price_volatility < 25:
+                collusion_score += 0.1
 
-            # Random component based on collusion_ratio
-            if rng.random() < collusion_ratio:
-                is_collusive = True
+            # Profit factor (0-1)
+            if avg_profit > 1200:
+                collusion_score += 0.2
+            elif avg_profit > 800:
+                collusion_score += 0.1
+
+            # Episode length factor (longer episodes more likely collusive)
+            episode_length_factor = min(len(steps_data) / 20.0, 1.0) * 0.1
+            collusion_score += episode_length_factor
+
+            # Add some randomness for realistic variation
+            random_factor = rng.random() * 0.2
+            collusion_score += random_factor
+
+            # Determine final label based on score and target ratio
+            threshold = (
+                0.4 + (collusion_ratio - 0.5) * 0.4
+            )  # Adjust threshold based on desired ratio
+            is_collusive = collusion_score > threshold
 
             valid_files.append(log_file)
             labels.append(1 if is_collusive else 0)
