@@ -171,17 +171,19 @@ class EconomicValidator:
         if market_shares and len(market_shares) == len(prices):
             # Check that lower prices generally get higher market shares
             # (allowing for some noise due to other factors)
-            try:
-                price_share_correlation = np.corrcoef(prices, market_shares)[0, 1]
-                if (
-                    price_share_correlation > 0.5
-                ):  # Strong positive correlation is suspicious
-                    errors.append(
-                        f"Strong positive correlation between prices and market shares: {price_share_correlation}"
-                    )
-            except (ValueError, np.linalg.LinAlgError):
-                # Handle cases where correlation can't be computed
-                pass
+            # Only calculate correlation if we have at least 2 data points
+            if len(prices) >= 2:
+                try:
+                    price_share_correlation = np.corrcoef(prices, market_shares)[0, 1]
+                    if (
+                        price_share_correlation > 0.5
+                    ):  # Strong positive correlation is suspicious
+                        errors.append(
+                            f"Strong positive correlation between prices and market shares: {price_share_correlation}"
+                        )
+                except (ValueError, np.linalg.LinAlgError):
+                    # Handle cases where correlation can't be computed
+                    pass
 
             # Check that market shares are reasonable (not too concentrated)
             max_share = max(market_shares)
