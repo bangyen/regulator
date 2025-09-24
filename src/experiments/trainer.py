@@ -169,8 +169,8 @@ def train_ml_detector(
     print(f"Training Accuracy: {metrics['train_accuracy']:.3f}")
     print(f"Test Accuracy: {metrics['test_accuracy']:.3f}")
     print(f"AUROC: {metrics['auroc']:.3f}")
-    print(f"Training Samples: {metrics['train_samples']}")
-    print(f"Test Samples: {metrics['test_samples']}")
+    print(f"Training Samples: {metrics['n_train_samples']}")
+    print(f"Test Samples: {metrics['n_test_samples']}")
 
     if metrics["auroc"] >= 0.8:
         print("✅ AUROC threshold (≥0.8) achieved!")

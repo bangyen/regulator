@@ -480,3 +480,231 @@ class TestAgentIntegration:
         for agent in agents:
             assert len(agent.price_history) == 0
             assert len(agent.rival_price_history) == 0
+
+
+class TestCollusiveAgent:
+    """Test suite for CollusiveAgent class."""
+
+    def test_collusive_agent_initialization(self) -> None:
+        """Test CollusiveAgent initialization."""
+        from src.agents.firm_agents import CollusiveAgent
+
+        agent = CollusiveAgent(
+            agent_id=0, collusive_price=30.0, deviation_penalty=0.1, seed=42
+        )
+
+        assert agent.agent_id == 0
+        assert agent.collusive_price == 30.0
+        assert agent.deviation_penalty == 0.1
+        assert isinstance(agent.np_random, np.random.Generator)
+
+    def test_collusive_agent_default_params(self) -> None:
+        """Test CollusiveAgent with default parameters."""
+        from src.agents.firm_agents import CollusiveAgent
+
+        agent = CollusiveAgent(agent_id=1)
+
+        assert agent.collusive_price == 30.0
+        assert agent.deviation_penalty == 0.1
+
+    def test_collusive_agent_no_history(self) -> None:
+        """Test CollusiveAgent behavior with no price history."""
+        from src.agents.firm_agents import CollusiveAgent
+
+        env = CartelEnv(n_firms=3, marginal_cost=10.0, price_min=1.0, price_max=50.0)
+        agent = CollusiveAgent(agent_id=0, collusive_price=25.0)
+        obs = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])  # No prices set yet
+
+        price = agent.choose_price(obs, env, None)
+
+        # Should return close to the collusive price (may have noise/randomness)
+        assert env.price_min <= price <= env.price_max
+        assert abs(price - 25.0) < 5.0  # Allow some deviation
+
+    def test_collusive_agent_with_history_cooperative(self) -> None:
+        """Test CollusiveAgent behavior when rivals are cooperative."""
+        from src.agents.firm_agents import CollusiveAgent
+
+        env = CartelEnv(n_firms=3, marginal_cost=10.0, price_min=1.0, price_max=50.0)
+        agent = CollusiveAgent(agent_id=0, collusive_price=25.0, deviation_penalty=0.1)
+
+        # Add cooperative rival history (close to collusive price)
+        agent.rival_price_history = [24.0, 25.5, 25.0]
+
+        obs = np.array([25.0, 24.5, 25.5, 100.0, 110.0, 105.0])
+        price = agent.choose_price(obs, env, None)
+
+        # Should maintain close to collusive price when rivals are cooperative
+        assert env.price_min <= price <= env.price_max
+        assert abs(price - 25.0) < 5.0  # Allow some deviation for cooperative behavior
+
+    def test_collusive_agent_with_history_defection(self) -> None:
+        """Test CollusiveAgent behavior when rivals deviate significantly."""
+        from src.agents.firm_agents import CollusiveAgent
+
+        env = CartelEnv(n_firms=3, marginal_cost=10.0, price_min=1.0, price_max=50.0)
+        agent = CollusiveAgent(agent_id=0, collusive_price=30.0, deviation_penalty=0.2)
+
+        # Add defecting rival history (much lower than collusive price)
+        agent.rival_price_history = [20.0, 18.0, 15.0]  # Significant deviation
+
+        obs = np.array([30.0, 15.0, 16.0, 100.0, 110.0, 105.0])
+        price = agent.choose_price(obs, env, None)
+
+        # Should respond to defection by lowering price
+        assert price < 30.0
+        assert price >= env.price_min
+
+    def test_collusive_agent_price_bounds(self) -> None:
+        """Test that CollusiveAgent respects price bounds."""
+        from src.agents.firm_agents import CollusiveAgent
+
+        env = CartelEnv(n_firms=2, marginal_cost=10.0, price_min=5.0, price_max=20.0)
+
+        # Test with collusive price above max
+        agent_high = CollusiveAgent(agent_id=0, collusive_price=50.0)
+        obs = np.array([0.0, 0.0, 0.0, 0.0])
+        price_high = agent_high.choose_price(obs, env, None)
+        assert price_high <= env.price_max
+
+        # Test with collusive price below min
+        agent_low = CollusiveAgent(agent_id=0, collusive_price=2.0)
+        price_low = agent_low.choose_price(obs, env, None)
+        assert price_low >= env.price_min
+
+
+class TestBestResponseAgentEdgeCases:
+    """Test edge cases for BestResponseAgent."""
+
+    def test_best_response_agent_fallback_calculation(self) -> None:
+        """Test BestResponseAgent with fallback calculation logic."""
+        # Create environment that would trigger fallback logic
+        env = CartelEnv(
+            n_firms=10,  # Many firms to test fallback case
+            marginal_cost=10.0,
+            demand_intercept=100.0,
+            demand_slope=-0.1,  # Small negative slope that might trigger edge case
+            price_min=1.0,
+            price_max=50.0,
+        )
+
+        agent = BestResponseAgent(agent_id=0)
+        obs = np.array([20.0] * 10 + [100.0] * 10)  # 10 prices + 10 profits
+
+        # Should handle gracefully
+        best_response_price = agent.choose_price(obs, env, None)
+
+        assert env.price_min <= best_response_price <= env.price_max
+        # Should be above marginal cost
+        assert best_response_price >= env.marginal_cost
+
+    def test_best_response_agent_extreme_marginal_cost(self) -> None:
+        """Test BestResponseAgent with very high marginal cost."""
+        env = CartelEnv(
+            n_firms=2,
+            marginal_cost=45.0,  # Very high marginal cost
+            demand_intercept=100.0,
+            demand_slope=-1.0,
+            price_min=1.0,
+            price_max=50.0,
+        )
+
+        agent = BestResponseAgent(agent_id=0)
+        obs = np.array([48.0, 49.0, 50.0, 50.0])
+
+        best_response_price = agent.choose_price(obs, env, None)
+
+        # Should be above marginal cost (line 218)
+        assert best_response_price >= env.marginal_cost + 1.0
+        assert best_response_price <= env.price_max
+
+
+class TestTitForTatAgentEdgeCases:
+    """Test edge cases for TitForTatAgent."""
+
+    def test_tit_for_tat_agent_default_price_at_bounds(self) -> None:
+        """Test TitForTatAgent default price calculation with edge case bounds."""
+        # Environment where default would exceed max price
+        env = CartelEnv(
+            n_firms=2,
+            marginal_cost=48.0,  # High marginal cost
+            price_min=1.0,
+            price_max=50.0,
+        )
+
+        agent = TitForTatAgent(agent_id=0)
+        obs = np.array([0.0, 0.0, 0.0, 0.0])
+
+        # No rival history, should use default (marginal_cost + 5.0 = 53.0)
+        # But should be clipped to max price (50.0)
+        price = agent.choose_price(obs, env, None)
+
+        assert price == env.price_max  # Should be clipped to 50.0
+
+        # Environment where default would be below min price
+        env_low = CartelEnv(
+            n_firms=2,
+            marginal_cost=1.0,
+            price_min=10.0,
+            price_max=50.0,
+        )
+
+        agent_low = TitForTatAgent(agent_id=0)
+        price_low = agent_low.choose_price(obs, env_low, None)
+
+        assert price_low >= env_low.price_min
+
+    def test_tit_for_tat_agent_rival_price_clipping(self) -> None:
+        """Test TitForTatAgent rival price clipping."""
+        env = CartelEnv(n_firms=2, marginal_cost=10.0, price_min=5.0, price_max=25.0)
+        agent = TitForTatAgent(agent_id=0)
+
+        # Set rival history with price outside bounds
+        agent.rival_price_history = [50.0]  # Above max
+
+        obs = np.array([25.0, 50.0, 100.0, 100.0])
+        price = agent.choose_price(obs, env, None)
+
+        # Should be clipped to max price
+        assert price == env.price_max
+
+        # Test with rival price below min
+        agent.rival_price_history = [2.0]  # Below min
+        price_low = agent.choose_price(obs, env, None)
+
+        # Should be clipped to min price
+        assert price_low == env.price_min
+
+
+class TestBaseAgentEdgeCases:
+    """Test edge cases for BaseAgent."""
+
+    def test_base_agent_update_history_empty_rivals(self) -> None:
+        """Test BaseAgent update_history with empty rival prices."""
+
+        class TestAgent(BaseAgent):
+            def choose_price(self, observation, env, info=None):
+                return 10.0
+
+        agent = TestAgent(agent_id=0)
+
+        # Update with empty rival array
+        agent.update_history(my_price=20.0, rival_prices=np.array([]))
+
+        assert agent.price_history == [20.0]
+        assert agent.rival_price_history == [0.0]  # Should default to 0.0
+
+    def test_base_agent_update_history_single_rival(self) -> None:
+        """Test BaseAgent update_history with single rival."""
+
+        class TestAgent(BaseAgent):
+            def choose_price(self, observation, env, info=None):
+                return 10.0
+
+        agent = TestAgent(agent_id=0)
+
+        # Update with single rival
+        agent.update_history(my_price=20.0, rival_prices=np.array([15.0]))
+
+        assert agent.price_history == [20.0]
+        assert agent.rival_price_history == [15.0]  # Should be the single rival price

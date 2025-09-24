@@ -53,9 +53,13 @@ class EnhancedMonitoringDashboard:
         with open(episode_file_path, "r") as f:
             for line in f:
                 if line.strip():
-                    data = json.loads(line)
-                    if data.get("type") == "step":
-                        episode_data["steps"].append(data)
+                    try:
+                        data = json.loads(line)
+                        if data.get("type") == "step":
+                            episode_data["steps"].append(data)
+                    except json.JSONDecodeError:
+                        # Skip invalid JSON lines
+                        continue
 
         return episode_data
 
@@ -195,6 +199,10 @@ class EnhancedMonitoringDashboard:
                     step_total = sum(step_fines)
                 else:
                     step_total = step_fines
+
+                # Ensure step_total is numeric
+                if not isinstance(step_total, (int, float)):
+                    step_total = 0
 
                 cumulative_fines += step_total
                 fines_applied.append(cumulative_fines)
@@ -338,6 +346,10 @@ class EnhancedMonitoringDashboard:
                 steps = data["steps"]
 
                 if not steps:
+                    report_lines.append(f"EPISODE: {episode_file}")
+                    report_lines.append("-" * 50)
+                    report_lines.append("No steps found in this episode.")
+                    report_lines.append("")
                     continue
 
                 report_lines.append(f"EPISODE: {episode_file}")

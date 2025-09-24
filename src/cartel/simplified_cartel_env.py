@@ -234,6 +234,11 @@ class SimplifiedCartelEnv(gym.Env):
             [prices, profits, [market_price, total_demand]], dtype=np.float32
         )
 
+        # Update state
+        self.current_step += 1
+        self.previous_prices = prices.copy()
+        self.current_demand_shock = float(self.np_random.normal(0, self.shock_std))
+
         # Create info dictionary
         info = {
             "step": self.current_step,
@@ -246,11 +251,6 @@ class SimplifiedCartelEnv(gym.Env):
             "demand_shock": self.current_demand_shock,
             "costs": costs.copy(),
         }
-
-        # Update state
-        self.current_step += 1
-        self.previous_prices = prices.copy()
-        self.current_demand_shock = float(self.np_random.normal(0, self.shock_std))
 
         # Check termination conditions
         terminated = self.current_step >= self.max_steps

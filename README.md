@@ -56,7 +56,7 @@ regulator/
 
 ## Validation
 
-- ✅ Full test coverage (`pytest`)
+- ✅ Overall test coverage of 92% (`pytest`)
 - ✅ Reproducible seeds for experiments
 - ✅ Benchmark scripts included
 
