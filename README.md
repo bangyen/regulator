@@ -63,7 +63,7 @@ regulator/
 ## References
 
 - [Algorithms, Machine Learning, and Collusion](https://academic.oup.com/jcle/article-abstract/14/4/568/5514023) - Comprehensive analysis of self-learning algorithms and collusive outcomes
-- [Deep learning for detecting bid rigging](https://arxiv.org/abs/2104.11142) - Deep learning approaches for detecting bid rigging in procurement auctions
+- [Deep learning for detecting bid rigging](https://arxiv.org/abs/2104.11142) - CNN-based approach for flagging cartel participants using pairwise bidding interactions
 - [Algorithmic Collusion: A Critical Review](https://arxiv.org/abs/2110.04740) - Critical assessment of pricing algorithms and collusion potential
 
 ## License
