@@ -6,6 +6,7 @@ by the simulation is consistent and economically plausible.
 """
 
 import math
+import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -174,7 +175,10 @@ class EconomicValidator:
             # Only calculate correlation if we have at least 2 data points
             if len(prices) >= 2:
                 try:
-                    price_share_correlation = np.corrcoef(prices, market_shares)[0, 1]
+                    # Suppress numpy warnings about division by zero when std is zero
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message="invalid value encountered in divide")
+                        price_share_correlation = np.corrcoef(prices, market_shares)[0, 1]
                     if (
                         price_share_correlation > 0.5
                     ):  # Strong positive correlation is suspicious
