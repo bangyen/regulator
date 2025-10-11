@@ -199,9 +199,12 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
 
         project_root = Path(__file__).parent.parent
 
-        # Use sys.executable to get current Python interpreter
+        # Use venv Python if available, otherwise fall back to current interpreter
+        venv_python = project_root / "venv" / "bin" / "python3"
+        python_cmd = str(venv_python) if venv_python.exists() else sys.executable
+        
         cmd = [
-            sys.executable,
+            python_cmd,
             "scripts/run_experiment.py",
             "--steps",
             str(steps),
