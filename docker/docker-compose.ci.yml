@@ -26,12 +26,11 @@ services:
       target: production
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
-      - STREAMLIT_SERVER_HEADLESS=true
-      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - FLASK_ENV=production
     ports:
-      - "8501:8501"
+      - "5000:5000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -54,9 +53,7 @@ services:
     command: |
       sh -c "
         echo 'Running smoke tests...' &&
-        python -m pytest tests/smoke/test_simulation.py -v --tb=short &&
-        echo 'Running dashboard tests...' &&
-        python -m pytest tests/smoke/test_dashboard.py -v --tb=short &&
+        python -m pytest tests/smoke/ -v --tb=short &&
         echo 'All tests passed!'
       "
     profiles:

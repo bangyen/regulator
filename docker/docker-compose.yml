@@ -6,7 +6,7 @@ services:
       dockerfile: docker/Dockerfile
       target: production
     ports:
-      - "8503:8501"
+      - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     env_file:
@@ -15,7 +15,7 @@ services:
       - ../logs:/app/logs
       - ../dashboard:/app/dashboard
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,15 +29,17 @@ services:
       dockerfile: docker/Dockerfile
       target: development
     ports:
-      - "8502:8501"
+      - "5001:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
     env_file:
       - ../.env
     volumes:
       - ..:/app
       - /app/__pycache__
-    command: ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.runOnSave=true"]
+    command: ["python", "dashboard/main.py"]
     profiles:
       - dev
 

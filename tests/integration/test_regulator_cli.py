@@ -81,17 +81,17 @@ class TestRegulatorCLI:
             mock_subprocess.return_value = Mock(returncode=0)
 
             runner = CliRunner()
-            result = runner.invoke(dashboard, ["--port", "8501"])
+            result = runner.invoke(dashboard, ["--port", "5000"])
 
             # Verify the command succeeded and subprocess was called
             assert result.exit_code == 0
             mock_subprocess.assert_called_once()
             call_args = mock_subprocess.call_args[0][0]
-            assert "streamlit" in call_args
+            assert "flask" in call_args
             assert "run" in call_args
-            assert "dashboard/app.py" in call_args
-            assert "--server.port" in call_args
-            assert "8501" in call_args
+            assert "--host" in call_args
+            assert "--port" in call_args
+            assert "5000" in call_args
 
     def test_dashboard_command_custom_port(self) -> None:
         """Test dashboard command with custom port."""
@@ -109,10 +109,10 @@ class TestRegulatorCLI:
     def test_dashboard_command_subprocess_error(self) -> None:
         """Test dashboard command with subprocess error."""
         with patch("subprocess.run") as mock_subprocess:
-            mock_subprocess.side_effect = subprocess.CalledProcessError(1, "streamlit")
+            mock_subprocess.side_effect = subprocess.CalledProcessError(1, "flask")
 
             runner = CliRunner()
-            result = runner.invoke(dashboard, ["--port", "8501"])
+            result = runner.invoke(dashboard, ["--port", "5000"])
 
             # Should exit with error code
             assert result.exit_code == 1
@@ -123,7 +123,7 @@ class TestRegulatorCLI:
             mock_subprocess.side_effect = KeyboardInterrupt()
 
             runner = CliRunner()
-            result = runner.invoke(dashboard, ["--port", "8501"])
+            result = runner.invoke(dashboard, ["--port", "5000"])
 
             # Should exit successfully for keyboard interrupt (graceful shutdown)
             assert result.exit_code == 0

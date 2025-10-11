@@ -72,25 +72,32 @@ def experiment(
 
 
 @main.command()
-@click.option("--port", default=8501, help="Port for the dashboard")
-def dashboard(port: int) -> None:
-    """Launch the Streamlit dashboard."""
-    click.echo(f"Launching dashboard on port {port}...")
+@click.option("--port", default=5000, help="Port for the dashboard")
+@click.option("--host", default="127.0.0.1", help="Host address for the dashboard")
+def dashboard(port: int, host: str) -> None:
+    """Launch the Flask dashboard."""
+    click.echo(f"Launching dashboard on {host}:{port}...")
 
+    import os
     import subprocess
-    import sys
 
     try:
+        env = os.environ.copy()
+        env["FLASK_APP"] = "dashboard.main"
+        env["FLASK_ENV"] = "development"
+        
         subprocess.run(
             [
                 sys.executable,
                 "-m",
-                "streamlit",
+                "flask",
                 "run",
-                "dashboard/app.py",
-                "--server.port",
+                "--host",
+                host,
+                "--port",
                 str(port),
             ],
+            env=env,
             check=True,
         )
     except subprocess.CalledProcessError as e:
