@@ -213,28 +213,21 @@ def test_cli_import():
 
 
 def test_dashboard_import():
-    """Test that dashboard can be imported without running Streamlit."""
-    # Test importing dashboard functions
-    from dashboard.app import (
-        load_episode_data,
-        calculate_surplus,
-        create_price_trajectory_plot,
-    )
+    """Test that Flask dashboard can be imported."""
+    from dashboard.main import app, calculate_metrics, extract_time_series
 
-    # Test that functions are callable
-    assert callable(load_episode_data)
-    assert callable(calculate_surplus)
-    assert callable(create_price_trajectory_plot)
+    # Test that Flask app exists
+    assert app is not None
+    assert callable(calculate_metrics)
+    assert callable(extract_time_series)
 
-    # Test basic functionality
-    consumer_surplus, producer_surplus = calculate_surplus(
-        prices=[10.0, 12.0], market_price=11.0, total_demand=50.0
-    )
+    # Test basic functionality with empty data
+    metrics = calculate_metrics({"steps": []})
+    assert isinstance(metrics, dict)
 
-    assert isinstance(consumer_surplus, (int, float))
-    assert isinstance(producer_surplus, (int, float))
-    assert consumer_surplus >= 0
-    assert producer_surplus >= 0
+    time_series = extract_time_series({"steps": []})
+    assert isinstance(time_series, dict)
+    assert "prices" in time_series
 
 
 if __name__ == "__main__":

@@ -24,6 +24,13 @@ python scripts/run_experiment.py --steps 100 --firms "random,tit_for_tat"
 
 Or open in Colab: [Colab Notebook](https://colab.research.google.com/github/bangyen/regulator/blob/main/regulator_demo.ipynb).
 
+For real-time monitoring, run the dashboard:
+
+```bash
+python dashboard/main.py
+# Visit http://localhost:5000
+```
+
 ## Results
 
 | Detection Method | Accuracy | Precision | Recall | F1 Score | ROC AUC |
@@ -33,6 +40,7 @@ Or open in Colab: [Colab Notebook](https://colab.research.google.com/github/bang
 
 ## Features
 
+- **Real-Time Dashboard** — Professional monitoring interface with live metrics, charts, and violation tracking.
 - **ML+LLM Detection** — 93% accuracy with sub-millisecond processing for real-time monitoring.
 - **Economic Validation** — Built-in consistency checks and market dynamics validation.
 - **Chat Integration** — Natural language communication monitoring with OpenAI-powered analysis.
@@ -44,6 +52,7 @@ Or open in Colab: [Colab Notebook](https://colab.research.google.com/github/bang
 ```plaintext
 regulator/
 ├── regulator_demo.ipynb  # Colab notebook
+├── dashboard/            # Real-time monitoring dashboard (Flask)
 ├── scripts/              # Example run scripts
 ├── tests/                # Unit/integration tests
 ├── docs/                 # Images for README

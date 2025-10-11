@@ -1,94 +1,94 @@
-# Regulator Experiment Dashboard
+# Regulator Dashboard
 
-A Streamlit-based dashboard for visualizing and analyzing regulator experiment episodes.
+Professional monitoring interface for real-time cartel detection and market analysis.
 
-## Features
+## Design
 
-- **Price Trajectories**: Interactive plots showing individual firm prices and market price over time
-- **Regulator Flags**: Visualization of monitoring results focused on total fines over time
-- **Surplus Analysis**: Consumer surplus vs producer surplus analysis over time
-- **Profit Analysis**: Individual firm profit trajectories
-- **Episode Replay**: Framework for replaying episodes step-by-step
-- **Data Export**: Download episode data as JSON
+Minimalist Bauhaus-inspired design with:
+- Space Grotesk typography
+- Flat color palette (red, navy, cyan, blue, orange, green)
+- Custom SVG icons
+- Canvas-based charts
+- Sharp geometric layouts
+
+## Quick Start
+
+```bash
+# Activate virtual environment
+source venv/bin/activate  # On macOS/Linux
+# venv\Scripts\activate   # On Windows
+
+# Install dependencies (if not already done)
+pip install -e .
+
+# Run dashboard
+python dashboard/main.py
+
+# Or use Make
+make dashboard
+```
+
+Visit `http://localhost:5000` in your browser.
 
 ## Usage
 
-1. **Activate Virtual Environment**:
-   ```bash
-   source venv/bin/activate
-   ```
-
-2. **Install Dependencies** (if not already installed):
-   ```bash
-   pip install streamlit plotly
-   ```
-
-3. **Run the Dashboard**:
-   ```bash
-   streamlit run dashboard/app.py
-   ```
-
-3. **Access the Dashboard**:
-   Open your browser to `http://localhost:8501`
-
-## Dashboard Components
-
-### Episode Selection
-- Select from available JSONL log files in the `logs/` directory
-- View episode summary including agent types and environment parameters
-
-### Visualizations
-
-#### Price Trajectories Tab
-- Individual firm price lines
-- Market price line (dashed)
-- Interactive hover information
-
-#### Regulator Flags Tab
-- Fines applied over time (total fines)
-- Simplified layout for clarity
-
-#### Surplus Analysis Tab
-- Consumer surplus (green, filled)
-- Producer surplus (blue, filled)
-- Economic welfare analysis
-
-#### Profit Analysis Tab
-- Individual firm profit trajectories
-- Profit comparison over time
-
-### Episode Replay
-- Framework for step-by-step episode replay
-- Export functionality for episode data
-
-## Data Format
-
-The dashboard expects JSONL log files with the following structure:
-
-```json
-{"type": "episode_header", "episode_id": "...", "n_firms": 2, ...}
-{"type": "step", "step": 1, "prices": [...], "profits": [...], ...}
-{"type": "episode_summary", "episode_id": "...", "total_reward": ...}
-```
-
-## Testing
-
-Run the dashboard tests:
+### 1. Run an Experiment
+First, generate some data to visualize:
 
 ```bash
-python -m pytest tests/test_dashboard.py -v
+python scripts/run_experiment.py --steps 100 --firms "random,tit_for_tat"
 ```
 
-## Architecture
+### 2. Start Dashboard
+The dashboard will automatically load the most recent experiment:
 
-- **`app.py`**: Main Streamlit application
-- **Plot Functions**: Modular functions for creating different visualizations
-- **Data Loading**: JSONL file parsing and validation
-- **Surplus Calculation**: Economic welfare analysis
+```bash
+python dashboard/main.py
+```
 
-## Dependencies
+### 3. Interact
+- **Refresh** - Click refresh button or wait for auto-update (5s)
+- **Switch Views** - Toggle between Price and Risk charts
+- **Export Data** - Click Export button to download JSON
 
-- `streamlit`: Web application framework
-- `plotly`: Interactive plotting library
-- `numpy`: Numerical computations
-- `pathlib`: File system operations
+## Features
+
+- **Real-time Monitoring** - Auto-refreshes every 5 seconds
+- **Key Metrics** - Price, violations, fines, risk scores
+- **Interactive Charts** - Switchable price/risk views
+- **Activity Table** - Recent step-by-step data
+- **Data Export** - Download JSON snapshots
+
+## API Endpoints
+
+- `GET /` - Dashboard interface
+- `GET /api/data` - Current metrics and time series
+- `GET /api/experiments` - List available experiments
+
+## Development
+
+The dashboard reads experiment logs from `/logs/*.jsonl` and displays the most recent data.
+
+### File Structure
+```
+dashboard/
+├── main.py              # Flask application
+├── templates/
+│   └── dashboard.html   # Main template
+├── static/
+│   ├── css/
+│   │   └── style.css    # Design system
+│   └── js/
+│       └── dashboard.js # Chart rendering + API client
+├── README.md            # This file
+├── DESIGN.md            # Design system documentation
+└── FEATURES.md          # Feature details
+```
+
+### Testing
+```bash
+# Run dashboard tests
+pytest tests/unit/test_dashboard.py -v
+pytest tests/integration/test_dashboard_integration.py -v
+```
+
