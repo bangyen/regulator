@@ -145,12 +145,12 @@ class DashboardChart {
     }
 }
 
-const priceChart = new DashboardChart('price-chart', 'line');
-const riskChart = new DashboardChart('price-chart', 'line');
+const mainChart = new DashboardChart('price-chart', 'line');
 const violationsChart = new DashboardChart('violations-chart', 'bar');
 const finesChart = new DashboardChart('fines-chart', 'bar');
 
 let currentChart = 'price';
+let currentData = { prices: [], risk_scores: [] };
 
 function updateMetrics(metrics) {
     document.getElementById('avg-price').textContent = metrics.avg_price.toFixed(2);
@@ -160,8 +160,12 @@ function updateMetrics(metrics) {
 }
 
 function updateCharts(timeSeries) {
-    priceChart.setData(timeSeries.prices);
-    riskChart.setData(timeSeries.risk_scores);
+    currentData = timeSeries;
+    if (currentChart === 'price') {
+        mainChart.setData(timeSeries.prices);
+    } else {
+        mainChart.setData(timeSeries.risk_scores);
+    }
     violationsChart.setData(timeSeries.violations);
     finesChart.setData(timeSeries.fines);
 }
@@ -218,6 +222,68 @@ async function fetchData() {
 
 document.getElementById('refresh-btn').addEventListener('click', fetchData);
 
+document.getElementById('run-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('run-btn');
+    try {
+        btn.disabled = true;
+        btn.classList.add('running');
+        btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Running...
+        `;
+        
+        const response = await fetch('/api/experiment/run', { method: 'POST' });
+        if (!response.ok) {
+            throw new Error('Failed to start experiment');
+        }
+        
+        // Poll for status
+        const statusInterval = setInterval(async () => {
+            const statusRes = await fetch('/api/experiment/status');
+            const status = await statusRes.json();
+            
+            if (status.status === 'completed') {
+                clearInterval(statusInterval);
+                btn.disabled = false;
+                btn.classList.remove('running');
+                btn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Run Experiment
+                `;
+                fetchData(); // Refresh data
+            } else if (status.status === 'error') {
+                clearInterval(statusInterval);
+                btn.disabled = false;
+                btn.classList.remove('running');
+                btn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Run Experiment
+                `;
+                const errorMsg = status.error_message || 'Unknown error';
+                alert('Experiment failed: ' + errorMsg);
+            }
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error running experiment:', error);
+        btn.disabled = false;
+        btn.classList.remove('running');
+        btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Run Experiment
+        `;
+        alert('Failed to start experiment');
+    }
+});
+
 document.querySelectorAll('[data-chart]').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('[data-chart]').forEach(b => b.classList.remove('active'));
@@ -225,9 +291,9 @@ document.querySelectorAll('[data-chart]').forEach(btn => {
         currentChart = btn.dataset.chart;
         
         if (currentChart === 'price') {
-            priceChart.resizeCanvas();
+            mainChart.setData(currentData.prices);
         } else if (currentChart === 'risk') {
-            riskChart.resizeCanvas();
+            mainChart.setData(currentData.risk_scores);
         }
     });
 });
