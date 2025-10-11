@@ -76,11 +76,11 @@ def create_regulator(regulator_config: str, seed: Optional[int] = None) -> Regul
             seed=seed,
         )
     elif regulator_config == "rule_based":
-        # Standard rule-based regulator
+        # Standard rule-based regulator (less sensitive)
         return Regulator(
-            parallel_threshold=2.0,
-            parallel_steps=3,
-            structural_break_threshold=10.0,
+            parallel_threshold=8.0,
+            parallel_steps=10,
+            structural_break_threshold=80.0,
             fine_amount=50.0,
             seed=seed,
         )

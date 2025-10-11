@@ -29,12 +29,17 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
         return None
 
     steps = []
+    n_firms = 2  # Default
     with open(log_files[0], "r") as f:
         for line in f:
             if line.strip():
-                steps.append(json.loads(line))
+                data = json.loads(line)
+                steps.append(data)
+                # Get n_firms from header
+                if data.get("type") == "episode_header":
+                    n_firms = data.get("n_firms", 2)
 
-    return {"steps": steps, "file": str(log_files[0])}
+    return {"steps": steps, "file": str(log_files[0]), "n_firms": n_firms}
 
 
 def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -42,6 +47,9 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
     steps = data.get("steps", [])
     if not steps:
         return {}
+
+    n_firms = data.get("n_firms", 2)
+    max_fines = n_firms * 50.0  # Each firm can be fined $50
 
     prices = [s.get("market_price", 0) for s in steps if "market_price" in s]
 
@@ -69,7 +77,7 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
                 risk_scores.append(flags["risk_score"])
             else:
                 fines = sum(flags.get("fines_applied", []))
-                risk_scores.append(min(fines / 150.0, 1.0))
+                risk_scores.append(min(fines / max_fines, 1.0))
 
     return {
         "total_steps": len(steps),
@@ -85,6 +93,8 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
 def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
     """Extract time series data for visualization."""
     steps = data.get("steps", [])
+    n_firms = data.get("n_firms", 2)
+    max_fines = n_firms * 50.0  # Each firm can be fined $50
 
     prices = []
     violations = []
@@ -114,7 +124,7 @@ def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
         ):
             risk_score = regulator_flags["risk_score"]
         else:
-            risk_score = min(step_fines / 150.0, 1.0) if step_fines > 0 else 0.0
+            risk_score = min(step_fines / max_fines, 1.0) if step_fines > 0 else 0.0
         risk_scores.append({"x": step_num, "y": risk_score})
 
     return {
