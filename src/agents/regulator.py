@@ -261,7 +261,7 @@ class Regulator:
             if len(self.price_history) >= 10:
                 # Use lower quartile of first 10 steps as competitive baseline
                 early_prices = np.array(self.price_history[:10]).flatten()
-                competitive_price = np.percentile(early_prices, 25)
+                competitive_price = float(np.percentile(early_prices, 25))
 
             # Calculate harm-based fines (more realistic approach)
             penalties = np.zeros(len(prices))
@@ -279,13 +279,13 @@ class Regulator:
                     recent_profits = np.array(
                         [self.profit_history[-(j + 2)][i] for j in range(lookback)]
                     )
-                    avg_recent_profit = np.mean(recent_profits)
+                    avg_recent_profit = float(np.mean(recent_profits))
                 else:
-                    avg_recent_profit = rewards[i]
+                    avg_recent_profit = float(rewards[i])
 
                 # 3. Fine calculation combining harm and revenue
                 # Revenue component: 2% of recent profits (per-step penalty rate)
-                revenue_fine = 0.02 * max(0, avg_recent_profit)
+                revenue_fine = 0.02 * max(0.0, avg_recent_profit)
 
                 # Harm component: 0.15× consumer harm (heavily scaled for simulation)
                 harm_fine = 0.15 * consumer_harm
