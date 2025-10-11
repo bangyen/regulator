@@ -189,7 +189,7 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
 
         # Set up environment with project root in PYTHONPATH
         env = os.environ.copy()
-        env["PYTHONPATH"] = str(project_root)
+        env["PYTHONPATH"] = str(project_root.resolve())
 
         result = subprocess.run(
             cmd, cwd=project_root, env=env, check=True, capture_output=True, text=True
@@ -222,7 +222,7 @@ def run_experiment() -> Response:
 
     # Default experiment parameters
     steps = 50
-    firms = ["random", "tit_for_tat"]
+    firms = ["random", "titfortat"]
 
     # Start experiment in background thread
     thread = threading.Thread(target=run_experiment_background, args=(steps, firms))

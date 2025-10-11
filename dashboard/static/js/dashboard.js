@@ -26,7 +26,12 @@ class DashboardChart {
     }
 
     setData(data) {
-        this.data = data;
+        // Filter out invalid/empty data points
+        this.data = data.filter(point => {
+            return point && typeof point.x === 'number' && typeof point.y === 'number' 
+                   && !isNaN(point.x) && !isNaN(point.y)
+                   && point.x > 0; // Step numbers should be > 0
+        });
         this.draw();
     }
 
@@ -36,7 +41,11 @@ class DashboardChart {
             return;
         }
 
-        this.ctx.clearRect(0, 0, this.width, this.height);
+        // Clear entire canvas properly
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
         
         const chartWidth = this.width - 2 * this.padding;
         const chartHeight = this.height - 2 * this.padding;
@@ -61,6 +70,7 @@ class DashboardChart {
     }
 
     drawGrid(chartWidth, chartHeight, minY, maxY) {
+        this.ctx.save();
         this.ctx.strokeStyle = this.colors.grid;
         this.ctx.lineWidth = 1;
 
@@ -71,32 +81,35 @@ class DashboardChart {
             this.ctx.lineTo(this.padding + chartWidth, y);
             this.ctx.stroke();
         }
+        this.ctx.beginPath(); // Clear path
+        this.ctx.restore();
     }
 
     drawLine(chartWidth, chartHeight, minX, maxX, minY, maxY, yRange) {
         const xScale = chartWidth / (maxX - minX || 1);
         const yScale = chartHeight / yRange;
 
-        this.ctx.beginPath();
-        this.data.forEach((point, i) => {
-            const x = this.padding + (point.x - minX) * xScale;
-            const y = this.padding + chartHeight - (point.y - minY) * yScale;
-            if (i === 0) {
-                this.ctx.moveTo(x, y);
-            } else {
-                this.ctx.lineTo(x, y);
-            }
-        });
-
+        // Draw each line segment individually
+        this.ctx.save();
         this.ctx.strokeStyle = this.colors.line;
         this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-
-        this.ctx.lineTo(this.padding + chartWidth, this.padding + chartHeight);
-        this.ctx.lineTo(this.padding, this.padding + chartHeight);
-        this.ctx.closePath();
-        this.ctx.fillStyle = this.colors.fill + '40';
-        this.ctx.fill();
+        
+        for (let i = 0; i < this.data.length - 1; i++) {
+            const point = this.data[i];
+            const nextPoint = this.data[i + 1];
+            
+            const x1 = this.padding + (point.x - minX) * xScale;
+            const y1 = this.padding + chartHeight - (point.y - minY) * yScale;
+            const x2 = this.padding + (nextPoint.x - minX) * xScale;
+            const y2 = this.padding + chartHeight - (nextPoint.y - minY) * yScale;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(x1, y1);
+            this.ctx.lineTo(x2, y2);
+            this.ctx.stroke();
+        }
+        
+        this.ctx.restore();
     }
 
     drawBars(chartWidth, chartHeight, minX, maxX, minY, maxY, yRange) {
@@ -115,6 +128,7 @@ class DashboardChart {
     }
 
     drawAxes(chartWidth, chartHeight, minY, maxY) {
+        this.ctx.save();
         this.ctx.strokeStyle = this.colors.grid;
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
@@ -122,6 +136,7 @@ class DashboardChart {
         this.ctx.lineTo(this.padding, this.padding + chartHeight);
         this.ctx.lineTo(this.padding + chartWidth, this.padding + chartHeight);
         this.ctx.stroke();
+        this.ctx.beginPath(); // Clear path
 
         this.ctx.fillStyle = this.colors.text;
         this.ctx.font = '600 11px Space Grotesk';
@@ -133,6 +148,7 @@ class DashboardChart {
             const y = this.padding + (chartHeight / 4) * i;
             this.ctx.fillText(value.toFixed(1), this.padding - 10, y);
         }
+        this.ctx.restore();
     }
 
     drawEmpty() {
