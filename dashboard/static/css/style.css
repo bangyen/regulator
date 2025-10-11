@@ -67,12 +67,12 @@ h1 {
     gap: 16px;
 }
 
-.btn-refresh, .btn-run {
+.btn-run {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    background: var(--navy);
+    background: var(--green);
     color: white;
     border: none;
     font-family: inherit;
@@ -82,19 +82,15 @@ h1 {
     transition: background 0.2s;
 }
 
-.btn-run {
-    background: var(--green);
-}
-
-.btn-refresh:hover, .btn-run:hover {
+.btn-run:hover {
     background: var(--blue);
 }
 
-.btn-refresh:active, .btn-run:active {
+.btn-run:active {
     transform: translateY(1px);
 }
 
-.btn-refresh:disabled, .btn-run:disabled {
+.btn-run:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -357,7 +353,7 @@ canvas {
         flex-wrap: wrap;
     }
     
-    .btn-refresh, .btn-run {
+    .btn-run {
         flex: 1;
         min-width: 140px;
     }

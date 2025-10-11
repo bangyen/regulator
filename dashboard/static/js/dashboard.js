@@ -234,8 +234,6 @@ async function fetchData() {
     }
 }
 
-document.getElementById('refresh-btn').addEventListener('click', fetchData);
-
 document.getElementById('run-btn').addEventListener('click', async () => {
     const btn = document.getElementById('run-btn');
     try {

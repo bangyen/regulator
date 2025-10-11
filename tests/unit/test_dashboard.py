@@ -13,8 +13,10 @@ def sample_data() -> Dict[str, Any]:
     return {
         "steps": [
             {
+                "type": "step",
                 "step": 1,
                 "market_price": 10.5,
+                "profits": [50.0, 45.0],
                 "regulator_flags": {
                     "flagged": False,
                     "risk_score": 0.2,
@@ -22,8 +24,10 @@ def sample_data() -> Dict[str, Any]:
                 },
             },
             {
+                "type": "step",
                 "step": 2,
                 "market_price": 12.0,
+                "profits": [60.0, 55.0],
                 "regulator_flags": {
                     "flagged": True,
                     "risk_score": 0.8,
@@ -31,15 +35,18 @@ def sample_data() -> Dict[str, Any]:
                 },
             },
             {
+                "type": "step",
                 "step": 3,
                 "market_price": 11.5,
+                "profits": [55.0, 50.0],
                 "regulator_flags": {
                     "flagged": False,
                     "risk_score": 0.3,
                     "fines_applied": [0.0, 0.0],
                 },
             },
-        ]
+        ],
+        "n_firms": 2,
     }
 
 
@@ -68,15 +75,16 @@ def test_extract_time_series(sample_data: Dict[str, Any]) -> None:
 
     assert "prices" in time_series
     assert "violations" in time_series
-    assert "risk_scores" in time_series
+    assert "profits" in time_series
     assert "fines" in time_series
+    assert "cumulative_fines" in time_series
 
     assert len(time_series["prices"]) == 3
     assert time_series["prices"][0] == {"x": 1, "y": 10.5}
     assert time_series["prices"][1] == {"x": 2, "y": 12.0}
 
-    assert time_series["violations"][1] == {"x": 2, "y": 1}
-    assert time_series["violations"][0] == {"x": 1, "y": 0}
+    assert time_series["violations"][1] == {"x": 2, "y": 15.0}  # Fines amount
+    assert time_series["violations"][0] == {"x": 1, "y": 0.0}
 
     assert time_series["fines"][1] == {"x": 2, "y": 15.0}
 
@@ -87,5 +95,7 @@ def test_extract_time_series_empty_data() -> None:
 
     assert time_series["prices"] == []
     assert time_series["violations"] == []
-    assert time_series["risk_scores"] == []
+    assert time_series["profits"] == []
+    assert time_series["fines"] == []
+    assert time_series["cumulative_fines"] == []
     assert time_series["fines"] == []
