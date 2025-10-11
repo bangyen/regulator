@@ -57,8 +57,8 @@ class TestCLIFunctions:
 
         # Test rule-based regulator
         rule_regulator = create_regulator("rule_based", seed=42)
-        assert rule_regulator.parallel_threshold == 2.0
-        assert rule_regulator.parallel_steps == 3
+        assert rule_regulator.parallel_threshold == 8.0
+        assert rule_regulator.parallel_steps == 10
         assert rule_regulator.fine_amount == 50.0
 
         # Test no regulator

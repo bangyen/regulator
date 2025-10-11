@@ -2,6 +2,7 @@
 
 import json
 import os
+import random
 import subprocess
 import sys
 import threading
@@ -52,8 +53,10 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
     max_fines = n_firms * 50.0  # Each firm can be fined $50
 
     # Filter to only actual step entries
-    step_entries = [s for s in steps if s.get("type") == "step" and s.get("step", 0) > 0]
-    
+    step_entries = [
+        s for s in steps if s.get("type") == "step" and s.get("step", 0) > 0
+    ]
+
     prices = [s.get("market_price", 0) for s in step_entries if "market_price" in s]
 
     violations = sum(
@@ -96,45 +99,43 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
 def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
     """Extract time series data for visualization."""
     steps = data.get("steps", [])
-    n_firms = data.get("n_firms", 2)
-    max_fines = n_firms * 50.0  # Each firm can be fined $50
 
     prices = []
     profits = []
     violations = []
     fines = []
     cumulative_fines = []
-    
+
     total_fines = 0.0
 
     for step in steps:
         # Skip non-step entries (headers, summaries)
         if step.get("type") != "step":
             continue
-            
+
         step_num = step.get("step", 0)
-        
+
         # Skip step 0 if it exists
         if step_num == 0:
             continue
-            
+
         prices.append({"x": step_num, "y": step.get("market_price", 0)})
-        
+
         # Average profit across firms
         step_profits = step.get("profits", [])
         avg_profit = sum(step_profits) / len(step_profits) if step_profits else 0
         profits.append({"x": step_num, "y": avg_profit})
 
         regulator_flags = step.get("regulator_flags", {})
-        
+
         # Calculate fines for this step
         step_fines = sum(regulator_flags.get("fines_applied", []))
         fines.append({"x": step_num, "y": step_fines})
-        
+
         # Track cumulative fines
         total_fines += step_fines
         cumulative_fines.append({"x": step_num, "y": total_fines})
-        
+
         # Violations now show fines amount (for combined chart)
         violations.append({"x": step_num, "y": step_fines})
 
@@ -202,7 +203,10 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
         # Use venv Python if available, otherwise fall back to current interpreter
         venv_python = project_root / "venv" / "bin" / "python3"
         python_cmd = str(venv_python) if venv_python.exists() else sys.executable
-        
+
+        # Generate random seed for each experiment
+        seed = random.randint(1, 999999)
+
         cmd = [
             python_cmd,
             "scripts/run_experiment.py",
@@ -210,13 +214,15 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
             str(steps),
             "--firms",
             ",".join(firms),
+            "--seed",
+            str(seed),
         ]
 
         # Set up environment with project root in PYTHONPATH
         env = os.environ.copy()
         env["PYTHONPATH"] = str(project_root.resolve())
 
-        result = subprocess.run(
+        subprocess.run(
             cmd, cwd=project_root, env=env, check=True, capture_output=True, text=True
         )
 

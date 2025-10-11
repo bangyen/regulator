@@ -72,7 +72,9 @@ class Regulator:
         self.structural_break_violations: List[Tuple[int, str]] = []
         self.total_fines_applied: float = 0.0
         self.profit_history: List[np.ndarray] = []  # Track firm profits over time
-        self.violation_start_step: Optional[int] = None  # When current violation period started
+        self.violation_start_step: Optional[int] = (
+            None  # When current violation period started
+        )
         self.consecutive_violation_steps: int = 0  # Duration of ongoing violation
 
         # Leniency program
@@ -137,9 +139,11 @@ class Regulator:
                 self.consecutive_violation_steps = 1
             else:
                 self.consecutive_violation_steps += 1
-            
+
             detection_results["violation_detected"] = True
-            detection_results["consecutive_violations"] = self.consecutive_violation_steps
+            detection_results["consecutive_violations"] = (
+                self.consecutive_violation_steps
+            )
         else:
             # No violation this step - reset consecutive counter
             self.violation_start_step = None
@@ -244,21 +248,21 @@ class Regulator:
         """
         # Store profit history for future fine calculations
         self.profit_history.append(rewards.copy())
-        
+
         # Calculate fines if violation detected
         if detection_results.get("violation_detected", False):
             prices = detection_results["prices"]
             consecutive_violations = detection_results.get("consecutive_violations", 1)
             parallel_violation = detection_results.get("parallel_violation", False)
             step = detection_results["step"]
-            
+
             # Calculate baseline competitive price (using early market history)
             competitive_price = 10.0  # Approximate competitive equilibrium
             if len(self.price_history) >= 10:
                 # Use lower quartile of first 10 steps as competitive baseline
                 early_prices = np.array(self.price_history[:10]).flatten()
                 competitive_price = np.percentile(early_prices, 25)
-            
+
             # Calculate harm-based fines (more realistic approach)
             penalties = np.zeros(len(prices))
             for i in range(len(prices)):
@@ -266,42 +270,53 @@ class Regulator:
                 price_markup = max(0, prices[i] - competitive_price)
                 estimated_quantity = max(10.0, 50.0 - prices[i])  # Simple demand curve
                 consumer_harm = price_markup * estimated_quantity
-                
+
                 # 2. Calculate affected revenue (last 10 periods if available)
-                lookback = min(10, len(self.profit_history) - 1)  # -1 because we just appended current
+                lookback = min(
+                    10, len(self.profit_history) - 1
+                )  # -1 because we just appended current
                 if lookback > 0:
-                    recent_profits = np.array([self.profit_history[-(j+2)][i] 
-                                               for j in range(lookback)])
+                    recent_profits = np.array(
+                        [self.profit_history[-(j + 2)][i] for j in range(lookback)]
+                    )
                     avg_recent_profit = np.mean(recent_profits)
                 else:
                     avg_recent_profit = rewards[i]
-                
+
                 # 3. Fine calculation combining harm and revenue
                 # Revenue component: 2% of recent profits (per-step penalty rate)
                 revenue_fine = 0.02 * max(0, avg_recent_profit)
-                
+
                 # Harm component: 0.15× consumer harm (heavily scaled for simulation)
                 harm_fine = 0.15 * consumer_harm
-                
+
                 # Base fine from deviation magnitude
-                deviation_ratio = min(price_markup / competitive_price, 2.0)  # 0-2x competitive
-                base_penalty = self.fine_amount * 0.3 * deviation_ratio  # 0-60% of fine_amount
-                
+                deviation_ratio = min(
+                    price_markup / competitive_price, 2.0
+                )  # 0-2x competitive
+                base_penalty = (
+                    self.fine_amount * 0.3 * deviation_ratio
+                )  # 0-60% of fine_amount
+
                 # 4. Duration multiplier (longer violations = higher fines)
                 duration_multiplier = 1.0 + (consecutive_violations - 1) * 0.03
                 duration_multiplier = min(duration_multiplier, 1.3)  # Cap at 1.3x
-                
+
                 # Combined fine (weighted combination + duration penalty)
-                penalties[i] = (0.3 * base_penalty + 0.4 * revenue_fine + 0.3 * harm_fine) * duration_multiplier
-                
+                penalties[i] = (
+                    0.3 * base_penalty + 0.4 * revenue_fine + 0.3 * harm_fine
+                ) * duration_multiplier
+
                 # Add some variance based on firm behavior (use price as proxy)
-                price_variance = abs(prices[i] - np.mean(prices)) / max(np.mean(prices), 1.0)
+                price_variance = abs(prices[i] - np.mean(prices)) / max(
+                    np.mean(prices), 1.0
+                )
                 variance_factor = 1.0 + price_variance * 0.2  # Up to 20% variation
                 penalties[i] *= variance_factor
-                
+
                 # Cap individual fines at 1.8x the fine_amount parameter
                 penalties[i] = min(penalties[i], self.fine_amount * 1.8)
-                
+
                 # Minimum fine for detected violations (3% of base)
                 if penalties[i] < self.fine_amount * 0.03:
                     penalties[i] = self.fine_amount * 0.03
@@ -321,10 +336,10 @@ class Regulator:
 
             # Update detection results with calculated fines
             detection_results["fines_applied"] = penalties
-            self.total_fines_applied += np.sum(penalties)
+            self.total_fines_applied += float(np.sum(penalties))
         else:
             penalties = detection_results["fines_applied"]
-        
+
         modified_rewards: np.ndarray = rewards - penalties
 
         # Allow negative rewards for economic realism (firms can have losses)
