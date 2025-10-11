@@ -35,18 +35,10 @@ jobs:
         
         # Run smoke tests in container
         docker run --rm \
-          -v $(pwd)/logs:/app/logs \
           -v $(pwd)/tests:/app/tests \
           --env-file .env \
           regulator-smoke-test \
           python -m pytest tests/smoke/ -v --tb=short
-          
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: smoke-test-results
-        path: logs/
 
   # Container health check
   container-health:
