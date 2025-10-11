@@ -22,7 +22,7 @@ test: ## run tests
 	python -m pytest
 
 dashboard: ## run the dashboard
-	streamlit run dashboard/app.py
+	python dashboard/main.py
 
 all: fmt lint type test
 
