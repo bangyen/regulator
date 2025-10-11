@@ -51,11 +51,14 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
     n_firms = data.get("n_firms", 2)
     max_fines = n_firms * 50.0  # Each firm can be fined $50
 
-    prices = [s.get("market_price", 0) for s in steps if "market_price" in s]
+    # Filter to only actual step entries
+    step_entries = [s for s in steps if s.get("type") == "step" and s.get("step", 0) > 0]
+    
+    prices = [s.get("market_price", 0) for s in step_entries if "market_price" in s]
 
     violations = sum(
         1
-        for s in steps
+        for s in step_entries
         if s.get("regulator_flags", {}).get("parallel_violation", False)
         or s.get("regulator_flags", {}).get("structural_break_violation", False)
         or s.get("regulator_flags", {}).get("flagged", False)
@@ -63,13 +66,13 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
 
     total_fines = sum(
         sum(s.get("regulator_flags", {}).get("fines_applied", []))
-        for s in steps
+        for s in step_entries
         if "regulator_flags" in s
     )
 
     # Calculate risk scores from fines or use existing risk_score
     risk_scores = []
-    for s in steps:
+    for s in step_entries:
         if "regulator_flags" in s:
             flags = s["regulator_flags"]
             # Use risk_score if available, otherwise calculate from fines
@@ -80,7 +83,7 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
                 risk_scores.append(min(fines / max_fines, 1.0))
 
     return {
-        "total_steps": len(steps),
+        "total_steps": len(step_entries),
         "avg_price": round(np.mean(prices), 2) if prices else 0,
         "price_volatility": round(np.std(prices), 2) if prices else 0,
         "total_violations": violations,
@@ -97,41 +100,50 @@ def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
     max_fines = n_firms * 50.0  # Each firm can be fined $50
 
     prices = []
+    profits = []
     violations = []
-    risk_scores = []
     fines = []
+    cumulative_fines = []
+    
+    total_fines = 0.0
 
     for step in steps:
+        # Skip non-step entries (headers, summaries)
+        if step.get("type") != "step":
+            continue
+            
         step_num = step.get("step", 0)
+        
+        # Skip step 0 if it exists
+        if step_num == 0:
+            continue
+            
         prices.append({"x": step_num, "y": step.get("market_price", 0)})
+        
+        # Average profit across firms
+        step_profits = step.get("profits", [])
+        avg_profit = sum(step_profits) / len(step_profits) if step_profits else 0
+        profits.append({"x": step_num, "y": avg_profit})
 
         regulator_flags = step.get("regulator_flags", {})
-        is_violation = (
-            regulator_flags.get("parallel_violation", False)
-            or regulator_flags.get("structural_break_violation", False)
-            or regulator_flags.get("flagged", False)
-        )
-        violations.append({"x": step_num, "y": 1 if is_violation else 0})
-
+        
         # Calculate fines for this step
         step_fines = sum(regulator_flags.get("fines_applied", []))
         fines.append({"x": step_num, "y": step_fines})
-
-        # Use risk_score if available, otherwise calculate from fines
-        if (
-            "risk_score" in regulator_flags
-            and regulator_flags["risk_score"] is not None
-        ):
-            risk_score = regulator_flags["risk_score"]
-        else:
-            risk_score = min(step_fines / max_fines, 1.0) if step_fines > 0 else 0.0
-        risk_scores.append({"x": step_num, "y": risk_score})
+        
+        # Track cumulative fines
+        total_fines += step_fines
+        cumulative_fines.append({"x": step_num, "y": total_fines})
+        
+        # Violations now show fines amount (for combined chart)
+        violations.append({"x": step_num, "y": step_fines})
 
     return {
         "prices": prices,
+        "profits": profits,
         "violations": violations,
-        "risk_scores": risk_scores,
         "fines": fines,
+        "cumulative_fines": cumulative_fines,
     }
 
 

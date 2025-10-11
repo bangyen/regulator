@@ -94,7 +94,7 @@
                     </svg>
                 </div>
                 <div class="metric-content">
-                    <span class="metric-label">Risk Score</span>
+                    <span class="metric-label">Avg Risk</span>
                     <span class="metric-value" id="risk-score">—</span>
                 </div>
             </div>
@@ -106,7 +106,7 @@
                     <h2>Market Price</h2>
                     <div class="chart-controls">
                         <button class="chart-btn active" data-chart="price">Price</button>
-                        <button class="chart-btn" data-chart="risk">Risk</button>
+                        <button class="chart-btn" data-chart="profit">Profit</button>
                     </div>
                 </div>
                 <div class="chart-body">
@@ -116,7 +116,7 @@
 
             <div class="chart-card">
                 <div class="chart-header">
-                    <h2>Violations</h2>
+                    <h2>Violations & Fines</h2>
                 </div>
                 <div class="chart-body">
                     <canvas id="violations-chart"></canvas>
@@ -125,10 +125,10 @@
 
             <div class="chart-card">
                 <div class="chart-header">
-                    <h2>Fines Applied</h2>
+                    <h2>Cumulative Fines</h2>
                 </div>
                 <div class="chart-body">
-                    <canvas id="fines-chart"></canvas>
+                    <canvas id="cumulative-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -144,7 +144,7 @@
                         <tr>
                             <th>Step</th>
                             <th>Price</th>
-                            <th>Risk</th>
+                            <th>Profit</th>
                             <th>Violation</th>
                             <th>Fine</th>
                         </tr>
