@@ -227,7 +227,7 @@ async function fetchData() {
         updateMetrics(data.metrics);
         updateCharts(data.time_series);
         updateTable(data.time_series);
-        document.getElementById('status-text').textContent = 'Live';
+        document.getElementById('status-text').textContent = 'Ready';
     } catch (error) {
         console.error('Error fetching data:', error);
         document.getElementById('status-text').textContent = 'Error';
@@ -327,5 +327,4 @@ document.getElementById('export-btn').addEventListener('click', async () => {
 });
 
 fetchData();
-setInterval(fetchData, 5000);
 
