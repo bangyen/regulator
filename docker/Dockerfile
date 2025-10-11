@@ -35,15 +35,15 @@ RUN mkdir -p logs
 FROM base AS development
 # Install additional dev tools
 RUN pip install jupyter ipython
-EXPOSE 8501
-CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+EXPOSE 5000
+CMD ["python", "dashboard/main.py"]
 
 # Production stage
 FROM base AS production
 # Remove dev dependencies for smaller image
 RUN pip uninstall -y pytest pytest-cov black ruff mypy pre-commit jupyter ipython
-EXPOSE 8501
-CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+EXPOSE 5000
+CMD ["python", "dashboard/main.py"]
 
 # Test stage for running tests (keeps all dependencies)
 FROM base AS test
@@ -52,6 +52,6 @@ CMD ["python", "-m", "pytest", "tests/", "-v"]
 
 # CLI stage for running experiments
 FROM base AS cli
-# Remove Streamlit and dashboard dependencies for CLI-only usage
-RUN pip uninstall -y streamlit
+# Remove dashboard dependencies for CLI-only usage
+RUN pip uninstall -y flask || true
 CMD ["python", "-m", "regulator_cli", "--help"]
