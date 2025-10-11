@@ -177,8 +177,12 @@ class EconomicValidator:
                 try:
                     # Suppress numpy warnings about division by zero when std is zero
                     with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", message="invalid value encountered in divide")
-                        price_share_correlation = np.corrcoef(prices, market_shares)[0, 1]
+                        warnings.filterwarnings(
+                            "ignore", message="invalid value encountered in divide"
+                        )
+                        price_share_correlation = np.corrcoef(prices, market_shares)[
+                            0, 1
+                        ]
                     if (
                         price_share_correlation > 0.5
                     ):  # Strong positive correlation is suspicious
