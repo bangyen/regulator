@@ -67,7 +67,7 @@ h1 {
     gap: 16px;
 }
 
-.btn-refresh {
+.btn-refresh, .btn-run {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -82,12 +82,25 @@ h1 {
     transition: background 0.2s;
 }
 
-.btn-refresh:hover {
+.btn-run {
+    background: var(--green);
+}
+
+.btn-refresh:hover, .btn-run:hover {
     background: var(--blue);
 }
 
-.btn-refresh:active {
+.btn-refresh:active, .btn-run:active {
     transform: translateY(1px);
+}
+
+.btn-refresh:disabled, .btn-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-run.running {
+    background: var(--orange);
 }
 
 .status-indicator {
