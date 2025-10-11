@@ -29,8 +29,7 @@ class DashboardChart {
         // Filter out invalid/empty data points
         this.data = data.filter(point => {
             return point && typeof point.x === 'number' && typeof point.y === 'number' 
-                   && !isNaN(point.x) && !isNaN(point.y)
-                   && point.x > 0; // Step numbers should be > 0
+                   && !isNaN(point.x) && !isNaN(point.y);
         });
         this.draw();
     }
@@ -163,16 +162,16 @@ class DashboardChart {
 
 const mainChart = new DashboardChart('price-chart', 'line');
 const violationsChart = new DashboardChart('violations-chart', 'bar');
-const finesChart = new DashboardChart('fines-chart', 'bar');
+const cumulativeChart = new DashboardChart('cumulative-chart', 'line');
 
 let currentChart = 'price';
-let currentData = { prices: [], risk_scores: [] };
+let currentData = { prices: [], profits: [] };
 
 function updateMetrics(metrics) {
     document.getElementById('avg-price').textContent = metrics.avg_price.toFixed(2);
     document.getElementById('violations').textContent = metrics.total_violations;
     document.getElementById('total-fines').textContent = metrics.total_fines.toFixed(2);
-    document.getElementById('risk-score').textContent = metrics.current_risk.toFixed(2);
+    document.getElementById('risk-score').textContent = metrics.avg_risk_score.toFixed(2);
 }
 
 function updateCharts(timeSeries) {
@@ -180,10 +179,10 @@ function updateCharts(timeSeries) {
     if (currentChart === 'price') {
         mainChart.setData(timeSeries.prices);
     } else {
-        mainChart.setData(timeSeries.risk_scores);
+        mainChart.setData(timeSeries.profits);
     }
     violationsChart.setData(timeSeries.violations);
-    finesChart.setData(timeSeries.fines);
+    cumulativeChart.setData(timeSeries.cumulative_fines);
 }
 
 function updateTable(timeSeries) {
@@ -200,18 +199,17 @@ function updateTable(timeSeries) {
     recentData.forEach((pricePoint, idx) => {
         const step = pricePoint.x;
         const price = pricePoint.y.toFixed(2);
-        const riskPoint = timeSeries.risk_scores.find(r => r.x === step);
-        const risk = riskPoint ? riskPoint.y.toFixed(2) : '—';
-        const violationPoint = timeSeries.violations.find(v => v.x === step);
-        const isViolation = violationPoint && violationPoint.y === 1;
+        const profitPoint = timeSeries.profits.find(p => p.x === step);
+        const profit = profitPoint ? profitPoint.y.toFixed(2) : '—';
         const finePoint = timeSeries.fines.find(f => f.x === step);
         const fine = finePoint ? finePoint.y.toFixed(2) : '0.00';
+        const isViolation = finePoint && finePoint.y > 0;
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${step}</strong></td>
             <td>${price}</td>
-            <td>${risk}</td>
+            <td>${profit}</td>
             <td><span class="violation-badge ${isViolation ? 'yes' : 'no'}">${isViolation ? 'Yes' : 'No'}</span></td>
             <td>${fine}</td>
         `;
@@ -308,8 +306,8 @@ document.querySelectorAll('[data-chart]').forEach(btn => {
         
         if (currentChart === 'price') {
             mainChart.setData(currentData.prices);
-        } else if (currentChart === 'risk') {
-            mainChart.setData(currentData.risk_scores);
+        } else if (currentChart === 'profit') {
+            mainChart.setData(currentData.profits);
         }
     });
 });
