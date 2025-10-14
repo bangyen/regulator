@@ -256,8 +256,8 @@ function createHistogram(data, bins = 10) {
     
     const labels = [];
     for (let i = 0; i < bins; i++) {
-        const start = (min + i * binSize).toFixed(1);
-        const end = (min + (i + 1) * binSize).toFixed(1);
+        const start = Math.round(min + i * binSize);
+        const end = Math.round(min + (i + 1) * binSize);
         labels.push(`${start}-${end}`);
     }
     
