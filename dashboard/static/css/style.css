@@ -1,23 +1,23 @@
 :root {
-    --color-bg: #F8F9FA;
+    --color-bg: #FAFBFC;
     --color-surface: #FFFFFF;
-    --color-border: #E1E4E8;
-    --color-text-primary: #1D1D1F;
-    --color-text-secondary: #6E6E73;
-    --color-text-tertiary: #86868B;
-    --color-accent: #E63946;
-    --color-accent-hover: #D62839;
-    --color-secondary: #1D3557;
-    --color-success: #06D6A0;
-    --color-warning: #F77F00;
-    --color-neutral: #457B9D;
-    --color-chart-1: #E63946;
-    --color-chart-2: #1D3557;
-    --color-chart-3: #457B9D;
-    --color-chart-4: #A8DADC;
+    --color-border: #E5E7EB;
+    --color-text-primary: #1F2937;
+    --color-text-secondary: #6B7280;
+    --color-text-tertiary: #9CA3AF;
+    --color-accent: #FF6B6B;
+    --color-accent-hover: #E85555;
+    --color-secondary: #0F4C5C;
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-neutral: #20B2AA;
+    --color-chart-1: #FF6B6B;
+    --color-chart-2: #20B2AA;
+    --color-chart-3: #5EEAD4;
+    --color-chart-4: #FB7185;
     --font-primary: 'Space Grotesk', system-ui, sans-serif;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -446,7 +446,7 @@ tbody tr:hover {
 }
 
 .violation-badge.yes {
-    background: #FFE5E7;
+    background: #FEE2E2;
     color: var(--color-accent);
 }
 
