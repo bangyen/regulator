@@ -477,22 +477,12 @@ function initExportButton() {
     });
 }
 
-function initRefreshButton() {
-    const refreshBtn = document.getElementById('refresh-btn');
-    if (!refreshBtn) return;
-    
-    refreshBtn.addEventListener('click', () => {
-        fetchData();
-    });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initCharts();
     initToggleButtons();
     initExperimentRunner();
     initExportButton();
-    initRefreshButton();
     
     // Load initial data
     fetchData();
