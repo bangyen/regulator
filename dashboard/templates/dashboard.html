@@ -4,155 +4,228 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Regulator Monitor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <div class="header-left">
-                <svg class="logo" width="32" height="32" viewBox="0 0 32 32">
-                    <rect x="4" y="4" width="10" height="10" fill="#E63946"/>
-                    <rect x="18" y="4" width="10" height="10" fill="#F1FAEE"/>
-                    <rect x="4" y="18" width="10" height="10" fill="#A8DADC"/>
-                    <rect x="18" y="18" width="10" height="10" fill="#457B9D"/>
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <rect x="0" y="0" width="12" height="12" fill="#E63946"/>
+                    <rect x="16" y="0" width="12" height="12" fill="#F1FAEE"/>
+                    <rect x="0" y="16" width="12" height="12" fill="#A8DADC"/>
+                    <rect x="16" y="16" width="12" height="12" fill="#1D3557"/>
                 </svg>
-                <h1>Regulator</h1>
+                <span>Regulator</span>
             </div>
-            <div class="header-right">
-                <button class="btn-run" id="run-btn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            
+            <nav class="nav">
+                <button class="nav-item active" data-view="overview">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <rect x="2" y="2" width="6" height="6" stroke="currentColor" stroke-width="2"/>
+                        <rect x="12" y="2" width="6" height="6" stroke="currentColor" stroke-width="2"/>
+                        <rect x="2" y="12" width="6" height="6" stroke="currentColor" stroke-width="2"/>
+                        <rect x="12" y="12" width="6" height="6" stroke="currentColor" stroke-width="2"/>
                     </svg>
-                    Run Experiment
+                    <span>Overview</span>
                 </button>
+                
+                <button class="nav-item" data-view="analytics">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2 18L6 10L10 14L18 2" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="6" cy="10" r="2" fill="currentColor"/>
+                        <circle cx="10" cy="14" r="2" fill="currentColor"/>
+                        <circle cx="18" cy="2" r="2" fill="currentColor"/>
+                    </svg>
+                    <span>Analytics</span>
+                </button>
+                
+                <button class="nav-item" data-view="enforcement">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M10 2L3 6V10C3 14 6 17 10 18C14 17 17 14 17 10V6L10 2Z" stroke="currentColor" stroke-width="2"/>
+                        <path d="M7 10L9 12L13 8" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span>Enforcement</span>
+                </button>
+                
+                <button class="nav-item" data-view="experiments">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
+                        <path d="M10 6V10L13 13" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <span>Experiments</span>
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
                 <div class="status-indicator">
                     <span class="status-dot"></span>
-                    <span id="status-text">Ready</span>
+                    <span class="status-text" id="sidebar-status">Live</span>
                 </div>
             </div>
-        </header>
-
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-icon" style="background: #E63946;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                        <line x1="12" y1="2" x2="12" y2="22"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
+        </aside>
+        
+        <main class="main-content">
+            <header class="header">
+                <h1 class="page-title">Dashboard Overview</h1>
+                <div class="header-actions">
+                    <button class="btn-primary" id="run-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <polygon points="4 2 14 8 4 14 4 2" fill="currentColor"/>
+                        </svg>
+                        Run Experiment
+                    </button>
+                    <button class="btn-secondary" id="refresh-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M14 2V6H10" stroke="currentColor" stroke-width="2"/>
+                            <path d="M2 14V10H6" stroke="currentColor" stroke-width="2"/>
+                            <path d="M14 6C13.5 4 12 2.5 10 2C6 1 2 3 2 8C2 13 6 15 10 14C12 13.5 13.5 12 14 10" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Refresh
+                    </button>
                 </div>
-                <div class="metric-content">
-                    <span class="metric-label">Average Price</span>
-                    <span class="metric-value" id="avg-price">—</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-icon" style="background: #457B9D;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                </div>
-                <div class="metric-content">
-                    <span class="metric-label">Violations</span>
-                    <span class="metric-value" id="violations">—</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-icon" style="background: #F77F00;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <path d="M3 9h18"></path>
-                        <path d="M9 21V9"></path>
-                    </svg>
-                </div>
-                <div class="metric-content">
-                    <span class="metric-label">Total Fines</span>
-                    <span class="metric-value" id="total-fines">—</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-icon" style="background: #06D6A0;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                    </svg>
-                </div>
-                <div class="metric-content">
-                    <span class="metric-label">Avg Risk</span>
-                    <span class="metric-value" id="risk-score">—</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="charts-container">
-            <div class="chart-card chart-large">
-                <div class="chart-header">
-                    <h2>Market Price</h2>
-                    <div class="chart-controls">
-                        <button class="chart-btn active" data-chart="price">Price</button>
-                        <button class="chart-btn" data-chart="profit">Profit</button>
+            </header>
+            
+            <!-- Overview View -->
+            <div class="view-container" id="overview-view">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Average Price</div>
+                        <div class="metric-value" id="avg-price">—</div>
+                        <div class="metric-change" id="price-change">Loading...</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Total Violations</div>
+                        <div class="metric-value" id="violations">—</div>
+                        <div class="metric-change" id="violations-change">—</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Total Fines</div>
+                        <div class="metric-value" id="total-fines">—</div>
+                        <div class="metric-change" id="fines-change">—</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Risk Score</div>
+                        <div class="metric-value" id="risk-score">—</div>
+                        <div class="metric-change" id="risk-change">—</div>
                     </div>
                 </div>
-                <div class="chart-body">
-                    <canvas id="price-chart"></canvas>
+                
+                <div class="chart-section">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">Market Price</h3>
+                            <div class="toggle-group">
+                                <button class="toggle-btn active" data-metric="price">Price</button>
+                                <button class="toggle-btn" data-metric="profit">Profit</button>
+                            </div>
+                        </div>
+                        <canvas id="main-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 class="chart-title">Violations Over Time</h3>
+                        <canvas id="violations-chart"></canvas>
+                    </div>
                 </div>
             </div>
-
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h2>Violations & Fines</h2>
-                </div>
-                <div class="chart-body">
-                    <canvas id="violations-chart"></canvas>
-                </div>
-            </div>
-
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h2>Cumulative Fines</h2>
-                </div>
-                <div class="chart-body">
+            
+            <!-- Analytics View -->
+            <div class="view-container hidden" id="analytics-view">
+                <div class="chart-full">
+                    <div class="chart-controls">
+                        <h3 class="chart-title">Cumulative Enforcement</h3>
+                        <div class="chart-info">
+                            <span class="info-text">Total fines accumulated over time</span>
+                        </div>
+                    </div>
                     <canvas id="cumulative-chart"></canvas>
                 </div>
+                
+                <div class="chart-section" style="margin-top: 20px;">
+                    <div class="chart-card">
+                        <h3 class="chart-title">Price Distribution</h3>
+                        <canvas id="price-histogram"></canvas>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 class="chart-title">Profit Distribution</h3>
+                        <canvas id="profit-histogram"></canvas>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <div class="data-table-container">
-            <div class="chart-header">
-                <h2>Recent Activity</h2>
-                <button class="chart-btn" id="export-btn">Export</button>
+            
+            <!-- Enforcement View -->
+            <div class="view-container hidden" id="enforcement-view">
+                <div class="data-table">
+                    <div class="table-header">
+                        <h3 class="chart-title">Recent Activity</h3>
+                        <button class="btn-secondary" id="export-btn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M8 2V10M8 10L5 7M8 10L11 7" stroke="currentColor" stroke-width="2"/>
+                                <path d="M2 12V13C2 13.5 2.5 14 3 14H13C13.5 14 14 13.5 14 13V12" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Export
+                        </button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Step</th>
+                                <th>Price</th>
+                                <th>Profit</th>
+                                <th>Violation</th>
+                                <th>Fine</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activity-table">
+                            <tr>
+                                <td colspan="5" class="loading">Loading data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="table-wrapper">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Step</th>
-                            <th>Price</th>
-                            <th>Profit</th>
-                            <th>Violation</th>
-                            <th>Fine</th>
-                        </tr>
-                    </thead>
-                    <tbody id="activity-table">
-                        <tr>
-                            <td colspan="5" class="table-empty">Loading data...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            
+            <!-- Experiments View -->
+            <div class="view-container hidden" id="experiments-view">
+                <div class="experiments-container">
+                    <div class="chart-card">
+                        <h3 class="chart-title">Experiment History</h3>
+                        <div id="experiments-list" class="experiments-list">
+                            <p class="loading">Loading experiments...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3 class="chart-title">Configuration</h3>
+                        <div class="config-info">
+                            <div class="config-item">
+                                <span class="config-label">Steps per experiment:</span>
+                                <span class="config-value">50</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Default firms:</span>
+                                <span class="config-value">random, titfortat</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">Random seed:</span>
+                                <span class="config-value">Generated per run</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
-
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    
+    <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
-
