@@ -33,7 +33,7 @@ running_experiments = {"status": "idle", "progress": None, "error_message": None
 
 def load_latest_experiment() -> Optional[Dict[str, Any]]:
     """Load most recent experiment data from logs directory.
-    
+
     Returns parsed experiment data including step-by-step metrics,
     or None if no experiment logs are found.
     """
@@ -58,7 +58,7 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
                     # Get n_firms from header
                     if data.get("type") == "episode_header":
                         n_firms = data.get("n_firms", 2)
-        
+
         logger.info(f"Loaded {len(steps)} steps from {log_files[0].name}")
         return {"steps": steps, "file": str(log_files[0]), "n_firms": n_firms}
     except Exception as e:
@@ -68,7 +68,7 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
 
 def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate aggregate metrics from experiment data.
-    
+
     Computes summary statistics including price averages, violation counts,
     total fines, and risk scores across all simulation steps.
     """
@@ -125,7 +125,7 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
     """Extract time series data for visualization.
-    
+
     Transforms step-by-step experiment data into time series arrays
     suitable for charting prices, profits, violations, and fines.
     """
@@ -182,7 +182,7 @@ def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
 @app.route("/")
 def index() -> str:
     """Render the main dashboard interface.
-    
+
     Serves the HTML template for the interactive monitoring dashboard.
     """
     return render_template("dashboard.html")
@@ -191,7 +191,7 @@ def index() -> str:
 @app.route("/api/data")
 def get_data() -> Union[Tuple[Response, int], Response]:
     """API endpoint for dashboard data.
-    
+
     Returns combined metrics and time series data from the most recent
     experiment run. Used by the dashboard for real-time visualization.
     """
@@ -209,7 +209,7 @@ def get_data() -> Union[Tuple[Response, int], Response]:
 @app.route("/api/experiments")
 def list_experiments() -> Response:
     """List all available experiment log files.
-    
+
     Returns metadata for the 10 most recent experiment runs,
     including filenames and modification timestamps.
     """
@@ -236,7 +236,7 @@ def list_experiments() -> Response:
 
 def run_experiment_background(steps: int, firms: List[str]) -> None:
     """Run experiment in background thread.
-    
+
     Executes the experiment runner script as a subprocess to avoid
     blocking the Flask server. Updates global status for polling.
     """
@@ -292,7 +292,7 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
 @app.route("/api/experiment/run", methods=["POST"])
 def run_experiment() -> Response:
     """Start a new experiment in the background.
-    
+
     Initiates a new simulation run with default parameters. The experiment
     runs asynchronously while status can be polled via /api/experiment/status.
     """
@@ -320,7 +320,7 @@ def run_experiment() -> Response:
 @app.route("/api/experiment/status")
 def experiment_status() -> Response:
     """Get status of running experiment.
-    
+
     Returns the current state of any running experiment, including
     progress percentage and error messages if applicable.
     """
@@ -330,7 +330,7 @@ def experiment_status() -> Response:
 @app.route("/api/healthz")
 def health_check() -> Response:
     """Health check endpoint.
-    
+
     Returns service health status for monitoring and load balancing.
     """
     return jsonify({"status": "healthy", "service": "regulator-dashboard"})
