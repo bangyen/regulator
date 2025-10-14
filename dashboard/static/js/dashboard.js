@@ -206,14 +206,6 @@ function updateMetrics(metrics) {
     document.getElementById('violations').textContent = metrics.total_violations || '—';
     document.getElementById('total-fines').textContent = metrics.total_fines?.toFixed(2) || '—';
     document.getElementById('risk-score').textContent = metrics.avg_risk_score?.toFixed(2) || '—';
-    
-    // Update metric change indicators
-    const volatility = metrics.price_volatility || 0;
-    const priceChange = document.getElementById('price-change');
-    if (priceChange) {
-        priceChange.textContent = `Volatility: ${volatility.toFixed(2)}`;
-        priceChange.className = 'metric-change neutral';
-    }
 }
 
 function updateMainChart(timeSeries, metric = 'price') {
