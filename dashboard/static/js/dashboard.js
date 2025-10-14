@@ -1,11 +1,11 @@
 const COLORS = {
-    primary: '#E63946',
-    secondary: '#1D3557',
-    tertiary: '#457B9D',
-    quaternary: '#A8DADC',
-    background: '#F8F9FA',
-    text: '#1D1D1F',
-    success: '#06D6A0'
+    primary: '#FF6B6B',
+    secondary: '#0F4C5C',
+    tertiary: '#20B2AA',
+    quaternary: '#5EEAD4',
+    background: '#FAFBFC',
+    text: '#1F2937',
+    success: '#10B981'
 };
 
 const CHART_CONFIG = {
@@ -18,7 +18,7 @@ const CHART_CONFIG = {
             position: 'bottom',
             labels: {
                 font: { family: 'Space Grotesk', size: 12, weight: '500' },
-                color: '#6E6E73',
+                color: '#6B7280',
                 padding: 16,
                 usePointStyle: true,
                 pointStyle: 'circle'
@@ -30,14 +30,14 @@ const CHART_CONFIG = {
             grid: { display: false, drawBorder: false },
             ticks: {
                 font: { family: 'Space Grotesk', size: 11 },
-                color: '#86868B'
+                color: '#9CA3AF'
             }
         },
         y: {
-            grid: { color: '#E1E4E8', drawBorder: false },
+            grid: { color: '#E5E7EB', drawBorder: false },
             ticks: {
                 font: { family: 'Space Grotesk', size: 11 },
-                color: '#86868B'
+                color: '#9CA3AF'
             }
         }
     }
