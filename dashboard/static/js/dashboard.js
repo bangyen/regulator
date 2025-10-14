@@ -1,11 +1,11 @@
 const COLORS = {
-    primary: '#FF6B6B',
-    secondary: '#0F4C5C',
-    tertiary: '#20B2AA',
-    quaternary: '#5EEAD4',
-    background: '#FAFBFC',
-    text: '#1F2937',
-    success: '#10B981'
+    primary: '#2563EB',
+    secondary: '#374151',
+    tertiary: '#10B981',
+    quaternary: '#F59E0B',
+    background: '#F5F5F7',
+    text: '#111827',
+    success: '#059669'
 };
 
 const CHART_CONFIG = {
@@ -34,7 +34,7 @@ const CHART_CONFIG = {
             }
         },
         y: {
-            grid: { color: '#E5E7EB', drawBorder: false },
+            grid: { color: '#D1D5DB', drawBorder: false },
             ticks: {
                 font: { family: 'Space Grotesk', size: 11 },
                 color: '#9CA3AF'
