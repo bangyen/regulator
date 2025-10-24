@@ -24,8 +24,8 @@ pip install -e .
 # Run dashboard
 python dashboard/main.py
 
-# Or use Make
-make dashboard
+# Or use Just
+just dashboard
 ```
 
 Visit `http://localhost:5000` in your browser.
