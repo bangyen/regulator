@@ -216,8 +216,10 @@ class CartelEnv(gym.Env):
         self.total_profits = np.zeros(n_firms, dtype=np.float32)
 
         # New economic model state variables
-        self.active_firms = np.ones(n_firms, dtype=bool)  # Track which firms are active
-        self.consecutive_losses = np.zeros(
+        self.active_firms: np.ndarray = np.ones(
+            n_firms, dtype=bool
+        )  # Track which firms are active
+        self.consecutive_losses: np.ndarray = np.zeros(
             n_firms, dtype=int
         )  # Track consecutive losses
         self.price_history: List[float] = (
