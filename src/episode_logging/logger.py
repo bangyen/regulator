@@ -100,58 +100,29 @@ class Logger:
     ) -> None:
         """
         Log data for a single step.
-
-        Args:
-            step: Current step number
-            prices: Array of prices chosen by each firm
-            profits: Array of profits for each firm in this step
-            demand_shock: Current demand shock value
-            market_price: Average market price
-            total_demand: Total market demand
-            individual_quantity: Quantity allocated to each firm
-            total_profits: Cumulative profits for each firm
-            regulator_flags: Optional regulator detection flags
-            additional_info: Optional additional information
         """
-        # Validate inputs
-        if len(prices) != self.n_firms:
-            raise ValueError(f"Prices array must have length {self.n_firms}")
-        if len(profits) != self.n_firms:
-            raise ValueError(f"Profits array must have length {self.n_firms}")
-        if len(total_profits) != self.n_firms:
-            raise ValueError(f"Total profits array must have length {self.n_firms}")
-
-        # Create step data record
         step_data = {
             "type": "step",
             "step": step,
             "timestamp": datetime.now().isoformat(),
-            "prices": [float(p) for p in prices.tolist()],
-            "profits": [float(p) for p in profits.tolist()],
+            "prices": prices.tolist(),
+            "profits": profits.tolist(),
             "demand_shock": float(demand_shock),
             "market_price": float(market_price),
             "total_demand": float(total_demand),
             "individual_quantity": (
-                [float(q) for q in individual_quantity.tolist()]
+                individual_quantity.tolist()
                 if isinstance(individual_quantity, np.ndarray)
                 else float(individual_quantity)
             ),
-            "total_profits": [float(p) for p in total_profits.tolist()],
+            "total_profits": total_profits.tolist(),
         }
 
-        # Add regulator flags if provided
-        if regulator_flags is not None:
-            # Convert numpy types in regulator flags
-            converted_regulator_flags = self._convert_numpy_types(regulator_flags)
-            step_data["regulator_flags"] = converted_regulator_flags
+        if regulator_flags:
+            step_data["regulator_flags"] = self._convert_numpy_types(regulator_flags)
+        if additional_info:
+            step_data["additional_info"] = self._convert_numpy_types(additional_info)
 
-        # Add additional info if provided
-        if additional_info is not None:
-            # Convert numpy types in additional info
-            converted_additional_info = self._convert_numpy_types(additional_info)
-            step_data["additional_info"] = converted_additional_info
-
-        # Store in memory and write to file
         self.episode_data.append(step_data)
         self.step_count = step
 
@@ -160,20 +131,15 @@ class Logger:
 
     def _convert_numpy_types(self, obj: Any) -> Any:
         """Convert numpy types to Python native types for JSON serialization."""
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        elif isinstance(obj, np.ndarray):
+        if isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        if isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif isinstance(obj, dict):
-            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
-        elif isinstance(obj, list):
-            return [self._convert_numpy_types(item) for item in obj]
-        else:
-            return obj
+        if isinstance(obj, dict):
+            return {k: self._convert_numpy_types(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [self._convert_numpy_types(i) for i in obj]
+        return obj
 
     def log_episode_end(
         self,

@@ -11,33 +11,35 @@ These agents serve as baselines for testing and benchmarking the CartelEnv.
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
+from collections import deque
 
 import numpy as np
 
 from src.cartel.cartel_env import CartelEnv
-from src.agents.leniency import LeniencyProgram, WhistleblowerAgent
+from src.agents.leniency import WhistleblowerAgent, LeniencyProgram
 
 
 class BaseAgent(ABC):
     """
     Abstract base class for firm agents.
-
-    This class defines the interface that all firm agents must implement,
-    providing a consistent way to interact with the CartelEnv environment.
     """
 
-    def __init__(self, agent_id: int, seed: Optional[int] = None) -> None:
+    def __init__(
+        self, agent_id: int, seed: Optional[int] = None, history_len: int = 10
+    ) -> None:
         """
         Initialize the base agent.
 
         Args:
             agent_id: Unique identifier for this agent
             seed: Random seed for reproducibility
+            history_len: Maximum length of price history to maintain
         """
         self.agent_id = agent_id
         self.np_random = np.random.default_rng(seed)
-        self.price_history: list[float] = []
-        self.rival_price_history: list[float] = []
+        # History tracking
+        self.price_history: deque[float] = deque(maxlen=history_len)
+        self.rival_price_history: deque[float] = deque(maxlen=history_len)
 
     @abstractmethod
     def choose_price(
@@ -46,27 +48,11 @@ class BaseAgent(ABC):
         env: CartelEnv,
         info: Optional[Dict[str, Any]] = None,
     ) -> float:
-        """
-        Choose a price for the current step.
-
-        Args:
-            observation: Current environment observation
-            env: The CartelEnv environment instance
-            info: Additional information from the environment
-
-        Returns:
-            The price to set for this agent
-        """
+        """Choose a price for the current step."""
         pass
 
     def update_history(self, my_price: float, rival_prices: np.ndarray) -> None:
-        """
-        Update the agent's price history.
-
-        Args:
-            my_price: The price this agent chose
-            rival_prices: Array of prices chosen by rival agents
-        """
+        """Update the agent's price history."""
         self.price_history.append(my_price)
         rival_avg = float(np.mean(rival_prices)) if rival_prices.size > 0 else 0.0
         self.rival_price_history.append(rival_avg)
