@@ -100,7 +100,7 @@ def run_episode_with_logging(
         logger.log_step(
             step=step + 1,
             prices=step_info["prices"],
-            profits=rewards,
+            profits=np.asarray(rewards),
             demand_shock=step_info["demand_shock"],
             market_price=step_info["market_price"],
             total_demand=step_info["total_demand"],
@@ -118,7 +118,10 @@ def run_episode_with_logging(
             prices_list.append(prices.copy())
         profits_list = episode_data["episode_profits"]
         if isinstance(profits_list, list):
-            profits_list.append(rewards.copy().tolist())
+            from typing import cast
+
+            rewards_arr = cast(np.ndarray, rewards)
+            profits_list.append(rewards_arr.copy().tolist())
         demand_shocks_list = episode_data["episode_demand_shocks"]
         if isinstance(demand_shocks_list, list):
             demand_shocks_list.append(step_info["demand_shock"])
@@ -303,35 +306,22 @@ def run_episode_with_regulator_logging(
                 "structural_break_violation"
             ],
             "fines_applied": (
-                detection_results["fines_applied"]
-                if isinstance(detection_results["fines_applied"], list)
-                else detection_results["fines_applied"].tolist()
+                detection_results["fines_applied"].tolist()
+                if hasattr(detection_results["fines_applied"], "tolist")
+                else detection_results["fines_applied"]
             ),
             "violation_details": detection_results["violation_details"],
         }
 
-        # Add enhanced regulator data if available
-        if "risk_score" in detection_results:
-            regulator_flags["risk_score"] = detection_results["risk_score"]
-        if "market_volatility" in detection_results:
-            regulator_flags["market_volatility"] = detection_results[
-                "market_volatility"
-            ]
-        if "violation_severities" in detection_results:
-            regulator_flags["violation_severities"] = detection_results[
-                "violation_severities"
-            ]
-        if "penalty_multipliers" in detection_results:
-            regulator_flags["penalty_multipliers"] = detection_results[
-                "penalty_multipliers"
-            ]
-
         # Prepare additional info for logging
+        from typing import cast
+
+        modified_rewards_arr = cast(np.ndarray, modified_rewards)
         additional_info = {
             "agent_types": agent_types,
             "agent_prices": prices,
-            "original_rewards": rewards.tolist(),
-            "modified_rewards": modified_rewards.tolist(),
+            "original_rewards": np.asarray(rewards).tolist(),
+            "modified_rewards": modified_rewards_arr.tolist(),
         }
 
         # Log step data

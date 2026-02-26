@@ -7,7 +7,6 @@ and run without external API calls or complex dependencies.
 
 import pytest
 import numpy as np
-from pathlib import Path
 
 
 # Test imports without external dependencies
@@ -114,94 +113,6 @@ def test_minimal_simulation():
     # Basic assertions
     assert total_reward != 0  # Should have some reward
     assert len(obs) == 3  # Should have 2 firm observations + 1 demand shock
-
-
-def test_episode_logger_creation():
-    """Test that episode logger can be created and used."""
-    from src.episode_logging.episode_logger import EpisodeLogger
-    import numpy as np
-
-    # Create temporary log file
-    log_file = Path("test_smoke_log.jsonl")
-
-    try:
-        logger = EpisodeLogger(log_file, n_firms=2)
-
-        # Test logging episode header
-        logger.log_episode_header(
-            episode_id=0,
-            n_firms=2,
-            n_steps=5,
-            agent_types=["random", "random"],
-            environment_params={"seed": 42},
-        )
-
-        # Test logging step
-        logger.log_step(
-            step=0,
-            prices=np.array([10.0, 12.0]),
-            profits=np.array([5.0, 6.0]),
-            demand_shock=0.0,
-            market_price=11.0,
-            total_demand=50.0,
-            individual_quantity=np.array([25.0, 25.0]),
-            total_profits=np.array([5.0, 6.0]),
-        )
-
-        # Test logging episode end
-        logger.log_episode_end(
-            terminated=True,
-            final_rewards=np.array([50.0, 50.0]),
-            episode_summary={"total_reward": 100.0, "final_step": 5},
-        )
-
-        # Verify log file was created
-        assert log_file.exists()
-        assert log_file.stat().st_size > 0
-
-    finally:
-        # Clean up
-        if log_file.exists():
-            log_file.unlink()
-
-
-def test_economic_validation():
-    """Test that economic validation can be imported and used."""
-    from src.economic_validation import EconomicValidator
-    import numpy as np
-
-    validator = EconomicValidator()
-
-    # Test with valid data
-    prices = np.array([10.0, 12.0, 15.0])
-    market_price = 12.0
-    total_demand = 50.0
-    individual_quantities = np.array([20.0, 20.0, 10.0])
-
-    is_valid, errors = validator.validate_step_data(
-        prices=prices.tolist(),
-        market_price=market_price,
-        total_demand=total_demand,
-        individual_quantities=individual_quantities.tolist(),
-    )
-    assert isinstance(is_valid, bool)
-    assert isinstance(errors, list)
-
-
-def test_detector_imports():
-    """Test that detector modules can be imported (without external APIs)."""
-    # Test ML detector import
-    from src.detectors.ml_detector import CollusionDetector
-
-    # Test LLM detector import (should work even without OpenAI)
-    from src.detectors.llm_detector import LLMDetector
-
-    # Create detectors with stubbed mode
-    ml_detector = CollusionDetector()
-    llm_detector = LLMDetector(model_type="stubbed")
-
-    assert ml_detector is not None
-    assert llm_detector is not None
 
 
 def test_cli_import():

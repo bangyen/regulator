@@ -6,7 +6,7 @@ training models, and executing episodes.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -246,32 +246,7 @@ def run_experiment(
 
     # Create environment with simplified economic features
     env = CartelEnv(
-        n_firms=int(cast(int, default_env_params["n_firms"])),
-        max_steps=int(cast(int, default_env_params["max_steps"])),
-        marginal_cost=float(cast(float, default_env_params["marginal_cost"])),
-        demand_intercept=float(cast(float, default_env_params["demand_intercept"])),
-        demand_slope=float(cast(float, default_env_params["demand_slope"])),
-        shock_std=float(cast(float, default_env_params["shock_std"])),
-        price_min=float(cast(float, default_env_params["price_min"])),
-        price_max=float(cast(float, default_env_params["price_max"])),
-        seed=(
-            int(cast(int, default_env_params["seed"]))
-            if default_env_params["seed"] is not None
-            else None
-        ),
-        # Simplified economic features - disable complex ones
-        use_logit_market_shares=False,
-        use_enhanced_market_shares=False,
-        use_capacity_constraints=bool(
-            default_env_params.get("use_capacity_constraints", False)
-        ),
-        use_economies_of_scale=False,
-        use_dynamic_elasticity=False,
-        use_fixed_costs=bool(default_env_params.get("use_fixed_costs", True)),
-        use_information_asymmetry=False,
-        use_market_entry_exit=False,
-        capacity=cast(Optional[List[float]], default_env_params.get("capacity", None)),
-        fixed_cost=float(cast(float, default_env_params.get("fixed_cost", 50.0))),
+        n_firms=n_firms, max_steps=steps, seed=seed, **env_params if env_params else {}
     )
 
     # Create agents

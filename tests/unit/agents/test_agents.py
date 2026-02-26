@@ -41,8 +41,8 @@ class TestBaseAgent:
         agent = TestAgent(agent_id=0, seed=42)
 
         assert agent.agent_id == 0
-        assert agent.price_history == []
-        assert agent.rival_price_history == []
+        assert list(agent.price_history) == []
+        assert list(agent.rival_price_history) == []
 
     def test_base_agent_update_history(self) -> None:
         """Test that BaseAgent updates price history correctly."""
@@ -61,8 +61,8 @@ class TestBaseAgent:
         # Update history
         agent.update_history(my_price=20.0, rival_prices=np.array([15.0, 25.0]))
 
-        assert agent.price_history == [20.0]
-        assert agent.rival_price_history == [20.0]  # Average of 15 and 25
+        assert list(agent.price_history) == [20.0]
+        assert list(agent.rival_price_history) == [20.0]  # Average of 15 and 25
 
     def test_base_agent_reset(self) -> None:
         """Test that BaseAgent reset clears history."""
@@ -85,8 +85,8 @@ class TestBaseAgent:
         # Reset
         agent.reset()
 
-        assert agent.price_history == []
-        assert agent.rival_price_history == []
+        assert list(agent.price_history) == []
+        assert list(agent.rival_price_history) == []
 
 
 class TestRandomAgent:
