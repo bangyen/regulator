@@ -15,8 +15,8 @@ from collections import deque
 
 import numpy as np
 
-from src.cartel.cartel_env import CartelEnv
-from src.agents.leniency import WhistleblowerAgent, LeniencyProgram
+from regulator.cartel.cartel_env import CartelEnv
+from regulator.agents.leniency import WhistleblowerAgent, LeniencyProgram
 
 
 class BaseAgent(ABC):

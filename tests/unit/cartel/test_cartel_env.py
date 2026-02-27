@@ -4,7 +4,7 @@ Unit tests for the minimalist CartelEnv environment.
 
 import math
 import numpy as np
-from src.cartel.cartel_env import CartelEnv
+from regulator.cartel.cartel_env import CartelEnv
 
 
 class TestCartelEnv:

@@ -12,7 +12,7 @@ import click
 from dotenv import load_dotenv
 
 # Import from the package
-from src.experiments.experiment_runner import run_experiment
+from regulator.experiments.experiment_runner import run_experiment
 
 
 @click.group()

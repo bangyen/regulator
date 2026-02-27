@@ -55,7 +55,7 @@ ml = [
 ]
 
 [project.scripts]
-regulator = "regulator_cli:main"
+regulator = "regulator.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/bangyen/regulator"
@@ -80,9 +80,10 @@ disallow_untyped_defs = true
 namespace_packages = true
 explicit_package_bases = true
 ignore_missing_imports = true
-packages = ["src"]
+# packages = ["src"]
 # Use explicit package bases and point to src for the package
 # to avoid duplicate module mapping.
+mypy_path = "src"
 
 [tool.pytest.ini_options]
 minversion = "7.0"

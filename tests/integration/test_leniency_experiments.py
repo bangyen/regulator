@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 from scripts.leniency_experiment import run_leniency_experiment
-from src.agents.leniency import LeniencyProgram
+from regulator.agents.leniency import LeniencyProgram
 
 
 class TestLeniencyExperimentIntegration:

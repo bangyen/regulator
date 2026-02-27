@@ -19,7 +19,7 @@ def test_core_imports():
 
 def test_environment_creation():
     """Test that the cartel environment can be created and reset."""
-    from src.cartel.cartel_env import CartelEnv
+    from regulator.cartel.cartel_env import CartelEnv
 
     # Create environment with minimal configuration
     env = CartelEnv(
@@ -44,8 +44,8 @@ def test_environment_creation():
 
 def test_agent_creation():
     """Test that basic agents can be created and act."""
-    from src.agents.firm_agents import RandomAgent, TitForTatAgent
-    from src.cartel.cartel_env import CartelEnv
+    from regulator.agents.firm_agents import RandomAgent, TitForTatAgent
+    from regulator.cartel.cartel_env import CartelEnv
 
     # Create a mock environment for testing
     env = CartelEnv(n_firms=2, max_steps=5)
@@ -66,7 +66,7 @@ def test_agent_creation():
 
 def test_regulator_creation():
     """Test that the basic regulator can be created and monitor."""
-    from src.agents.regulator import Regulator
+    from regulator.agents.regulator import Regulator
 
     regulator = Regulator()
 
@@ -82,9 +82,9 @@ def test_regulator_creation():
 
 def test_minimal_simulation():
     """Test a minimal simulation run without external dependencies."""
-    from src.cartel.cartel_env import CartelEnv
-    from src.agents.firm_agents import RandomAgent
-    from src.agents.regulator import Regulator
+    from regulator.cartel.cartel_env import CartelEnv
+    from regulator.agents.firm_agents import RandomAgent
+    from regulator.agents.regulator import Regulator
     import numpy as np
 
     # Create minimal simulation
@@ -117,7 +117,7 @@ def test_minimal_simulation():
 
 def test_cli_import():
     """Test that CLI module can be imported."""
-    from src.regulator_cli import main
+    from regulator.cli import main
 
     # Just test that the function exists and is callable
     assert callable(main)
