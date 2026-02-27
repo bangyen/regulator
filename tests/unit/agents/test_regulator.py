@@ -3,7 +3,7 @@ Unit tests for the minimalist Regulator.
 """
 
 import numpy as np
-from src.agents.regulator import Regulator
+from regulator.agents.regulator import Regulator
 
 
 class TestRegulator:

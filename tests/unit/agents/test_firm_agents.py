@@ -4,12 +4,12 @@ Unit tests for the minimalist firm agents.
 
 import numpy as np
 import pytest
-from src.agents.firm_agents import (
+from regulator.agents.firm_agents import (
     RandomAgent,
     BestResponseAgent,
     TitForTatAgent,
 )
-from src.cartel.cartel_env import CartelEnv
+from regulator.cartel.cartel_env import CartelEnv
 
 
 class TestFirmAgents:

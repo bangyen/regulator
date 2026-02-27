@@ -54,4 +54,4 @@ CMD ["python", "-m", "pytest", "tests/", "-v"]
 FROM base AS cli
 # Remove dashboard dependencies for CLI-only usage
 RUN pip uninstall -y flask || true
-CMD ["python", "-m", "regulator_cli", "--help"]
+CMD ["regulator", "--help"]

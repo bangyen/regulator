@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from src.experiments.experiment_runner import (
+from regulator.experiments.experiment_runner import (
     calculate_welfare_metrics,
     create_agent,
     create_regulator,
@@ -20,9 +20,9 @@ from src.experiments.experiment_runner import (
 )
 
 # Import the actual classes that experiment_runner uses
-from src.agents.firm_agents import BaseAgent
-from src.agents.regulator import Regulator
-from src.cartel.cartel_env import CartelEnv
+from regulator.agents.firm_agents import BaseAgent
+from regulator.agents.regulator import Regulator
+from regulator.cartel.cartel_env import CartelEnv
 
 
 class TestCreateAgent:
@@ -272,7 +272,7 @@ class TestPrintExperimentSummary:
 class TestRunExperiment:
     """Test main experiment execution functionality."""
 
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_basic(self, mock_run_episode: Mock) -> None:
         """Test running a basic experiment."""
         # Mock the episode runner
@@ -326,7 +326,7 @@ class TestRunExperiment:
         assert exp_params["regulator_config"] == "rule_based"
         assert exp_params["seed"] == 42
 
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_with_env_params(self, mock_run_episode: Mock) -> None:
         """Test running experiment with custom environment parameters."""
         mock_logger = Mock()
@@ -360,7 +360,7 @@ class TestRunExperiment:
         assert exp_params["env_params"]["demand_intercept"] == 120.0
         assert exp_params["env_params"]["demand_slope"] == -1.5
 
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_auto_episode_id(self, mock_run_episode: Mock) -> None:
         """Test running experiment with auto-generated episode ID."""
         mock_logger = Mock()
@@ -387,7 +387,7 @@ class TestRunExperiment:
         assert results["episode_id"].startswith("experiment_")
         assert len(results["episode_id"]) > 20  # Should include timestamp
 
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_numpy_type_conversion(self, mock_run_episode: Mock) -> None:
         """Test that numpy types are converted to Python native types."""
         mock_logger = Mock()
@@ -431,7 +431,7 @@ class TestRunExperiment:
         assert isinstance(episode_data["market_price"], float)
         assert isinstance(episode_data["total_quantity"], int)
 
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_different_agent_types(self, mock_run_episode: Mock) -> None:
         """Test running experiment with different agent types."""
         mock_logger = Mock()
@@ -457,7 +457,7 @@ class TestRunExperiment:
         assert exp_params["firms"] == ["random", "bestresponse", "titfortat"]
         assert exp_params["env_params"]["n_firms"] == 3
 
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_different_regulator_configs(
         self, mock_run_episode: Mock
     ) -> None:
@@ -488,7 +488,7 @@ class TestRunExperiment:
             assert exp_params["regulator_config"] == config
 
     @patch("builtins.print")
-    @patch("src.experiments.experiment_runner.run_episode_with_regulator_logging")
+    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
     def test_run_experiment_prints_progress(
         self, mock_run_episode: Mock, mock_print: Mock
     ) -> None:

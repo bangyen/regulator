@@ -27,7 +27,7 @@ lint:
 
 # type-check
 type:
-    {{PYTHON}} -m mypy src/
+    {{PYTHON}} -m mypy src/regulator
 
 # run tests
 test:

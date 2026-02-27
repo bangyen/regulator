@@ -10,15 +10,15 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from src.agents.firm_agents import (
+from regulator.agents.firm_agents import (
     BaseAgent,
     RandomAgent,
     BestResponseAgent,
     TitForTatAgent,
 )
-from src.agents.regulator import Regulator
-from src.cartel.cartel_env import CartelEnv
-from src.episode_logging.episode_runner import (
+from regulator.agents.regulator import Regulator
+from regulator.cartel.cartel_env import CartelEnv
+from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
 

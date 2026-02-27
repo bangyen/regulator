@@ -27,9 +27,21 @@ Or open in Colab: [Colab Notebook](https://colab.research.google.com/github/bang
 For real-time monitoring, run the dashboard:
 
 ```bash
-python dashboard/main.py
+python src/regulator/monitoring/main.py
 # Visit http://localhost:5000
 ```
+
+## Development Workflow
+
+This project uses `uv` for dependency management and `just` as a task runner.
+
+- **Initialize environment**: `just init`
+- **Format code**: `just fmt`
+- **Lint**: `just lint`
+- **Type check**: `just type`
+- **Run tests**: `just test`
+- **Run all checks**: `just all`
+
 
 ## Results
 
@@ -52,15 +64,18 @@ python dashboard/main.py
 ```plaintext
 regulator/
 ├── regulator_demo.ipynb  # Colab notebook
-├── dashboard/            # Real-time monitoring dashboard (Flask)
+├── dashboard/            # Legacy dashboard (use src/regulator/monitoring)
 ├── scripts/              # Example run scripts
 ├── tests/                # Unit/integration tests
 ├── docs/                 # Images for README
 └── src/                  # Core implementation
-    ├── agents/           # Market agents (firms, regulators)
-    ├── detectors/        # ML and LLM detection systems
-    ├── cartel/           # Market simulation environment
-    └── monitoring/       # Dashboard and visualization
+    └── regulator/        # Main package
+        ├── agents/       # Market agents
+        ├── cartel/       # Market environment
+        ├── detectors/    # Detection systems
+        ├── experiments/  # Experiment logic
+        ├── monitoring/   # Dashboard & metrics
+        └── cli.py        # CLI entry point
 ```
 
 ## Validation

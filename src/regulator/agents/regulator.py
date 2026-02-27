@@ -12,7 +12,7 @@ from collections import deque
 
 import numpy as np
 
-from src.agents.leniency import LeniencyProgram, LeniencyStatus
+from regulator.agents.leniency import LeniencyProgram, LeniencyStatus
 
 
 class Regulator:

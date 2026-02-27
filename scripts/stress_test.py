@@ -16,12 +16,12 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from src.cartel.cartel_env import CartelEnv
-from src.agents.firm_agents import TitForTatAgent, RandomAgent
-from src.agents.adaptive_agent import AdaptiveAgent
-from src.agents.stealth_agent import StealthCollusiveAgent
-from src.agents.regulator import Regulator
-from src.episode_logging.episode_runner import run_episode_with_regulator_logging
+from regulator.cartel.cartel_env import CartelEnv
+from regulator.agents.firm_agents import TitForTatAgent, RandomAgent
+from regulator.agents.adaptive_agent import AdaptiveAgent
+from regulator.agents.stealth_agent import StealthCollusiveAgent
+from regulator.agents.regulator import Regulator
+from regulator.episode_logging.episode_runner import run_episode_with_regulator_logging
 
 
 def run_tier(

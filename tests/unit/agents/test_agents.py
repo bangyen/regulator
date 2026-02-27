@@ -13,13 +13,13 @@ import numpy as np
 
 from typing import Any, Dict, Optional
 
-from src.agents.firm_agents import (
+from regulator.agents.firm_agents import (
     BaseAgent,
     BestResponseAgent,
     RandomAgent,
     TitForTatAgent,
 )
-from src.cartel.cartel_env import CartelEnv
+from regulator.cartel.cartel_env import CartelEnv
 
 
 class TestBaseAgent:
