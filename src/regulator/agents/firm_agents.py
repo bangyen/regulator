@@ -15,7 +15,6 @@ from collections import deque
 
 import numpy as np
 
-from regulator.cartel.cartel_env import CartelEnv
 from regulator.agents.leniency import WhistleblowerAgent, LeniencyProgram
 
 
@@ -45,10 +44,17 @@ class BaseAgent(ABC):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: CartelEnv,
+        env: Optional[Any] = None,
         info: Optional[Dict[str, Any]] = None,
     ) -> float:
-        """Choose a price for the current step."""
+        """
+        Choose a price for the current step.
+
+        Args:
+            observation: Current environment observation
+            env: Optional environment instance (deprecated, use info instead)
+            info: Dictionary containing market parameters and other info
+        """
         pass
 
     def update_history(self, my_price: float, rival_prices: np.ndarray) -> None:
@@ -74,21 +80,18 @@ class RandomAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: CartelEnv,
+        env: Optional[Any] = None,
         info: Optional[Dict[str, Any]] = None,
     ) -> float:
         """
-        Choose a random price within the environment's bounds.
-
-        Args:
-            observation: Current environment observation (unused)
-            env: The CartelEnv environment instance
-            info: Additional information (unused)
-
-        Returns:
-            A random price within [price_min, price_max]
+        Choose a random price within market bounds.
         """
-        return float(self.np_random.uniform(env.price_min, env.price_max))
+        # Prioritize info['market_params']
+        params = info.get("market_params", {}) if info else {}
+        price_min = params.get("price_min", getattr(env, "price_min", 1.0))
+        price_max = params.get("price_max", getattr(env, "price_max", 100.0))
+
+        return float(self.np_random.uniform(price_min, price_max))
 
 
 class BestResponseAgent(BaseAgent):
@@ -102,75 +105,53 @@ class BestResponseAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: CartelEnv,
+        env: Optional[Any] = None,
         info: Optional[Dict[str, Any]] = None,
     ) -> float:
         """
         Choose the price that maximizes profit against rival average.
-
-        For the demand function D = a + b*p_market where p_market = (p_self + p_rival) / 2,
-        and each firm gets equal market share, the best response is:
-        p* = (a + 2*c - b*p_rival) / (2*b)
-        where a = demand_intercept, b = demand_slope, c = marginal_cost
-
-        Args:
-            observation: Current environment observation
-            env: The CartelEnv environment instance
-            info: Additional information (unused)
-
-        Returns:
-            The optimal price response
         """
+        params = info.get("market_params", {}) if info else {}
+
         # If no rival history, use a reasonable default
         if not self.rival_price_history:
             # Use Nash equilibrium price as default
-            nash_price = self._calculate_nash_equilibrium_price(env)
+            nash_price = self._calculate_nash_equilibrium_price(env, params)
             return nash_price
 
         # Get the most recent rival average price
         rival_avg_price = self.rival_price_history[-1]
 
-        # Calculate best response price
-        # For demand D = a + b*p_market, market price = (p_self + p_rival) / 2
-        # Each firm gets D/2 = (a + b*(p_self + p_rival)/2) / 2
-        # Profit = (p_self - c) * quantity
-        # Taking derivative and setting to zero gives: p_self = (a + 2*c - b*p_rival) / (2*b)
-
-        a = env.demand_intercept
-        b = env.demand_slope
-        c = env.marginal_cost
+        # Get market parameters
+        a = params.get("demand_intercept", getattr(env, "demand_intercept", 100.0))
+        b = params.get("demand_slope", getattr(env, "demand_slope", -1.0))
+        c = params.get("marginal_cost", getattr(env, "marginal_cost", 10.0))
+        price_min = params.get("price_min", getattr(env, "price_min", 1.0))
+        price_max = params.get("price_max", getattr(env, "price_max", 100.0))
 
         # Best response formula: p_self = (a + 2*c - b*p_rival) / (2*b)
-        # For a=100, b=-1, c=10: p_self = (100 + 20 - (-1)*p_rival) / (2*(-1))
-        # p_self = (120 + p_rival) / (-2) = -60 - p_rival/2
-        # This gives negative prices, so let's use the correct formula:
-        # p_self = 105 - p_rival/2 (derived from profit maximization)
         best_response = (a + 2 * c) / (2 * abs(b)) - rival_avg_price / 2
 
         # Clip to valid price range
-        best_response = max(env.price_min, min(env.price_max, best_response))
+        best_response = max(price_min, min(price_max, best_response))
 
         return float(best_response)
 
-    def _calculate_nash_equilibrium_price(self, env: CartelEnv) -> float:
+    def _calculate_nash_equilibrium_price(
+        self, env: Optional[Any] = None, params: Optional[Dict[str, Any]] = None
+    ) -> float:
         """
-        Calculate the Nash equilibrium price for the static game with enhanced accuracy.
-
-        For symmetric firms with demand D = a + b*p_market and marginal cost c,
-        where market price = (p1 + p2 + ... + pn) / n,
-        and market shares are determined by competitiveness,
-        the Nash equilibrium price is derived from profit maximization.
-
-        Args:
-            env: The CartelEnv environment instance
-
-        Returns:
-            The Nash equilibrium price
+        Calculate the Nash equilibrium price.
         """
-        a = env.demand_intercept
-        b = env.demand_slope
-        c = env.marginal_cost
-        n = env.n_firms
+        if params is None:
+            params = {}
+
+        a = params.get("demand_intercept", getattr(env, "demand_intercept", 100.0))
+        b = params.get("demand_slope", getattr(env, "demand_slope", -1.0))
+        c = params.get("marginal_cost", getattr(env, "marginal_cost", 10.0))
+        n = params.get("n_firms", getattr(env, "n_firms", 3))
+        price_min = params.get("price_min", getattr(env, "price_min", 1.0))
+        price_max = params.get("price_max", getattr(env, "price_max", 100.0))
 
         # Enhanced Nash equilibrium calculation
         # For competitiveness-based market shares: s_i = (1/p_i^α) / Σ(1/p_j^α)
@@ -204,7 +185,7 @@ class BestResponseAgent(BaseAgent):
         nash_price = max(nash_price, c + 1.0)  # At least 1 unit above marginal cost
 
         # Clip to valid price range
-        nash_price = max(env.price_min, min(env.price_max, nash_price))
+        nash_price = max(price_min, min(price_max, nash_price))
 
         return float(nash_price)
 
@@ -220,31 +201,28 @@ class TitForTatAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: CartelEnv,
+        env: Optional[Any] = None,
         info: Optional[Dict[str, Any]] = None,
     ) -> float:
         """
         Choose a price equal to the previous rival average price.
-
-        Args:
-            observation: Current environment observation
-            env: The CartelEnv environment instance
-            info: Additional information (unused)
-
-        Returns:
-            The previous rival average price, or a default if no history
         """
+        params = info.get("market_params", {}) if info else {}
+        marginal_cost = params.get("marginal_cost", getattr(env, "marginal_cost", 10.0))
+        price_min = params.get("price_min", getattr(env, "price_min", 1.0))
+        price_max = params.get("price_max", getattr(env, "price_max", 100.0))
+
         # If no rival history, use a reasonable default
         if not self.rival_price_history:
             # Use a price slightly above marginal cost as default
-            default_price = env.marginal_cost + 5.0
-            return float(max(env.price_min, min(env.price_max, default_price)))
+            default_price = marginal_cost + 5.0
+            return float(max(price_min, min(price_max, default_price)))
 
         # Copy the most recent rival average price
         tit_for_tat_price = self.rival_price_history[-1]
 
         # Clip to valid price range
-        tit_for_tat_price = max(env.price_min, min(env.price_max, tit_for_tat_price))
+        tit_for_tat_price = max(price_min, min(price_max, tit_for_tat_price))
 
         return float(tit_for_tat_price)
 
@@ -280,20 +258,15 @@ class CollusiveAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: CartelEnv,
+        env: Optional[Any] = None,
         info: Optional[Dict[str, Any]] = None,
     ) -> float:
         """
         Choose a collusive price.
-
-        Args:
-            observation: Current environment observation
-            env: The CartelEnv environment instance
-            info: Additional information (unused)
-
-        Returns:
-            The collusive price
         """
+        params = info.get("market_params", {}) if info else {}
+        price_min = params.get("price_min", getattr(env, "price_min", 1.0))
+        price_max = params.get("price_max", getattr(env, "price_max", 100.0))
         # Start with collusive price
         price = self.collusive_price
 
@@ -316,7 +289,7 @@ class CollusiveAgent(BaseAgent):
         price += variation
 
         # Clip to valid price range
-        price = max(env.price_min, min(env.price_max, price))
+        price = max(price_min, min(price_max, price))
 
         return float(price)
 

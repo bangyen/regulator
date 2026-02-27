@@ -74,7 +74,7 @@ def run_episode_with_logging(
         # Each agent chooses a price
         prices = []
         for i, agent in enumerate(agents):
-            price = agent.choose_price(obs, env, info)
+            price = agent.choose_price(obs, info=info)
             prices.append(price)
 
         action = np.array(prices, dtype=np.float32)
@@ -277,7 +277,7 @@ def run_episode_with_regulator_logging(
         # Each agent chooses a price
         prices = []
         for i, agent in enumerate(agents):
-            price = agent.choose_price(obs, env, info)
+            price = agent.choose_price(obs, info=info)
             prices.append(price)
 
         action = np.array(prices, dtype=np.float32)

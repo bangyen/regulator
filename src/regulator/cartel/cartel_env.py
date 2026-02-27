@@ -306,6 +306,7 @@ class CartelEnv(gym.Env):
             "step": self.current_step,
             "demand_shock": self.current_demand_shock,
             "total_profits": self.total_profits.copy(),
+            "market_params": self._get_market_info(),
         }
 
         return observation, info
@@ -397,19 +398,8 @@ class CartelEnv(gym.Env):
             "market_shares": market_shares,
             "demand_shock": self.current_demand_shock,
             "total_profits": self.total_profits.copy(),
-            "use_enhanced_demand": self.use_enhanced_demand,
-            "use_logit_market_shares": self.use_logit_market_shares,
-            "use_fixed_costs": self.use_fixed_costs,
-            "use_economies_of_scale": self.use_economies_of_scale,
-            "use_information_asymmetry": self.use_information_asymmetry,
-            # New economic model features
-            "use_dynamic_elasticity": self.use_dynamic_elasticity,
-            "current_elasticity": self.current_elasticity,
-            "use_capacity_constraints": self.use_capacity_constraints,
-            "capacity": self.capacity.copy(),
-            "use_market_entry_exit": self.use_market_entry_exit,
             "active_firms": self.active_firms.copy(),
-            "consecutive_losses": self.consecutive_losses.copy(),
+            "market_params": self._get_market_info(),
         }
 
         return observation, profits, terminated, truncated, info
@@ -421,6 +411,24 @@ class CartelEnv(gym.Env):
     def close(self) -> None:
         """Close the environment (not implemented)."""
         pass
+
+    def _get_market_info(self) -> Dict[str, Any]:
+        """Get current market parameters for agents."""
+        return {
+            "n_firms": self.n_firms,
+            "price_min": self.price_min,
+            "price_max": self.price_max,
+            "marginal_cost": self.marginal_cost,
+            "demand_intercept": self.demand_intercept,
+            "demand_slope": self.demand_slope,
+            "current_elasticity": getattr(
+                self, "current_elasticity", self.price_elasticity
+            ),
+            "use_dynamic_elasticity": self.use_dynamic_elasticity,
+            "use_capacity_constraints": self.use_capacity_constraints,
+            "capacity": self.capacity.copy() if hasattr(self, "capacity") else None,
+            "use_market_entry_exit": self.use_market_entry_exit,
+        }
 
     def _calculate_dynamic_elasticity(
         self, market_price: float, total_demand: float

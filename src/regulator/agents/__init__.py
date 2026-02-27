@@ -5,6 +5,18 @@ This module provides baseline firm agents that can be used to test and benchmark
 the CartelEnv environment, including random, best response, and tit-for-tat strategies.
 """
 
-from .firm_agents import BestResponseAgent, RandomAgent, TitForTatAgent
+from .firm_agents import (
+    BestResponseAgent,
+    CollusiveAgent,
+    RandomAgent,
+    TitForTatAgent,
+)
+from .regulator import Regulator
 
-__all__ = ["RandomAgent", "BestResponseAgent", "TitForTatAgent"]
+__all__ = [
+    "RandomAgent",
+    "BestResponseAgent",
+    "TitForTatAgent",
+    "CollusiveAgent",
+    "Regulator",
+]
