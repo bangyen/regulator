@@ -104,6 +104,8 @@ class TestRegulatorPackage:
             "experiments",
             "monitoring",
             "cli",
+            "CartelEnv",
+            "Regulator",
         ]
 
         # Should only have the expected metadata attributes or sub-packages

@@ -87,9 +87,10 @@ class TestCartelEnv:
         obs, rewards, terminated, truncated, info = env.step(prices)
 
         # Check that dynamic elasticity is being calculated
-        assert "current_elasticity" in info
-        assert "use_dynamic_elasticity" in info
-        assert info["use_dynamic_elasticity"] is True
+        assert "market_params" in info
+        assert "current_elasticity" in info["market_params"]
+        assert "use_dynamic_elasticity" in info["market_params"]
+        assert info["market_params"]["use_dynamic_elasticity"] is True
 
         # Run a few more steps
         for _ in range(5):
@@ -100,7 +101,7 @@ class TestCartelEnv:
             obs, rewards, terminated, truncated, info = env.step(prices)
 
         # Elasticity should potentially change (though not guaranteed)
-        final_elasticity = info["current_elasticity"]
+        final_elasticity = info["market_params"]["current_elasticity"]
         # Just check that the system is working, not that it changed
         assert isinstance(final_elasticity, float)
 
@@ -120,14 +121,15 @@ class TestCartelEnv:
         obs, rewards, terminated, truncated, info = env.step(prices)
 
         # Check that capacity information is in info
-        assert "use_capacity_constraints" in info
-        assert "capacity" in info
-        assert info["use_capacity_constraints"] is True
-        assert np.array_equal(info["capacity"], [50.0, 100.0])
+        assert "market_params" in info
+        assert "use_capacity_constraints" in info["market_params"]
+        assert "capacity" in info["market_params"]
+        assert info["market_params"]["use_capacity_constraints"] is True
+        assert np.array_equal(info["market_params"]["capacity"], [50.0, 100.0])
 
         # Test that quantities don't exceed capacity
         individual_quantities = info["individual_quantities"]
-        capacity = info["capacity"]
+        capacity = info["market_params"]["capacity"]
 
         for i in range(len(individual_quantities)):
             assert (
@@ -151,16 +153,16 @@ class TestCartelEnv:
         obs, rewards, terminated, truncated, info = env.step(prices)
 
         # Check that market entry/exit information is in info
-        assert "use_market_entry_exit" in info
+        assert "market_params" in info
+        assert "use_market_entry_exit" in info["market_params"]
         assert "active_firms" in info
-        assert "consecutive_losses" in info
-        assert info["use_market_entry_exit"] is True
+        assert hasattr(env, "consecutive_losses")
+        assert info["market_params"]["use_market_entry_exit"] is True
         assert len(info["active_firms"]) == 3
-        assert len(info["consecutive_losses"]) == 3
 
         # All firms should be active initially
         assert np.all(info["active_firms"])
-        assert np.all(info["consecutive_losses"] == 0)
+        assert np.all(env.consecutive_losses == 0)
 
     def test_parameter_validation_new_features(self) -> None:
         """Test parameter validation for new economic features."""
