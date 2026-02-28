@@ -19,7 +19,7 @@ git clone https://github.com/bangyen/regulator.git
 cd regulator
 pip install -e .
 pytest   # optional: run tests
-python scripts/run_experiment.py --steps 100 --firms "random,tit_for_tat"
+python scripts/run_experiment.py --firms "random,titfortat" --steps 100
 ```
 
 Or open in Colab: [Colab Notebook](https://colab.research.google.com/github/bangyen/regulator/blob/main/regulator_demo.ipynb).
@@ -27,7 +27,8 @@ Or open in Colab: [Colab Notebook](https://colab.research.google.com/github/bang
 For real-time monitoring, run the dashboard:
 
 ```bash
-python src/regulator/monitoring/main.py
+python dashboard/main.py
+# Or use the CLI: regulator dashboard
 # Visit http://localhost:5000
 ```
 
@@ -64,17 +65,18 @@ This project uses `uv` for dependency management and `just` as a task runner.
 ```plaintext
 regulator/
 ├── regulator_demo.ipynb  # Colab notebook
-├── dashboard/            # Legacy dashboard (use src/regulator/monitoring)
+├── dashboard/            # Flask dashboard (run with dashboard/main.py)
 ├── scripts/              # Example run scripts
 ├── tests/                # Unit/integration tests
 ├── docs/                 # Images for README
 └── src/                  # Core implementation
     └── regulator/        # Main package
-        ├── agents/       # Market agents
+        ├── agents/       # Market agents (firm_agents.py, leniency.py)
         ├── cartel/       # Market environment
-        ├── detectors/    # Detection systems
+        ├── detectors/    # Detection systems (under development)
+        ├── episode_logging/ # Logger & episode runner
         ├── experiments/  # Experiment logic
-        ├── monitoring/   # Dashboard & metrics
+        ├── monitoring/   # Placeholder for future metrics
         └── cli.py        # CLI entry point
 ```
 
