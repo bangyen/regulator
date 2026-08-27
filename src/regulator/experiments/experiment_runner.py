@@ -37,7 +37,9 @@ def create_agent(
     Returns:
         Agent instance
     """
-    agent_type = agent_type.lower()
+    # Normalize so "tit_for_tat", "tit-for-tat" and "titfortat" are all accepted
+    # (the CLI's --firms default uses the underscored spelling).
+    agent_type = agent_type.lower().replace("_", "").replace("-", "")
 
     if agent_type == "random":
         return RandomAgent(agent_id=agent_id, seed=seed)

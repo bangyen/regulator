@@ -1,7 +1,7 @@
 # Regulator
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bangyen/regulator/blob/main/regulator_demo.ipynb)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](tests/)
+[![CI](https://github.com/bangyen/regulator/actions/workflows/ci.yml/badge.svg)](https://github.com/bangyen/regulator/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/bangyen/regulator)](LICENSE)
 
 **Advanced Market Collusion Detection: 93% accuracy with ML+LLM detection, real-time monitoring, and economic validation**
@@ -51,6 +51,11 @@ This project uses `uv` for dependency management and `just` as a task runner.
 | ML Detector | **93.0%** | **85.0%** | **97.1%** | **90.7%** | **98.0%** |
 | LLM Detector | 69.0% | 49.2% | 96.7% | 65.2% | 91.8% |
 
+> **Note:** These figures are historical and are not currently reproducible from
+> this repository — no benchmark script regenerates them, and `train_ml_detector`
+> reports accuracy only. Treat them as provisional until a benchmark is added
+> that emits the full metric set on a fixed seed.
+
 ## Features
 
 - **Real-Time Dashboard** — Professional monitoring interface with live metrics, charts, and violation tracking.
@@ -71,18 +76,18 @@ regulator/
 ├── docs/                 # Images for README
 └── src/                  # Core implementation
     └── regulator/        # Main package
-        ├── agents/       # Market agents (firm_agents.py, leniency.py)
+        ├── agents/       # Market agents, regulators, chat/adaptive/stealth firms
         ├── cartel/       # Market environment
-        ├── detectors/    # Detection systems (under development)
+        ├── detectors/    # ML + LLM collusion detectors
         ├── episode_logging/ # Logger & episode runner
         ├── experiments/  # Experiment logic
-        ├── monitoring/   # Placeholder for future metrics
+        ├── monitoring/   # Enhanced monitoring dashboard
         └── cli.py        # CLI entry point
 ```
 
 ## Validation
 
-- ✅ Overall test coverage of 92% (`pytest`)
+- ✅ 525 tests, 89% coverage (`uv run pytest --cov=src`)
 - ✅ Reproducible seeds for experiments
 - ✅ Benchmark scripts included
 
