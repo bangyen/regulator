@@ -103,6 +103,7 @@ class TestRegulatorPackage:
             "episode_logging",
             "experiments",
             "monitoring",
+            "economic_validation",
             "cli",
             "CartelEnv",
             "Regulator",

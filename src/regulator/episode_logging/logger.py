@@ -100,7 +100,30 @@ class Logger:
     ) -> None:
         """
         Log data for a single step.
+
+        Args:
+            step: Current step number
+            prices: Array of prices chosen by each firm
+            profits: Array of profits for each firm in this step
+            demand_shock: Current demand shock value
+            market_price: Average market price
+            total_demand: Total market demand
+            individual_quantity: Quantity allocated to each firm
+            total_profits: Cumulative profits for each firm
+            regulator_flags: Optional regulator detection flags
+            additional_info: Optional additional information
+
+        Raises:
+            ValueError: If any per-firm array does not have length ``n_firms``
         """
+        # Validate inputs
+        if len(prices) != self.n_firms:
+            raise ValueError(f"Prices array must have length {self.n_firms}")
+        if len(profits) != self.n_firms:
+            raise ValueError(f"Profits array must have length {self.n_firms}")
+        if len(total_profits) != self.n_firms:
+            raise ValueError(f"Total profits array must have length {self.n_firms}")
+
         step_data = {
             "type": "step",
             "step": step,

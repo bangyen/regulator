@@ -5,11 +5,6 @@ This package provides advanced monitoring capabilities for the regulator simulat
 including continuous risk scoring, graduated penalties, and comprehensive dashboards.
 """
 
-"""
-Enhanced Monitoring Package
+from .enhanced_dashboard import EnhancedMonitoringDashboard
 
-This package provides advanced monitoring capabilities for the regulator simulation,
-including continuous risk scoring, graduated penalties, and comprehensive dashboards.
-"""
-
-__all__: list[str] = []
+__all__ = ["EnhancedMonitoringDashboard"]
