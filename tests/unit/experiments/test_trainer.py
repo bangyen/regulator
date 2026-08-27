@@ -489,16 +489,16 @@ class TestTrainMlDetector:
             # Directory shouldn't exist initially
             assert not output_dir.exists()
 
-            with patch(
-                "regulator.experiments.trainer.create_demo_episodes"
-            ) as mock_create_demo, patch(
-                "regulator.experiments.trainer.train_and_evaluate_detector"
-            ) as mock_train_eval, patch(
-                "regulator.experiments.trainer.print"
-            ), patch(
-                "builtins.open", new_callable=mock_open
-            ), patch(
-                "json.dump"
+            with (
+                patch(
+                    "regulator.experiments.trainer.create_demo_episodes"
+                ) as mock_create_demo,
+                patch(
+                    "regulator.experiments.trainer.train_and_evaluate_detector"
+                ) as mock_train_eval,
+                patch("regulator.experiments.trainer.print"),
+                patch("builtins.open", new_callable=mock_open),
+                patch("json.dump"),
             ):
 
                 mock_create_demo.return_value = []

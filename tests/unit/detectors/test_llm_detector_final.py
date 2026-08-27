@@ -380,9 +380,10 @@ class TestLLMDetectorLLMModel:
 
     def test_llm_model_initialization(self) -> None:
         """Test LLM model initialization."""
-        with patch("regulator.detectors.llm_detector.openai") as mock_openai, patch(
-            "regulator.detectors.llm_detector.os.getenv"
-        ) as mock_getenv:
+        with (
+            patch("regulator.detectors.llm_detector.openai") as mock_openai,
+            patch("regulator.detectors.llm_detector.os.getenv") as mock_getenv,
+        ):
             # Mock the environment variable
             mock_getenv.return_value = "test-api-key"
             # Mock the models.list() call to avoid API call
@@ -395,9 +396,10 @@ class TestLLMDetectorLLMModel:
 
     def test_llm_model_classification(self) -> None:
         """Test LLM model classification (mocked)."""
-        with patch("regulator.detectors.llm_detector.openai") as mock_openai, patch(
-            "regulator.detectors.llm_detector.os.getenv"
-        ) as mock_getenv:
+        with (
+            patch("regulator.detectors.llm_detector.openai") as mock_openai,
+            patch("regulator.detectors.llm_detector.os.getenv") as mock_getenv,
+        ):
             # Mock the environment variable
             mock_getenv.return_value = "test-api-key"
             # Mock OpenAI response
