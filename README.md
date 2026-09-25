@@ -4,7 +4,7 @@
 [![CI](https://github.com/bangyen/regulator/actions/workflows/ci.yml/badge.svg)](https://github.com/bangyen/regulator/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/bangyen/regulator)](LICENSE)
 
-**Advanced Market Collusion Detection: 93% accuracy with ML+LLM detection, real-time monitoring, and economic validation**
+**Market collusion simulation and detection: ML episode classifier, LLM chat monitoring, real-time dashboard, and economic validation**
 
 <p align="center">
   <img src="docs/price_trajectories.png" alt="Price trajectories demo" width="600">
@@ -32,6 +32,11 @@ python dashboard/main.py
 # Visit http://localhost:5000
 ```
 
+The dashboard binds to `127.0.0.1` with debug off. Override with
+`DASHBOARD_HOST`, `DASHBOARD_PORT` and `FLASK_DEBUG=1`. Never enable debug on a
+network-reachable host, because the Werkzeug debugger allows arbitrary code
+execution.
+
 ## Development Workflow
 
 This project uses `uv` for dependency management and `just` as a task runner.
@@ -42,24 +47,29 @@ This project uses `uv` for dependency management and `just` as a task runner.
 - **Type check**: `just type`
 - **Run tests**: `just test`
 - **Run all checks**: `just all`
+- **Benchmark detectors**: `python scripts/benchmark.py`
 
 
 ## Results
 
-| Detection Method | Accuracy | Precision | Recall | F1 Score | ROC AUC |
-|------------------|----------|-----------|--------|----------|---------|
-| ML Detector | **93.0%** | **85.0%** | **97.1%** | **90.7%** | **98.0%** |
-| LLM Detector | 69.0% | 49.2% | 96.7% | 65.2% | 91.8% |
+Reproduce with `python scripts/benchmark.py` (seed 42, ~5 s):
 
-> **Note:** These figures are historical and are not currently reproducible from
-> this repository — no benchmark script regenerates them, and `train_ml_detector`
-> reports accuracy only. Treat them as provisional until a benchmark is added
-> that emits the full metric set on a fixed seed.
+| Detector | Accuracy | Precision | Recall | F1 | ROC AUC | Test size |
+|----------|----------|-----------|--------|----|---------|-----------|
+| ML (logistic) | 100.0% | 100.0% | 100.0% | 100.0% | 1.000 | 60 |
+| LLM (stubbed) | 86.2% | 81.1% | 94.5% | 87.3% | 0.875 | 400 |
+
+Ground truth comes from the firms' strategies (collusive/stealth agents vs
+random/best-response/tit-for-tat) for the ML detector, and from the chat
+agents' message templates for the LLM detector. The simulated classes are
+easy to separate, so the ML score shows the pipeline works end to end. It is
+not an estimate of real-world performance. The LLM row uses the keyword-based
+stub; set `OPENAI_API_KEY` and construct `LLMDetector` with any other `model_type` to call OpenAI.
 
 ## Features
 
 - **Real-Time Dashboard** — Professional monitoring interface with live metrics, charts, and violation tracking.
-- **ML+LLM Detection** — 93% accuracy with sub-millisecond processing for real-time monitoring.
+- **ML+LLM Detection** — Episode-level ML classifier (logistic / LightGBM) plus message-level LLM analysis.
 - **Economic Validation** — Built-in consistency checks and market dynamics validation.
 - **Chat Integration** — Natural language communication monitoring with OpenAI-powered analysis.
 - **Enhanced Regulator** — Graduated penalties, continuous risk scores, and market-aware monitoring.
@@ -87,9 +97,10 @@ regulator/
 
 ## Validation
 
-- ✅ 525 tests, 89% coverage (`uv run pytest --cov=src`)
+- ✅ 540 tests, ~91% coverage, enforced floor of 88% (`pytest --cov=src/regulator`)
 - ✅ Reproducible seeds for experiments
-- ✅ Benchmark scripts included
+- ✅ Seeded benchmark: `python scripts/benchmark.py`
+- ✅ Demo notebook executed in CI
 
 ## References
 
