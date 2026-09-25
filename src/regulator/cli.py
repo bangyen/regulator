@@ -19,10 +19,10 @@ from regulator.experiments.experiment_runner import REGULATOR_CONFIGS, run_exper
 @click.version_option(package_name="regulator")
 def main() -> None:
     """
-    Regulator: Market Competition & Collusion Detection
+    Regulator: can label-free screens detect algorithmic collusion?
 
-    A Python package for simulating market competition and detecting
-    collusive behavior using LLM-based chat analysis and rule-based monitoring.
+    Simulate oligopoly markets with competing, colluding and learning firms,
+    and measure how well collusion screens and regulators tell them apart.
     """
     # Load environment variables
     load_dotenv()
@@ -71,6 +71,37 @@ def experiment(
     except Exception as e:
         click.echo(f"❌ Experiment failed: {e}", err=True)
         sys.exit(1)
+
+
+@main.command()
+@click.option("--episodes", default=40, help="Test episodes per population")
+@click.option("--steps", default=100, help="Steps per episode")
+@click.option("--alpha", default=0.05, help="Target false-positive rate")
+@click.option("--q-pairs", default=4, help="Q-learning pairs per discount factor")
+@click.option("--q-train-steps", default=150_000, help="Training periods per pair")
+@click.option("--seed", default=0, help="Base seed")
+def screen(
+    episodes: int,
+    steps: int,
+    alpha: float,
+    q_pairs: int,
+    q_train_steps: int,
+    seed: int,
+) -> None:
+    """Calibrate label-free screens on competition; measure FPR and detection."""
+    from regulator.experiments.screening import format_study, run_study
+
+    logging.getLogger("regulator").setLevel(logging.WARNING)
+    click.echo("Training Q-learners and running the screening study...")
+    result = run_study(
+        episodes=episodes,
+        steps=steps,
+        alpha=alpha,
+        q_pairs=q_pairs,
+        q_train_steps=q_train_steps,
+        seed=seed,
+    )
+    click.echo(format_study(result))
 
 
 @main.command()

@@ -11,7 +11,7 @@ regulator = ["py.typed"]
 [project]
 name = "regulator"
 version = "0.1.0"
-description = "A Python package for simulating market competition and detecting collusive behavior using machine learning"
+description = "Simulated oligopolies for testing whether label-free screens and regulators can detect (algorithmic) collusion"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -19,7 +19,7 @@ license-files = ["LICENSE"]
 authors = [
     {name = "Bangyen Pham", email = "bangyen99@gmail.com"},
 ]
-keywords = ["python", "economics", "collusion", "detection", "machine-learning", "simulation"]
+keywords = ["economics", "collusion", "algorithmic-collusion", "screening", "q-learning", "simulation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

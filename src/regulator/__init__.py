@@ -1,7 +1,8 @@
 """
-Regulator: Market Competition & Collusion Detection
+Regulator: can label-free screens detect algorithmic collusion?
 
-A Python package for simulating market competition and detecting collusive behavior using machine learning.
+Simulated oligopoly markets with competing, colluding and Q-learning firms,
+plus collusion screens and regulators to evaluate against them.
 """
 
 from importlib import metadata as _metadata
