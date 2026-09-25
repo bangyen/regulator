@@ -16,7 +16,7 @@ from regulator.experiments.experiment_runner import REGULATOR_CONFIGS, run_exper
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(package_name="regulator")
 def main() -> None:
     """
     Regulator: Market Competition & Collusion Detection

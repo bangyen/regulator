@@ -1,9 +1,12 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = []
+
+[tool.setuptools.package-data]
+regulator = ["py.typed"]
 
 [project]
 name = "regulator"
@@ -11,7 +14,8 @@ version = "0.1.0"
 description = "A Python package for simulating market competition and detecting collusive behavior using machine learning"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Bangyen Pham", email = "bangyen99@gmail.com"},
 ]
@@ -19,7 +23,6 @@ keywords = ["python", "economics", "collusion", "detection", "machine-learning",
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
