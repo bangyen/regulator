@@ -46,7 +46,7 @@ class TestRegulatorPackage:
 
         assert __email__ is not None
         assert isinstance(__email__, str)
-        assert __email__ == "bangyenp@gmail.com"
+        assert __email__ == "bangyen99@gmail.com"
 
     def test_email_format(self):
         """Test that email has valid format."""
