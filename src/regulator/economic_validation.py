@@ -193,11 +193,20 @@ class EconomicValidator:
                     # Handle cases where correlation can't be computed
                     pass
 
-            # Check that market shares are reasonable (not too concentrated)
+            # A near-monopoly share is expected for the cheapest firm when
+            # prices differ a lot; it is only inconsistent for a firm that
+            # isn't the cheapest
             max_share = max(market_shares)
-            if max_share > 0.99:  # No firm should have >99% market share (very lenient)
+            leader = market_shares.index(max_share)
+            if (
+                len(prices) > 1
+                and max_share > 0.99
+                and prices[leader] > min(prices) + self.tolerance
+            ):
                 errors.append(
-                    f"Market share too concentrated: max share is {max_share}"
+                    f"Market share too concentrated: firm {leader} has {max_share} "
+                    f"of the market at price {prices[leader]} above the minimum "
+                    f"{min(prices)}"
                 )
 
         # Check that quantities are non-negative

@@ -22,9 +22,11 @@ from regulator.agents.ml_regulator import MLRegulator
 from regulator.agents.regulator import Regulator
 from regulator.agents.stealth_agent import StealthCollusiveAgent
 from regulator.cartel.cartel_env import CartelEnv
+from regulator.economic_validation import EconomicValidator
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
+from regulator.episode_logging.logger import Logger
 from regulator.experiments.ml_training import train_collusion_classifier
 
 logger = logging.getLogger(__name__)
@@ -229,9 +231,42 @@ def print_experiment_summary(
     print(f"  Parallel Pricing Violations: {violations.get('parallel', 0)}")
     print(f"  Structural Break Violations: {violations.get('structural_break', 0)}")
 
+    # Economic consistency checks
+    validation = results.get("economic_validation")
+    if validation is not None:
+        if validation["valid"]:
+            print("\nECONOMIC VALIDATION: passed")
+        else:
+            print(f"\nECONOMIC VALIDATION: {validation['n_issues']} issue(s)")
+            for issue in validation["issues"][:3]:
+                print(f"  - {issue}")
+
     # Log file info
     print(f"\nLog File: {results.get('log_file', 'N/A')}")
     print("=" * 80)
+
+
+def validate_episode(log_file: str, env: CartelEnv) -> dict[str, Any]:
+    """
+    Run EconomicValidator over a logged episode.
+
+    Args:
+        log_file: Path to the episode's JSONL log
+        env: Environment the episode ran in (supplies demand/cost parameters)
+
+    Returns:
+        {"valid": bool, "n_issues": int, "issues": first 20 issue strings}
+    """
+    steps = Logger.load_episode_data(log_file)["steps"]
+    validator = EconomicValidator(
+        demand_intercept=env.demand_intercept,
+        demand_slope=env.demand_slope,
+        marginal_cost=env.marginal_cost,
+        price_min=env.price_min,
+        price_max=env.price_max,
+    )
+    is_valid, issues = validator.validate_episode_consistency({"steps": steps})
+    return {"valid": is_valid, "n_issues": len(issues), "issues": issues[:20]}
 
 
 def run_experiment(
@@ -340,6 +375,16 @@ def run_experiment(
     # Calculate welfare metrics
     welfare_metrics = calculate_welfare_metrics(results["episode_data"], env)
     results["welfare_metrics"] = welfare_metrics
+
+    # Check the logged episode for economic consistency
+    results["economic_validation"] = validate_episode(results["log_file"], env)
+    validation = results["economic_validation"]
+    if not validation["valid"]:
+        logger.warning(
+            "Economic validation found %d issue(s); first: %s",
+            validation["n_issues"],
+            validation["issues"][0],
+        )
 
     # Print summary
     print_experiment_summary(results, results["episode_data"], welfare_metrics)
