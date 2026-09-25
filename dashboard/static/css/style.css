@@ -212,6 +212,21 @@ body {
     width: 88px;
 }
 
+.field-check .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    font-size: 14px;
+    color: var(--color-text-primary);
+}
+
+.field-check input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+}
+
 .field select:focus,
 .field input:focus {
     outline: 2px solid var(--color-accent);

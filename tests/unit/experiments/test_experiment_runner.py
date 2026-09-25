@@ -229,6 +229,7 @@ class TestRunExperiment:
             "regulator_config": "rule_based",
             "seed": 42,
             "env_params": results["experiment_params"]["env_params"],
+            "chat_monitoring": False,
         }
 
     def test_env_params_are_applied(self, tmp_path: Path) -> None:
@@ -333,3 +334,59 @@ class TestEconomicValidation:
         run_experiment(firms=["random"], steps=5, seed=1, log_dir=str(tmp_path))
 
         assert "ECONOMIC VALIDATION: passed" in capsys.readouterr().out
+
+
+class TestChatMonitoring:
+    """Chat firms talk each step; the chat regulator fines collusive senders."""
+
+    def test_chat_agent_types(self) -> None:
+        from regulator.agents.chat_firm import CollusiveChatAgent, CompetitiveChatAgent
+
+        assert isinstance(create_agent("chat_colluder", 0, seed=0), CollusiveChatAgent)
+        assert isinstance(
+            create_agent("chat-competitor", 1, seed=0), CompetitiveChatAgent
+        )
+
+    def test_collusive_senders_are_fined(self, tmp_path: Path) -> None:
+        results = run_experiment(
+            firms=["chatcolluder", "chatcompetitor"],
+            steps=40,
+            regulator_config="none",
+            seed=3,
+            log_dir=str(tmp_path),
+            chat_monitoring=True,
+        )
+
+        data = results["episode_data"]
+        assert data["messages_sent"] > 0
+        assert data["message_violations"] > 0
+        assert data["chat_fines"] == data["message_violations"] * 25.0
+        assert data["total_fines"] == data["chat_fines"]
+
+        steps = [
+            json.loads(line)
+            for line in Path(results["log_file"]).read_text().splitlines()
+            if '"type": "step"' in line
+        ]
+        fined = [s for s in steps if any(s["regulator_flags"]["chat_fines"])]
+        assert fined
+        for step in fined:
+            senders = {m["sender_id"] for m in step["additional_info"]["messages"]}
+            fined_firms = {
+                i for i, f in enumerate(step["regulator_flags"]["chat_fines"]) if f
+            }
+            assert fined_firms <= senders
+            # The competitor's templates are never collusive
+            assert 1 not in fined_firms
+
+    def test_messages_without_monitoring_are_not_fined(self, tmp_path: Path) -> None:
+        results = run_experiment(
+            firms=["chatcolluder", "chatcompetitor"],
+            steps=20,
+            regulator_config="none",
+            seed=3,
+            log_dir=str(tmp_path),
+        )
+
+        assert results["episode_data"]["messages_sent"] > 0
+        assert results["episode_data"]["chat_fines"] == 0.0

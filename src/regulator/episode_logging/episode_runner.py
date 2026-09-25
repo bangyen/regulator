@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 
+from regulator.agents.chat_firm import ChatFirmAgent, ChatMessageManager
 from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.logger import Logger
 
@@ -213,6 +214,7 @@ def run_episode_with_regulator_logging(
     log_dir: str = "logs",
     episode_id: str | None = None,
     agent_types: list[str] | None = None,
+    chat_regulator: Any | None = None,
 ) -> dict[str, Any]:
     """
     Run a CartelEnv episode with regulator monitoring and integrated logging.
@@ -229,6 +231,9 @@ def run_episode_with_regulator_logging(
         log_dir: Directory to save log files
         episode_id: Unique identifier for this episode
         agent_types: List of agent type names for logging
+        chat_regulator: Optional ChatRegulator. Agents that can talk
+            (ChatFirmAgent) exchange messages each step before pricing;
+            the chat regulator classifies them and fines the senders.
 
     Returns:
         Dictionary containing episode results and logger information
@@ -272,11 +277,33 @@ def run_episode_with_regulator_logging(
         "episode_demand_shocks": [],
         "terminated": False,
         "truncated": False,
+        "messages_sent": 0,
+        "message_violations": 0,
+        "chat_fines": 0.0,
     }
+
+    # Firms that can talk exchange messages through a manager
+    talkers = [a for a in agents if isinstance(a, ChatFirmAgent)]
+    chat = ChatMessageManager(talkers) if talkers else None
 
     # Run episode
     step = 0
     while step < env.max_steps:
+        # Firms talk first, then price
+        messages: list[dict[str, Any]] = []
+        chat_fines = np.zeros(env.n_firms)
+        chat_details: list[str] = []
+        if chat is not None:
+            messages = chat.collect_messages(step, obs, env, info)
+            chat.distribute_messages(messages, step)
+            if chat_regulator is not None and messages:
+                monitoring = chat_regulator.monitor_messages(messages, step)
+                for sender, fine in monitoring["fines_by_agent"].items():
+                    chat_fines[sender] += fine
+                chat_details = monitoring["violation_details"]
+                episode_data["message_violations"] += monitoring["collusive_messages"]
+            episode_data["messages_sent"] += len(messages)
+
         # Each agent chooses a price
         prices = []
         for agent in agents:
@@ -304,6 +331,8 @@ def run_episode_with_regulator_logging(
             modified_rewards = regulator.apply_penalties(rewards, detection_results)
         else:
             modified_rewards = np.asarray(rewards, dtype=float)
+        modified_rewards = modified_rewards - chat_fines
+        episode_data["chat_fines"] += float(chat_fines.sum())
 
         # Update agent histories
         for i, agent in enumerate(agents):
@@ -327,7 +356,8 @@ def run_episode_with_regulator_logging(
                 if hasattr(detection_results["fines_applied"], "tolist")
                 else detection_results["fines_applied"]
             ),
-            "violation_details": detection_results["violation_details"],
+            "violation_details": detection_results["violation_details"] + chat_details,
+            "chat_fines": chat_fines.tolist(),
         }
 
         # Prepare additional info for logging
@@ -338,6 +368,9 @@ def run_episode_with_regulator_logging(
             "agent_types": agent_types,
             "agent_prices": prices,
             "original_rewards": np.asarray(rewards).tolist(),
+            "messages": [
+                {"sender_id": m["sender_id"], "message": m["message"]} for m in messages
+            ],
             "modified_rewards": modified_rewards_arr.tolist(),
         }
 
@@ -358,9 +391,11 @@ def run_episode_with_regulator_logging(
         # Update episode tracking
         episode_data["total_steps"] = step + 1
         episode_data["total_rewards"] += modified_rewards
-        episode_data["total_fines"] += np.sum(
-            detection_results["fines_applied"]
-        ) + np.sum(detection_results.get("ml_fines_applied", 0.0))
+        episode_data["total_fines"] += (
+            np.sum(detection_results["fines_applied"])
+            + np.sum(detection_results.get("ml_fines_applied", 0.0))
+            + chat_fines.sum()
+        )
         prices_list = episode_data["episode_prices"]
         if isinstance(prices_list, list):
             prices_list.append(prices.copy())

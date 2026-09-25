@@ -44,6 +44,7 @@ class TestParseRunRequest:
             "regulator": "ml",
             "steps": 200,
             "seed": 7,
+            "chat": False,
         }
 
     def test_null_seed_means_random(self) -> None:
@@ -63,6 +64,7 @@ class TestParseRunRequest:
             ({"steps": True}, "integer"),
             ({"seed": -1}, "non-negative"),
             ({"seed": 1.5}, "non-negative"),
+            ({"chat": "yes"}, "chat must be"),
         ],
     )
     def test_invalid(self, payload: dict[str, Any], message: str) -> None:
@@ -132,4 +134,21 @@ class TestRunEndpoints:
         assert cmd[cmd.index("--regulator") + 1] == "ml"
         assert cmd[cmd.index("--seed") + 1] == "9"
         assert cmd[cmd.index("--log-dir") + 1] == str(tmp_path)
+        assert "--chat" not in cmd
+
+    def test_background_passes_chat_flag(self, tmp_path: Any) -> None:
+        config = {
+            "firms": ["chatcolluder", "chatcompetitor"],
+            "regulator": "none",
+            "steps": 5,
+            "seed": 1,
+            "chat": True,
+        }
+        with (
+            patch.dict("os.environ", {"REGULATOR_LOG_DIR": str(tmp_path)}),
+            patch.object(dash.subprocess, "run") as run,
+        ):
+            dash.run_experiment_background(config)
+
+        assert "--chat" in run.call_args.args[0]
         assert dash.running_experiments["status"] == "completed"

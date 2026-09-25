@@ -642,22 +642,31 @@ class ChatRegulator:
                 "messages_analyzed": 0,
                 "collusive_messages": 0,
                 "fines_applied": 0.0,
+                "fines_by_agent": {},
                 "violation_details": [],
             }
 
         # Classify all messages
         classifications = self.llm_detector.classify_messages_batch(messages, context)
 
-        # Identify collusive messages
+        # Identify collusive messages. The threshold applies to the collusion
+        # probability, the same scale the detector classifies on ("confidence"
+        # is |p - 0.5| * 2 and would require p >= 0.85 at a 0.7 threshold).
         collusive_messages = [
             result
             for result in classifications
             if result["is_collusive"]
-            and result["confidence"] >= self.collusion_threshold
+            and result["collusive_probability"] >= self.collusion_threshold
         ]
 
-        # Calculate fines
+        # Fines go to the sender of each collusive message
         total_fines = len(collusive_messages) * self.message_fine_amount
+        fines_by_agent: dict[int, float] = {}
+        for result in collusive_messages:
+            sender = result["sender_id"]
+            fines_by_agent[sender] = (
+                fines_by_agent.get(sender, 0.0) + self.message_fine_amount
+            )
 
         # Record violations
         for result in collusive_messages:
@@ -678,6 +687,7 @@ class ChatRegulator:
             "messages_analyzed": len(messages),
             "collusive_messages": len(collusive_messages),
             "fines_applied": total_fines,
+            "fines_by_agent": fines_by_agent,
             "violation_details": [
                 f"Collusive message from agent {result['sender_id']}: {result['message'][:50]}..."
                 for result in collusive_messages
