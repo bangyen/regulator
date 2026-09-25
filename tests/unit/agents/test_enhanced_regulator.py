@@ -5,8 +5,6 @@ This module tests the enhanced regulator functionality including graduated penal
 continuous monitoring scores, market awareness, and cumulative penalty tracking.
 """
 
-from unittest.mock import Mock
-
 import numpy as np
 import pytest
 
@@ -35,8 +33,6 @@ class TestEnhancedRegulator:
             parallel_steps=4,
             structural_break_threshold=30.0,
             base_fine_amount=25.0,
-            leniency_enabled=True,
-            leniency_reduction=0.5,
             use_graduated_penalties=True,
             use_market_awareness=True,
             cumulative_penalty_multiplier=1.2,
@@ -317,23 +313,6 @@ class TestEnhancedRegulator:
         assert multipliers[0] == 2.0
         assert multipliers[1] == 1.5
         assert multipliers[2] == 1.0
-
-    def test_calculate_graduated_penalties_leniency_reduction(self, regulator):
-        """Test graduated penalty calculation with leniency reduction."""
-        prices = np.array([50.0, 52.0, 48.0])
-
-        # Mock leniency program
-        mock_leniency = Mock()
-        mock_leniency.get_fine_reduction.side_effect = lambda i: 0.5 if i == 0 else 0.0
-        regulator.leniency_program = mock_leniency
-
-        fines, severities, multipliers = regulator._calculate_graduated_penalties(
-            prices, parallel_violation=True, structural_break_violation=False
-        )
-
-        assert np.all(fines > 0)
-        # Firm 0 should have reduced fine due to leniency
-        assert fines[0] < fines[1]  # Assuming same base fine
 
     def test_get_monitoring_summary(self, regulator):
         """Test monitoring summary generation."""

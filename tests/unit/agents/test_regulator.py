@@ -43,8 +43,7 @@ class TestRegulator:
 
     def test_penalty_application(self) -> None:
         """Test that penalties reduce rewards."""
-        # Disable leniency for simple test
-        regulator = Regulator(fine_amount=50.0, leniency_enabled=False)
+        regulator = Regulator(fine_amount=50.0)
         rewards = np.array([100.0, 100.0])
 
         # Simulate violation results
@@ -68,12 +67,7 @@ class TestRegulator:
 
     def test_reset(self) -> None:
         """Test that reset clears histories."""
-        regulator = Regulator(leniency_enabled=False)
+        regulator = Regulator()
         regulator.price_history.append(np.array([10.0]))
         regulator.reset()
         assert len(regulator.price_history) == 0
-
-        # Test with leniency
-        regulator_len = Regulator(leniency_enabled=True)
-        regulator_len.reset(n_firms=2)
-        assert len(regulator_len.price_history) == 0
