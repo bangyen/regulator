@@ -526,3 +526,50 @@ class TestIntegration:
         assert predictions[0] in [0, 1]
         assert probabilities.shape == (1, 2)
         assert np.allclose(np.sum(probabilities, axis=1), 1.0)
+
+
+class TestStrategicFeatures:
+    """Features describing how firms react to each other."""
+
+    @staticmethod
+    def _features(prices: list[list[float]]) -> dict[str, float]:
+        from regulator.detectors.ml_detector import (
+            STRATEGIC_FEATURE_NAMES,
+            _strategic_features,
+        )
+
+        values = _strategic_features(np.array(prices, dtype=float), 10.0, 100.0)
+        return dict(zip(STRATEGIC_FEATURE_NAMES, values, strict=True))
+
+    def test_markup_normalized_by_demand(self) -> None:
+        f = self._features([[55.0, 55.0]] * 5)
+
+        assert f["normalized_markup"] == pytest.approx(0.5)
+        assert f["rigidity"] == 1.0
+        assert f["cut_rate"] == 0.0
+
+    def test_follower_shows_lead_lag(self) -> None:
+        leader = [40, 45, 42, 48, 44, 50, 46, 41, 47, 43]
+        follower = [40] + leader[:-1]  # copies the leader one period later
+        f = self._features([[a, b] for a, b in zip(leader, follower, strict=True)])
+
+        assert f["lead_lag_corr"] > 0.4
+
+    def test_punish_and_return(self) -> None:
+        # Firm 0 cuts at t=3; firm 1 retaliates at t=4; both return by t=6
+        prices = [[50, 50], [50, 50], [50, 50], [42, 50], [42, 42], [50, 46], [50, 50]]
+        f = self._features(prices)
+
+        assert f["cut_rate"] > 0
+        assert f["rival_response_to_cut"] < -0.1
+        assert f["cut_recovery_rate"] == 1.0
+
+    def test_marginal_cost_read_from_header(self) -> None:
+        from regulator.detectors.ml_detector import _environment_params
+
+        header = {"environment_params": {"marginal_cost": 15.0}}
+        old = {"episode_summary": {"environment_params": {"marginal_cost": 12.0}}}
+
+        assert _environment_params(header)["marginal_cost"] == 15.0
+        assert _environment_params(old)["marginal_cost"] == 12.0
+        assert _environment_params(None) == {}
