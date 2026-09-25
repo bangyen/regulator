@@ -15,41 +15,12 @@ from typing import Any
 import numpy as np
 
 # Import from the package
-from regulator.agents.firm_agents import (
-    BaseAgent,
-    BestResponseAgent,
-    RandomAgent,
-    TitForTatAgent,
-)
 from regulator.agents.regulator import Regulator
 from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
-
-
-def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> BaseAgent:
-    """
-    Create an agent of the specified type.
-
-    Args:
-        agent_type: Type of agent to create ('random', 'bestresponse', 'titfortat')
-        agent_id: Unique identifier for the agent
-        seed: Random seed for reproducibility
-
-    Returns:
-        Agent instance
-    """
-    agent_type = agent_type.lower()
-
-    if agent_type == "random":
-        return RandomAgent(agent_id=agent_id, seed=seed)
-    elif agent_type == "bestresponse":
-        return BestResponseAgent(agent_id=agent_id, seed=seed)
-    elif agent_type == "titfortat":
-        return TitForTatAgent(agent_id=agent_id, seed=seed)
-    else:
-        raise ValueError(f"Unknown agent type: {agent_type}")
+from regulator.experiments.experiment_runner import AGENT_TYPES, create_agent
 
 
 def create_regulator(regulator_config: str, seed: int | None = None) -> Regulator:
@@ -472,7 +443,7 @@ Examples:
         "--firms",
         type=str,
         required=True,
-        help="Comma-separated list of agent types (random, bestresponse, titfortat)",
+        help=f"Comma-separated list of agent types ({', '.join(AGENT_TYPES)})",
     )
 
     parser.add_argument(
@@ -559,11 +530,10 @@ Examples:
     firms = [firm.strip() for firm in args.firms.split(",")]
 
     # Validate agent types
-    valid_types = {"random", "bestresponse", "titfortat"}
     for firm in firms:
-        if firm.lower() not in valid_types:
+        if firm.lower().replace("_", "").replace("-", "") not in AGENT_TYPES:
             print(
-                f"Error: Unknown agent type '{firm}'. Valid types: {', '.join(valid_types)}"
+                f"Error: Unknown agent type '{firm}'. Valid types: {', '.join(AGENT_TYPES)}"
             )
             sys.exit(1)
 
