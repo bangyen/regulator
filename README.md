@@ -147,7 +147,6 @@ regulator/
         ├── detectors/    # ML + LLM collusion detectors
         ├── episode_logging/ # Logger & episode runner
         ├── experiments/  # Experiment logic
-        ├── monitoring/   # Enhanced monitoring dashboard
         └── cli.py        # CLI entry point
 ```
 

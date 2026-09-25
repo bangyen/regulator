@@ -41,8 +41,6 @@ class EnhancedRegulator(Regulator):
         parallel_steps: int = 4,
         structural_break_threshold: float = 30.0,
         base_fine_amount: float = 25.0,
-        leniency_enabled: bool = True,
-        leniency_reduction: float = 0.5,
         # Enhanced parameters
         use_graduated_penalties: bool = True,
         use_market_awareness: bool = True,
@@ -59,8 +57,6 @@ class EnhancedRegulator(Regulator):
             parallel_steps: Steps required for parallel pricing detection
             structural_break_threshold: Price change threshold for structural breaks
             base_fine_amount: Base fine amount for violations
-            leniency_enabled: Whether leniency program is enabled
-            leniency_reduction: Fine reduction for leniency participants
             use_graduated_penalties: Whether to use graduated penalty system
             use_continuous_scores: Whether to use continuous risk scores
             use_market_awareness: Whether to adjust thresholds based on market conditions
@@ -74,8 +70,6 @@ class EnhancedRegulator(Regulator):
             parallel_steps=parallel_steps,
             structural_break_threshold=structural_break_threshold,
             fine_amount=base_fine_amount,
-            leniency_enabled=leniency_enabled,
-            leniency_reduction=leniency_reduction,
             seed=seed,
         )
 
@@ -288,11 +282,6 @@ class EnhancedRegulator(Regulator):
             # Calculate final fine
             fine = base_fine * severity_multiplier * cumulative_multiplier
 
-            # Apply leniency reductions if enabled
-            if self.leniency_program is not None:
-                reduction = self.leniency_program.get_fine_reduction(i)
-                fine *= 1.0 - reduction
-
             fines[i] = fine
             severities.append(severity)
             multipliers.append(cumulative_multiplier)
@@ -307,7 +296,6 @@ class EnhancedRegulator(Regulator):
 
         The base class only fines on its own ``violation_detected`` flag and
         would overwrite ``fines_applied`` with zeros, so it is not reused here.
-        Leniency reductions are already folded into the graduated fines.
         """
         self.profit_history.append(rewards.copy())
         fines = np.asarray(

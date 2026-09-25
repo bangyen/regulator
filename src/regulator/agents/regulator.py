@@ -12,8 +12,6 @@ from typing import Any
 
 import numpy as np
 
-from regulator.agents.leniency import LeniencyProgram, LeniencyStatus
-
 
 class Regulator:
     """
@@ -26,8 +24,6 @@ class Regulator:
         parallel_steps: int = 4,
         structural_break_threshold: float = 30.0,
         fine_amount: float = 25.0,
-        leniency_enabled: bool = True,
-        leniency_reduction: float = 0.5,
         seed: int | None = None,
         history_maxlen: int = 20,
     ) -> None:
@@ -38,8 +34,6 @@ class Regulator:
         self.parallel_steps = parallel_steps
         self.structural_break_threshold = structural_break_threshold
         self.fine_amount = fine_amount
-        self.leniency_enabled = leniency_enabled
-        self.leniency_reduction = leniency_reduction
         self.np_random = np.random.default_rng(seed)
 
         # Episode monitoring state
@@ -50,13 +44,6 @@ class Regulator:
         self.total_fines_applied: float = 0.0
         self.violation_start_step: int | None = None
         self.consecutive_violation_steps: int = 0
-
-        # Leniency program
-        self.leniency_program: LeniencyProgram | None = None
-        if self.leniency_enabled:
-            self.leniency_program = LeniencyProgram(
-                leniency_reduction=leniency_reduction, seed=seed
-            )
 
     def monitor_step(
         self,
@@ -163,19 +150,6 @@ class Regulator:
             base_penalty = self.fine_amount * duration_multiplier
             penalties = np.full(len(rewards), base_penalty)
 
-            # Apply leniency if enabled
-            if self.leniency_program is not None:
-                for i in range(len(rewards)):
-                    reduction = self.leniency_program.get_fine_reduction(i)
-                    penalties[i] *= 1.0 - reduction
-
-                # Update evidence
-                evidence = 0.8 if detection_results.get("parallel_violation") else 0.5
-                for i in range(len(rewards)):
-                    self.leniency_program.update_collusion_evidence(
-                        i, evidence, detection_results["step"]
-                    )
-
             self.total_fines_applied += float(np.sum(penalties))
 
         from typing import cast
@@ -205,7 +179,7 @@ class Regulator:
         Reset the regulator's monitoring state for a new episode.
 
         Args:
-            n_firms: Number of firms (required if leniency program is enabled)
+            n_firms: Number of firms (unused; kept for API compatibility)
         """
         self.price_history.clear()
         self.parallel_violations.clear()
@@ -214,13 +188,6 @@ class Regulator:
         self.profit_history.clear()
         self.violation_start_step = None
         self.consecutive_violation_steps = 0
-
-        if self.leniency_program is not None:
-            if n_firms is None:
-                raise ValueError(
-                    "n_firms must be provided when leniency program is enabled"
-                )
-            self.leniency_program.reset(n_firms)
 
     def get_price_statistics(self) -> dict[str, float]:
         """
@@ -262,99 +229,3 @@ class Regulator:
             if total_checkable_steps > 0
             else 0.0
         )
-
-    def submit_leniency_report(
-        self,
-        firm_id: int,
-        reported_firms: list[int],
-        evidence_strength: float,
-        step: int,
-    ) -> bool:
-        """
-        Submit a leniency report from a firm.
-
-        Args:
-            firm_id: ID of the reporting firm
-            reported_firms: List of firm IDs being reported
-            evidence_strength: Strength of evidence provided
-            step: Current step number
-
-        Returns:
-            True if report was accepted, False otherwise
-        """
-        if self.leniency_program is None:
-            return False
-
-        result: bool = self.leniency_program.submit_report(
-            firm_id, reported_firms, evidence_strength, step
-        )
-        return result
-
-    def get_leniency_status(self, firm_id: int) -> LeniencyStatus:
-        """
-        Get the leniency status for a firm.
-
-        Args:
-            firm_id: ID of the firm
-
-        Returns:
-            Current leniency status
-        """
-        if self.leniency_program is None:
-            return LeniencyStatus.NOT_APPLICABLE
-
-        return self.leniency_program.firm_status.get(
-            firm_id, LeniencyStatus.NOT_APPLICABLE
-        )
-
-    def get_whistleblower_incentive(
-        self,
-        firm_id: int,
-        current_fine: float,
-        collusion_probability: float,
-    ) -> float:
-        """
-        Get the whistleblower incentive for a firm.
-
-        Args:
-            firm_id: ID of the firm
-            current_fine: Current fine amount if caught
-            collusion_probability: Probability of being caught in collusion
-
-        Returns:
-            Expected benefit from whistleblowing
-        """
-        if self.leniency_program is None:
-            return 0.0
-
-        result: float = self.leniency_program.get_whistleblower_incentive(
-            firm_id, current_fine, collusion_probability
-        )
-        return result
-
-    def get_leniency_summary(self) -> dict[str, Any]:
-        """
-        Get a summary of the leniency program's current state.
-
-        Returns:
-            Dictionary containing leniency program statistics
-        """
-        if self.leniency_program is None:
-            return {"leniency_enabled": False}
-
-        summary: dict[str, Any] = self.leniency_program.get_program_summary()
-        summary["leniency_enabled"] = True
-        return summary
-
-    def get_leniency_reports(self) -> list[dict[str, Any]]:
-        """
-        Get a summary of all leniency reports.
-
-        Returns:
-            List of dictionaries containing report details
-        """
-        if self.leniency_program is None:
-            return []
-
-        result: list[dict[str, Any]] = self.leniency_program.get_reports_summary()
-        return result

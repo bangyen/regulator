@@ -34,8 +34,6 @@ class MLRegulator(Regulator):
         parallel_steps: int = 4,  # More steps required for detection
         structural_break_threshold: float = 30.0,  # Even less sensitive to individual price jumps
         fine_amount: float = 25.0,
-        leniency_enabled: bool = True,
-        leniency_reduction: float = 0.5,
         # ML-specific parameters
         use_ml_detection: bool = True,
         ml_anomaly_threshold: float = 0.1,  # Threshold for anomaly detection
@@ -53,8 +51,6 @@ class MLRegulator(Regulator):
             parallel_steps: Number of consecutive steps required for parallel pricing
             structural_break_threshold: Price change threshold for structural break detection
             fine_amount: Fine amount per violation
-            leniency_enabled: Whether leniency program is enabled
-            leniency_reduction: Fine reduction factor for leniency participants
             use_ml_detection: Whether to use ML-based detection
             ml_anomaly_threshold: Threshold for anomaly detection (0.0-1.0)
             ml_collusion_threshold: Threshold for collusion classification (0.0-1.0)
@@ -74,8 +70,6 @@ class MLRegulator(Regulator):
             parallel_steps=parallel_steps,
             structural_break_threshold=structural_break_threshold,
             fine_amount=fine_amount,
-            leniency_enabled=leniency_enabled,
-            leniency_reduction=leniency_reduction,
             seed=seed,
         )
 
