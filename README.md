@@ -102,6 +102,15 @@ regulator/
 - ✅ Seeded benchmark: `python scripts/benchmark.py`
 - ✅ Demo notebook executed in CI
 
+## Roadmap
+
+- [Harder detection benchmark](https://github.com/bangyen/regulator/issues/1) (tacit collusion, noisy colluders, mixed line-ups)
+- [Evaluate the LLM detector against a real model](https://github.com/bangyen/regulator/issues/2)
+- [Fix `create_regulator` ignoring its config](https://github.com/bangyen/regulator/issues/3)
+- [Remove duplicated experiment and environment code](https://github.com/bangyen/regulator/issues/4)
+- [Publish to PyPI on tagged releases](https://github.com/bangyen/regulator/issues/5)
+- [Browser tests for the dashboard](https://github.com/bangyen/regulator/issues/6)
+
 ## References
 
 - [Algorithms, Machine Learning, and Collusion](https://academic.oup.com/jcle/article-abstract/14/4/568/5514023) - Comprehensive analysis of self-learning algorithms and collusive outcomes
