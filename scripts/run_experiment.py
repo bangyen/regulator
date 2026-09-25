@@ -7,6 +7,7 @@ experiments with various agent types, regulator configurations, and analysis.
 """
 
 import argparse
+import logging
 import sys
 from datetime import datetime
 from typing import Any
@@ -454,6 +455,7 @@ def run_experiment(
 
 def main() -> None:
     """Main entry point for the CLI."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(
         description="Run regulator experiments with various agent types and configurations",
         formatter_class=argparse.RawDescriptionHelpFormatter,

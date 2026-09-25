@@ -230,18 +230,18 @@ class TestTrainAndEvaluateDetector:
 class TestRunEpisode:
     """Test the run_episode function."""
 
-    @patch("regulator.experiments.trainer.print")
-    def test_run_episode_basic(self, mock_print):
+    def test_run_episode_basic(self, caplog):
         """Test basic episode running."""
         firms = ["firm1", "firm2", "firm3"]
         steps = 50
         seed = 42
         log_dir = "test_logs"
 
-        result = run_episode(firms, steps, seed=seed, log_dir=log_dir)
+        with caplog.at_level("INFO", logger="regulator.experiments.trainer"):
+            result = run_episode(firms, steps, seed=seed, log_dir=log_dir)
 
-        # Verify print calls
-        assert mock_print.call_count >= 2
+        # Verify progress is logged
+        assert len(caplog.records) >= 2
 
         # Verify result structure
         assert result["episode_id"] == f"episode_{seed}"

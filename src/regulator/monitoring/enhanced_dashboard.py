@@ -6,6 +6,7 @@ continuous risk scores, and dynamic monitoring patterns.
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,8 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class EnhancedMonitoringDashboard:
@@ -88,11 +91,11 @@ class EnhancedMonitoringDashboard:
                 data = self.load_episode_data(episode_file)
                 episode_data[episode_file] = data
             except FileNotFoundError:
-                print(f"Warning: Could not load {episode_file}")
+                logger.warning("Could not load %s", episode_file)
                 continue
 
         if not episode_data:
-            print("No episode data found!")
+            logger.warning("No episode data found!")
             return
 
         # Create visualizations
@@ -105,7 +108,7 @@ class EnhancedMonitoringDashboard:
 
         plt.tight_layout()
         plt.savefig(self.log_dir / output_file, dpi=300, bbox_inches="tight")
-        print(f"Enhanced dashboard saved to: {self.log_dir / output_file}")
+        logger.info("Enhanced dashboard saved to: %s", self.log_dir / output_file)
 
     def _plot_fines_over_time(self, ax: Any, episode_data: dict[str, Any]) -> None:
         """Plot fines over time."""
@@ -410,11 +413,12 @@ class EnhancedMonitoringDashboard:
         with open(self.log_dir / output_file, "w") as f:
             f.write("\n".join(report_lines))
 
-        print(f"Monitoring report saved to: {self.log_dir / output_file}")
+        logger.info("Monitoring report saved to: %s", self.log_dir / output_file)
 
 
 def main() -> None:
     """Example usage of the enhanced monitoring dashboard."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     dashboard = EnhancedMonitoringDashboard()
 
     # Example episode files (adjust as needed)

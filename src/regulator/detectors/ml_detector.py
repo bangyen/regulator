@@ -6,6 +6,7 @@ by analyzing price patterns, profit margins, and market dynamics from episode lo
 """
 
 import json
+import logging
 import warnings
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+logger = logging.getLogger(__name__)
 
 try:
     from lightgbm import LGBMClassifier
@@ -251,7 +254,7 @@ class FeatureExtractor:
                 features_list.append(features)
                 valid_files.append(log_file)
             except (ValueError, FileNotFoundError) as e:
-                print(f"Warning: Skipping {log_file}: {e}")
+                logger.warning("Skipping %s: %s", log_file, e)
                 continue
 
         if not features_list:
@@ -540,7 +543,7 @@ def generate_synthetic_labels(
             labels.append(1 if is_collusive else 0)
 
         except Exception as e:
-            print(f"Warning: Error processing {log_file}: {e}")
+            logger.warning("Error processing %s: %s", log_file, e)
             continue
 
     return valid_files, np.array(labels, dtype=int)

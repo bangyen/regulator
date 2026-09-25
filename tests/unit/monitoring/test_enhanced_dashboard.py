@@ -198,7 +198,9 @@ class TestEnhancedMonitoringDashboard:
         mock_savefig.assert_called_once()
 
     @patch("matplotlib.pyplot.subplots")
-    def test_create_comprehensive_dashboard_no_data(self, mock_subplots, dashboard):
+    def test_create_comprehensive_dashboard_no_data(
+        self, mock_subplots, dashboard, caplog
+    ):
         """Test dashboard creation with no episode data."""
         mock_fig = Mock()
         mock_axes = np.array([[Mock(), Mock()], [Mock(), Mock()], [Mock(), Mock()]])
@@ -207,16 +209,15 @@ class TestEnhancedMonitoringDashboard:
         # Create dashboard with non-existent files
         episode_files = ["nonexistent1.jsonl", "nonexistent2.jsonl"]
 
-        with patch("builtins.print") as mock_print:
+        with caplog.at_level("WARNING"):
             dashboard.create_comprehensive_dashboard(episode_files)
 
-            # Should print warning about no data
-            print_calls = [call[0][0] for call in mock_print.call_args_list]
-            assert any("No episode data found!" in call for call in print_calls)
+        # Should log warning about no data
+        assert "No episode data found!" in caplog.text
 
     @patch("matplotlib.pyplot.subplots")
     def test_create_comprehensive_dashboard_file_not_found(
-        self, mock_subplots, dashboard, sample_episode_data
+        self, mock_subplots, dashboard, sample_episode_data, caplog
     ):
         """Test dashboard creation with some files not found."""
         mock_fig = Mock()
@@ -247,12 +248,11 @@ class TestEnhancedMonitoringDashboard:
 
         episode_files = [episode_file, "nonexistent.jsonl"]
 
-        with patch("builtins.print") as mock_print:
+        with caplog.at_level("WARNING"):
             dashboard.create_comprehensive_dashboard(episode_files)
 
-            # Should print warning about missing file
-            print_calls = [call[0][0] for call in mock_print.call_args_list]
-            assert any("Warning: Could not load" in call for call in print_calls)
+        # Should log warning about missing file
+        assert "Could not load" in caplog.text
 
     def test_plot_fines_over_time(self, dashboard, sample_episode_data):
         """Test fines over time plotting."""

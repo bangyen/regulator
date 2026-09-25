@@ -5,6 +5,7 @@ This module provides CLI commands for running experiments, training models,
 and analyzing results.
 """
 
+import logging
 import sys
 
 import click
@@ -25,6 +26,7 @@ def main() -> None:
     """
     # Load environment variables
     load_dotenv()
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 @main.command()

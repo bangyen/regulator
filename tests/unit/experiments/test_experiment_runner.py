@@ -486,12 +486,11 @@ class TestRunExperiment:
             exp_params = results["experiment_params"]
             assert exp_params["regulator_config"] == config
 
-    @patch("builtins.print")
     @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_prints_progress(
-        self, mock_run_episode: Mock, mock_print: Mock
+    def test_run_experiment_logs_progress(
+        self, mock_run_episode: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test that experiment prints progress information."""
+        """Test that experiment logs progress information."""
         mock_logger = Mock()
         mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
         mock_logger.load_episode_data.return_value = {"steps": []}
@@ -501,7 +500,10 @@ class TestRunExperiment:
             "logger": mock_logger,
         }
 
-        with tempfile.TemporaryDirectory() as temp_dir:
+        with (
+            caplog.at_level("INFO", logger="regulator.experiments.experiment_runner"),
+            tempfile.TemporaryDirectory() as temp_dir,
+        ):
             run_experiment(
                 firms=["random"],
                 steps=5,
@@ -511,9 +513,7 @@ class TestRunExperiment:
                 episode_id="test_print",
             )
 
-        # Verify progress information is printed
-        assert mock_print.call_count > 0
-        printed_text = " ".join(str(call) for call in mock_print.call_args_list)
-        assert "test_print" in printed_text
-        assert "random" in printed_text
-        assert "rule_based" in printed_text
+        # Verify progress information is logged
+        assert "test_print" in caplog.text
+        assert "random" in caplog.text
+        assert "rule_based" in caplog.text
