@@ -82,13 +82,15 @@ def run_episode_with_logging(
         # Take step in environment
         next_obs, rewards, terminated, truncated, step_info = env.step(action)
 
-        # Update agent histories
+        # Update agent histories; learning agents also see their profit
         for i, agent in enumerate(agents):
             if hasattr(agent, "update_history"):
                 rival_prices = np.array(
                     [prices[j] for j in range(len(prices)) if j != i]
                 )
                 agent.update_history(prices[i], rival_prices)
+            if hasattr(agent, "observe_outcome"):
+                agent.observe_outcome(float(rewards[i]))
 
         # Prepare additional info for logging
         step_additional_info = additional_info.copy() if additional_info else {}
@@ -310,6 +312,9 @@ def run_episode_with_regulator_logging(
                     [prices[j] for j in range(len(prices)) if j != i]
                 )
                 agent.update_history(prices[i], rival_prices)
+            # Learning agents see their profit after fines
+            if hasattr(agent, "observe_outcome"):
+                agent.observe_outcome(float(modified_rewards[i]))
 
         # Prepare regulator flags for logging
         regulator_flags = {
