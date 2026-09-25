@@ -15,7 +15,7 @@ services:
       - ../logs:/app/logs
       - ../dashboard:/app/dashboard
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3

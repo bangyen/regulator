@@ -84,7 +84,6 @@ def dashboard(port: int, host: str) -> None:
     try:
         env = os.environ.copy()
         env["FLASK_APP"] = "dashboard.main"
-        env["FLASK_ENV"] = "development"
 
         subprocess.run(
             [
