@@ -17,6 +17,19 @@ All notable changes to this project are documented here. The format follows
 - Playwright browser tests for the dashboard (`pytest -m e2e`, `e2e` extra)
   and a CI job that runs them.
 - `REGULATOR_LOG_DIR` sets the dashboard's log directory.
+- `QLearningAgent` and `regulator.experiments.q_learning` (tacit collusion,
+  Calvano et al. 2020); a "tacit" benchmark scenario.
+- `BaseAgent.observe_outcome(profit)`; runners pass each firm its profit
+  after fines.
+- Strategic-interaction detector features: normalized markup, lead-lag,
+  rigidity, unprovoked cuts, rival response, punish-and-return.
+- Chat monitoring in experiments: `chatcolluder` / `chatcompetitor` firms,
+  `--chat` on the CLI and script, a dashboard checkbox.
+- Batch experiments: `regulator batch`, `run_batch()`, `summarize()` with
+  95% confidence intervals.
+- Dashboard controls for firms, regulator, steps, seed and chat
+  (`/api/options`; `/api/experiment/run` takes a validated JSON body).
+- Economic validation runs after every experiment.
 - `stealth` agent type in `create_agent`; `StealthCollusiveAgent` is exported
   from `regulator.agents`.
 - `llm` and `dashboard` optional extras.
@@ -32,6 +45,22 @@ All notable changes to this project are documented here. The format follows
 - Limited price visibility hid prices far more often than configured with
   more than two firms.
 - ML-regulator fines were missing from `total_fines`.
+- `MLRegulator` trained its classifier on the rule-based detector's own
+  verdicts and predicted on unscaled features. The classifier is now trained
+  offline on simulations labeled by strategy; scaling is in pipelines.
+- `CartelEnv` always applied learning-curve cost reductions and never reset
+  them, driving marginal cost from 10 to about 2 within an episode. They are
+  now opt-in (`use_learning_curves`) and reset each episode.
+- `CollusiveAgent` (30) and the stealth agent (40) defaulted to prices at or
+  below the market's Nash price; defaults are now 55 and 50.
+- The detector's marginal-cost lookup read a header path that isn't
+  written.
+- `ChatRegulator` compared its threshold to a confidence score on a
+  different scale and didn't attribute fines to senders.
+- The concentration check flagged the cheapest firm winning most of the
+  market.
+- The dashboard showed 0 violations as a dash, and a double click could start
+  two runs.
 - Experiment welfare metrics used a fixed 10% deadweight loss and read a key
   the logs don't contain.
 
