@@ -13,7 +13,7 @@ init:
     else
         echo "Using pip..."
         python -m pip install -U pip
-        pip install -e ".[dev,ml,llm,dashboard]"
+        pip install -e ".[dev,ml,dashboard]"
         pre-commit install
     fi
 

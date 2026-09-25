@@ -9,7 +9,6 @@ services:
       dockerfile: docker/Dockerfile
       target: development
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
       - PYTEST_TIMEOUT=300
     volumes:
       - ../logs:/app/logs
@@ -25,7 +24,6 @@ services:
       dockerfile: docker/Dockerfile
       target: production
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
       - FLASK_ENV=production
     ports:
       - "5000:5000"
@@ -45,7 +43,6 @@ services:
       dockerfile: docker/Dockerfile
       target: development
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
       - PYTEST_TIMEOUT=300
     volumes:
       - ../logs:/app/logs

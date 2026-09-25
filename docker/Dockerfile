@@ -24,7 +24,7 @@ COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
-    pip install -e ".[dev,ml,llm,dashboard]"
+    pip install -e ".[dev,ml,dashboard]"
 
 # Copy remaining source code
 COPY . .

@@ -254,7 +254,6 @@ DEFAULT_RUN: dict[str, Any] = {
     "regulator": "rule_based",
     "steps": 50,
     "seed": None,
-    "chat": False,
 }
 
 
@@ -291,9 +290,6 @@ def parse_run_request(payload: dict[str, Any] | None) -> dict[str, Any]:
     if not 5 <= steps <= MAX_STEPS:
         raise ValueError(f"steps must be between 5 and {MAX_STEPS}")
 
-    if not isinstance(config["chat"], bool):
-        raise ValueError("chat must be true or false")
-
     seed = config["seed"]
     if seed is None:
         seed = random.randint(1, 999999)
@@ -305,7 +301,6 @@ def parse_run_request(payload: dict[str, Any] | None) -> dict[str, Any]:
         "regulator": config["regulator"],
         "steps": steps,
         "seed": seed,
-        "chat": config["chat"],
     }
 
 
@@ -342,8 +337,6 @@ def run_experiment_background(config: dict[str, Any]) -> None:
             "--log-dir",
             str(get_log_dir()),
         ]
-        if config.get("chat"):
-            cmd.append("--chat")
 
         # Set up environment with project root in PYTHONPATH
         env = os.environ.copy()

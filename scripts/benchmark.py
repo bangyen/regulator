@@ -2,26 +2,21 @@
 """
 Reproducible detection benchmark.
 
-Generates labeled data with known ground truth, then reports accuracy,
-precision, recall, F1 and ROC AUC for:
-
-- the ML episode detector (CollusionDetector), on simulated episodes where the
-  label comes from the firms' strategies, across scenarios of increasing
-  difficulty (see SCENARIOS)
-- the LLM message detector (LLMDetector), on chat-agent template messages and
-  on a hand-written set of paraphrased / indirect messages (HARD_MESSAGES)
+Generates labeled episodes with known ground truth and reports accuracy,
+precision, recall, F1 and ROC AUC for the supervised episode detector
+(CollusionDetector), across scenarios of increasing difficulty (see
+SCENARIOS). The label comes from the firms' strategies. Label-free screens
+are evaluated separately by scripts/screen_study.py.
 
 Usage:
     python scripts/benchmark.py                      # defaults, seed 42
     python scripts/benchmark.py --episodes 200 --model lightgbm --json out.json
-    OPENAI_API_KEY=... python scripts/benchmark.py --llm-model gpt-4o-mini
 """
 
 import argparse
 import copy
 import json
 import logging
-import os
 import sys
 import tempfile
 from collections.abc import Callable
@@ -40,7 +35,6 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 
 from regulator.agents.adaptive_agent import AdaptiveAgent
-from regulator.agents.chat_firm import CollusiveChatAgent, CompetitiveChatAgent
 from regulator.agents.firm_agents import (
     BaseAgent,
     BestResponseAgent,
@@ -52,7 +46,6 @@ from regulator.agents.firm_agents import (
 from regulator.agents.regulator import Regulator
 from regulator.agents.stealth_agent import StealthCollusiveAgent
 from regulator.cartel.cartel_env import CartelEnv
-from regulator.detectors.llm_detector import LLMDetector
 from regulator.detectors.ml_detector import CollusionDetector, FeatureExtractor
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
@@ -130,30 +123,6 @@ SCENARIOS: dict[str, tuple[list[Lineup], list[Lineup]]] = {
         [(_adaptive(0.1), _adaptive(0.1))],
     ),
 }
-
-# Messages whose intent is not carried by obvious keywords. 1 = collusive.
-HARD_MESSAGES: list[tuple[str, int]] = [
-    ("It would be a shame if anyone started a race to the bottom.", 1),
-    ("We've all seen what happens when someone breaks ranks.", 1),
-    ("I'll be holding at 48 next quarter, in case that's useful to anyone.", 1),
-    ("Let's keep things civilised in the northern region, it's yours.", 1),
-    ("Nobody benefits from those discounts; I'm not planning to repeat them.", 1),
-    ("If you stay above 45 I won't have a reason to go lower.", 1),
-    ("Same arrangement as last year works for me.", 1),
-    ("Happy to leave the hospital contracts to you if the schools stay with us.", 1),
-    ("Our list price goes up 8% on the first; you'll see the circular soon.", 1),
-    ("There's plenty of margin for everyone if we're all sensible.", 1),
-    ("We're cutting prices aggressively to win share this quarter.", 0),
-    ("Our new plant lowers unit costs, so expect sharper pricing from us.", 0),
-    ("We price independently based on our own costs and demand.", 0),
-    ("Customers keep asking for discounts; we'll probably match the market.", 0),
-    ("Raw material costs rose 8%, and we're passing that through.", 0),
-    ("We don't discuss pricing with competitors.", 0),
-    ("Holding prices steady isn't something we can promise anyone.", 0),
-    ("We're bidding on every hospital contract this year.", 0),
-    ("Demand in the north is soft, so we're running a promotion.", 0),
-    ("Our margins are thin; efficiency is the only way forward.", 0),
-]
 
 
 def _metrics(y_true: np.ndarray, y_pred: np.ndarray, y_score: np.ndarray) -> dict:
@@ -295,50 +264,6 @@ def benchmark_tacit(
     return metrics
 
 
-def template_messages(n_messages: int, seed: int) -> list[tuple[str, int]]:
-    """Labeled messages drawn from the chat agents' templates."""
-    collusive = CollusiveChatAgent(agent_id=0, collusion_intensity=1.0, seed=seed)
-    normal = CollusiveChatAgent(agent_id=1, collusion_intensity=0.0, seed=seed + 1)
-    competitive = CompetitiveChatAgent(agent_id=2, seed=seed + 2)
-    obs = np.zeros(2)
-    env = CartelEnv(n_firms=2, seed=seed)
-
-    messages: list[tuple[str, int]] = []
-    for i in range(n_messages):
-        if i % 2:
-            messages.append((collusive._generate_base_message(obs, env), 1))
-        elif i % 4 == 0:
-            messages.append((normal._generate_base_message(obs, env), 0))
-        else:
-            messages.append((competitive._generate_base_message(obs, env), 0))
-    return messages
-
-
-def benchmark_llm(
-    messages: list[tuple[str, int]], detector: LLMDetector
-) -> dict[str, Any]:
-    """Classify labeled messages; for a real model also report latency/tokens."""
-    results = [
-        detector.classify_message(text, sender_id=0, receiver_id=1, step=i)
-        for i, (text, _) in enumerate(messages)
-    ]
-    y_true = np.array([label for _, label in messages])
-    y_pred = np.array([int(r["is_collusive"]) for r in results])
-    y_score = np.array([r["collusive_probability"] for r in results])
-    metrics = _metrics(y_true, y_pred, y_score)
-
-    if detector.model_type == "llm":
-        answered = [r for r in results if not r.get("llm_fallback")]
-        metrics["fallbacks"] = len(results) - len(answered)
-        if answered:
-            metrics["mean_latency_s"] = float(
-                np.mean([r["latency_s"] for r in answered])
-            )
-            for key in ("prompt_tokens", "completion_tokens"):
-                metrics[key] = int(sum(r["usage"][key] for r in answered))
-    return metrics
-
-
 def _fmt(value: float | None, pct: bool = True) -> str:
     if value is None:
         return "n/a"
@@ -366,7 +291,6 @@ def main() -> None:
         "--episodes", type=int, default=200, help="ML episodes per scenario"
     )
     parser.add_argument("--steps", type=int, default=50, help="Steps per episode")
-    parser.add_argument("--messages", type=int, default=400, help="Template messages")
     parser.add_argument("--model", choices=["logistic", "lightgbm"], default="logistic")
     parser.add_argument(
         "--scenarios",
@@ -384,11 +308,6 @@ def main() -> None:
         type=int,
         default=150_000,
         help="Training periods per Q-learning pair",
-    )
-    parser.add_argument(
-        "--llm-model",
-        help="Also evaluate this OpenAI model (needs OPENAI_API_KEY and the "
-        "llm extra); makes paid API calls",
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--json", type=Path, help="Also write metrics to this file")
@@ -414,20 +333,6 @@ def main() -> None:
         )
         results[f"ML ({args.model}) — tacit (Q-learning)"] = tacit
 
-    templates = template_messages(args.messages, args.seed)
-    stub = LLMDetector(model_type="stubbed", seed=args.seed)
-    results["LLM (stub) — templates"] = benchmark_llm(templates, stub)
-    results["LLM (stub) — hard"] = benchmark_llm(HARD_MESSAGES, stub)
-
-    if args.llm_model:
-        if not os.getenv("OPENAI_API_KEY"):
-            parser.error("--llm-model needs OPENAI_API_KEY")
-        llm = LLMDetector(model_type="llm", model_name=args.llm_model)
-        # Templates repeat, so the distinct ones are enough for a paid model
-        distinct = list(dict.fromkeys(templates))
-        results[f"LLM ({args.llm_model}) — templates"] = benchmark_llm(distinct, llm)
-        results[f"LLM ({args.llm_model}) — hard"] = benchmark_llm(HARD_MESSAGES, llm)
-
     print(_table(results))
     for name, m in results.items():
         if "collusion_index_patient" in m:
@@ -437,18 +342,7 @@ def main() -> None:
                 f"{m['mean_price_myopic']:.2f} "
                 f"({m['collusion_index_myopic']:.2f}); Nash 40, monopoly 55"
             )
-    for name, m in results.items():
-        if "fallbacks" in m:
-            print(
-                f"\n{name}: {m['fallbacks']} fallbacks, "
-                f"mean latency {m.get('mean_latency_s', 0):.2f}s, "
-                f"{m.get('prompt_tokens', 0)} prompt + "
-                f"{m.get('completion_tokens', 0)} completion tokens"
-            )
-    print(
-        f"\nseed={args.seed} episodes={args.episodes}/scenario steps={args.steps} "
-        f"messages={args.messages}"
-    )
+    print(f"\nseed={args.seed} episodes={args.episodes}/scenario steps={args.steps}")
     if args.json:
         args.json.write_text(json.dumps(results, indent=2) + "\n")
 

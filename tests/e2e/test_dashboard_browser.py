@@ -121,28 +121,12 @@ def test_run_uses_selected_configuration(dashboard: Any, log_dir: Path) -> None:
         "regulator": "enhanced",
         "steps": 12,
         "seed": 5,
-        "chat": False,
     }
     expect(dashboard.locator("#run-btn")).to_be_enabled(timeout=60_000)
     (new_log,) = set(log_dir.glob("*.jsonl")) - before
     steps = [line for line in new_log.read_text().splitlines() if '"step"' in line]
     assert len([s for s in steps if '"type": "step"' in s]) == 12
     assert '"n_firms": 3' in new_log.read_text().splitlines()[0]
-
-
-def test_chat_run_logs_messages(dashboard: Any, log_dir: Path) -> None:
-    before = set(log_dir.glob("*.jsonl"))
-    dashboard.select_option("#firm-1", "chatcolluder")
-    dashboard.select_option("#firm-2", "chatcompetitor")
-    dashboard.fill("#steps-input", "20")
-    dashboard.fill("#seed-input", "3")
-    dashboard.check("#chat-input")
-
-    dashboard.click("#run-btn")
-
-    expect(dashboard.locator("#run-btn")).to_be_enabled(timeout=60_000)
-    (new_log,) = set(log_dir.glob("*.jsonl")) - before
-    assert '"messages": [{"sender_id"' in new_log.read_text()
 
 
 def test_invalid_steps_show_server_error(

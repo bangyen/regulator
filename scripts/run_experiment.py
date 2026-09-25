@@ -70,17 +70,6 @@ Examples:
     )
 
     parser.add_argument(
-        "--chat",
-        action="store_true",
-        help="Monitor messages from chat firms (chatcolluder, chatcompetitor)",
-    )
-
-    parser.add_argument(
-        "--llm-model",
-        help="OpenAI model for --chat (default: keyword stub)",
-    )
-
-    parser.add_argument(
         "--episode-id",
         type=str,
         help="Custom episode ID (auto-generated if not provided)",
@@ -162,8 +151,6 @@ Examples:
             log_dir=args.log_dir,
             episode_id=args.episode_id,
             env_params=env_params,
-            chat_monitoring=args.chat,
-            llm_model=args.llm_model,
         )
 
         print("\nExperiment completed successfully!")
