@@ -808,20 +808,12 @@ class CartelEnv(gym.Env):
         )
         observed_prices = prices + observation_noise
 
-        # Apply limited visibility - firms may not observe all competitor prices
-        visibility_mask = (
-            self.np_random.random(prices.shape) < self.price_visibility_prob
-        )
-        # Always allow firms to observe their own prices
-        visibility_mask = np.ones_like(visibility_mask, dtype=bool)
-
-        # For competitors, apply visibility probability
-        for i in range(self.n_firms):
-            for j in range(self.n_firms):
-                # Don't affect own price observation
-                if i != j and self.np_random.random() > self.price_visibility_prob:
-                    # Cannot observe this competitor's price
-                    observed_prices[i] = np.nan
+        # Limited visibility: each price in the shared observation is hidden
+        # independently with probability 1 - price_visibility_prob. (The old
+        # nested loop hid price i with probability 1 - p^(n-1), over-hiding
+        # for n > 2.)
+        hidden = self.np_random.random(prices.shape) > self.price_visibility_prob
+        observed_prices[hidden] = np.nan
 
         result: np.ndarray = observed_prices.astype(np.float32)
         return result
