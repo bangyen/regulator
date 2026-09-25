@@ -296,6 +296,7 @@ def run_experiment(
     env_params: dict[str, Any] | None = None,
     chat_monitoring: bool = False,
     llm_model: str | None = None,
+    verbose: bool = True,
 ) -> dict[str, Any]:
     """
     Run a complete experiment with the specified parameters.
@@ -311,6 +312,7 @@ def run_experiment(
         chat_monitoring: Classify chat messages (from chatcolluder /
             chatcompetitor firms) and fine senders of collusive ones
         llm_model: OpenAI model for chat monitoring; the keyword stub if None
+        verbose: Print the experiment summary
 
     Returns:
         Dictionary containing experiment results
@@ -419,7 +421,7 @@ def run_experiment(
             validation["issues"][0],
         )
 
-    # Print summary
-    print_experiment_summary(results, results["episode_data"], welfare_metrics)
+    if verbose:
+        print_experiment_summary(results, results["episode_data"], welfare_metrics)
 
     return results  # type: ignore
