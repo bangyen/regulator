@@ -47,8 +47,8 @@ python dashboard/main.py
 ```
 
 ### 3. Interact
-- **Run** - Pick up to three firms, the regulator, steps, a seed (blank =
-  random) and whether to monitor chat, then click Run Experiment
+- **Run** - Pick up to three firms, the regulator, steps and a seed (blank =
+  random), then click Run Experiment
 - **Refresh** - Data reloads every 30 seconds and after each run
 - **Switch Views** - Toggle the main chart between Price and Profit
 - **Export Data** - Click Export (Enforcement view) to download JSON

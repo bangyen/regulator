@@ -7,13 +7,16 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Screening study** — the project's focus. `regulator.screens` (variance,
+  rigidity, markup, parallel pricing, punish-and-return screens; static
+  Nash/monopoly benchmarks; calibration on a competitive null) and
+  `regulator.experiments.screening` / `scripts/screen_study.py` /
+  `regulator screen`, which measure false-positive and detection rates on
+  competitive, cartel and Q-learning markets.
 - `scripts/benchmark.py`: seeded benchmark that reports accuracy, precision,
   recall, F1 and ROC AUC per scenario (baseline, noisy, mixed, adaptive) for
-  the ML detector, and on template and hard messages for the LLM detector.
-  `--llm-model` evaluates a real OpenAI model with latency and token usage.
+  the supervised ML detector.
 - `enhanced` regulator config (`EnhancedRegulator`).
-- `LLMDetector(model_name=...)`; honours `OPENAI_MODEL`,
-  `OPENAI_TEMPERATURE`, `OPENAI_MAX_TOKENS`.
 - Playwright browser tests for the dashboard (`pytest -m e2e`, `e2e` extra)
   and a CI job that runs them.
 - `REGULATOR_LOG_DIR` sets the dashboard's log directory.
@@ -23,16 +26,14 @@ All notable changes to this project are documented here. The format follows
   after fines.
 - Strategic-interaction detector features: normalized markup, lead-lag,
   rigidity, unprovoked cuts, rival response, punish-and-return.
-- Chat monitoring in experiments: `chatcolluder` / `chatcompetitor` firms,
-  `--chat` on the CLI and script, a dashboard checkbox.
 - Batch experiments: `regulator batch`, `run_batch()`, `summarize()` with
   95% confidence intervals.
-- Dashboard controls for firms, regulator, steps, seed and chat
+- Dashboard controls for firms, regulator, steps and seed
   (`/api/options`; `/api/experiment/run` takes a validated JSON body).
 - Economic validation runs after every experiment.
 - `stealth` agent type in `create_agent`; `StealthCollusiveAgent` is exported
   from `regulator.agents`.
-- `llm` and `dashboard` optional extras.
+- `dashboard` and `e2e` optional extras.
 - CI: native pytest matrix (Python 3.10–3.12), coverage floor, notebook
   execution via nbmake, Dependabot.
 
@@ -40,8 +41,6 @@ All notable changes to this project are documented here. The format follows
 - `create_regulator` ignored its config and always returned a default
   `Regulator`; `ml`, `enhanced` and `none` now do what they say.
 - `EnhancedRegulator` never applied its graduated fines.
-- `LLMDetector` read `OPENAI_KEY` instead of `OPENAI_API_KEY`, and its
-  fallback to the stub crashed on API errors.
 - Limited price visibility hid prices far more often than configured with
   more than two firms.
 - ML-regulator fines were missing from `total_fines`.
@@ -55,8 +54,6 @@ All notable changes to this project are documented here. The format follows
   below the market's Nash price; defaults are now 55 and 50.
 - The detector's marginal-cost lookup read a header path that isn't
   written.
-- `ChatRegulator` compared its threshold to a confidence score on a
-  different scale and didn't attribute fines to senders.
 - The concentration check flagged the cheapest firm winning most of the
   market.
 - The dashboard showed 0 violations as a dash, and a double click could start
@@ -71,7 +68,7 @@ All notable changes to this project are documented here. The format follows
 - Chart.js is vendored, so the dashboard works offline.
 - The dashboard binds to `127.0.0.1` with debug off by default
   (`DASHBOARD_HOST`, `DASHBOARD_PORT`, `FLASK_DEBUG` override).
-- `openai` and `flask` are no longer core dependencies.
+- `flask` is no longer a core dependency.
 - Library diagnostics use `logging` instead of `print`.
 - Ruff now enforces import sorting, bugbear, pyupgrade and simplify rules;
   `ruff format` replaces black.
@@ -81,6 +78,12 @@ All notable changes to this project are documented here. The format follows
 ### Removed
 - Python 3.9 support.
 - Unused `SimplifiedCartelEnv`.
+- The LLM chat layer (chat firms, `LLMDetector`, `ChatRegulator`,
+  `EpisodeLogger`, the `llm` extra and OpenAI settings): detection ran on
+  template strings the simulation generated itself.
+- The leniency program and whistleblower agents (not used by any
+  experiment).
+- The matplotlib `regulator.monitoring` module (unused).
 
 ## [0.1.0] - 2026-08-27
 
