@@ -31,13 +31,19 @@ app = Flask(__name__)
 running_experiments = {"status": "idle", "progress": None, "error_message": None}
 
 
+def get_log_dir() -> Path:
+    """Directory holding experiment logs (override with REGULATOR_LOG_DIR)."""
+    default = Path(__file__).parent.parent / "logs"
+    return Path(os.environ.get("REGULATOR_LOG_DIR", default))
+
+
 def load_latest_experiment() -> dict[str, Any] | None:
     """Load most recent experiment data from logs directory.
 
     Returns parsed experiment data including step-by-step metrics,
     or None if no experiment logs are found.
     """
-    log_dir = Path(__file__).parent.parent / "logs"
+    log_dir = get_log_dir()
     if not log_dir.exists():
         logger.warning(f"Log directory does not exist: {log_dir}")
         return None
@@ -213,7 +219,7 @@ def list_experiments() -> Response:
     Returns metadata for the 10 most recent experiment runs,
     including filenames and modification timestamps.
     """
-    log_dir = Path(__file__).parent.parent / "logs"
+    log_dir = get_log_dir()
     if not log_dir.exists():
         return jsonify([])
 
@@ -264,6 +270,8 @@ def run_experiment_background(steps: int, firms: list[str]) -> None:
             ",".join(firms),
             "--seed",
             str(seed),
+            "--log-dir",
+            str(get_log_dir()),
         ]
 
         # Set up environment with project root in PYTHONPATH

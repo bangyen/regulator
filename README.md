@@ -55,6 +55,7 @@ This project uses `uv` for dependency management and `just` as a task runner.
 - **Run tests**: `just test`
 - **Run all checks**: `just all`
 - **Benchmark detectors**: `python scripts/benchmark.py`
+- **Browser tests** (dashboard front end): `pip install -e ".[e2e]" && playwright install chromium && pytest -m e2e`
 
 ### Releasing
 
@@ -134,7 +135,7 @@ regulator/
 
 ## Validation
 
-- ✅ 540 tests, ~91% coverage, enforced floor of 88% (`pytest --cov=src/regulator`)
+- ✅ 522 unit/integration tests (~92% coverage, 88% floor) + 8 browser tests
 - ✅ Reproducible seeds for experiments
 - ✅ Seeded benchmark: `python scripts/benchmark.py`
 - ✅ Demo notebook executed in CI

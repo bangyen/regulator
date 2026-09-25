@@ -51,6 +51,11 @@ llm = [
 dashboard = [
     "flask>=2.3.0",
 ]
+# Browser tests for the dashboard (`pytest -m e2e`)
+e2e = [
+    "flask>=2.3.0",
+    "pytest-playwright>=0.5.0",
+]
 # Kept as an extra so `pip install -e ".[dev,ml]"` (used by docker/Dockerfile
 # and CI) keeps working; mirrored in [dependency-groups] below so that a bare
 # `uv run pytest` also picks the tools up.
@@ -106,7 +111,9 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q"
+# Browser tests need Playwright + Chromium; run them with `pytest -m e2e`
+addopts = "-ra -q -m 'not e2e'"
+markers = ["e2e: browser tests of the dashboard (need the e2e extra)"]
 testpaths = [
     "tests",
 ]
