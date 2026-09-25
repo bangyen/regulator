@@ -5,7 +5,8 @@ FROM python:3.11-slim AS base
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DASHBOARD_HOST=0.0.0.0
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,7 +24,7 @@ COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
-    pip install -e ".[dev,ml]"
+    pip install -e ".[dev,ml,dashboard]"
 
 # Copy remaining source code
 COPY . .
@@ -41,7 +42,7 @@ CMD ["python", "dashboard/main.py"]
 # Production stage
 FROM base AS production
 # Remove dev dependencies for smaller image
-RUN pip uninstall -y pytest pytest-cov black ruff mypy pre-commit jupyter ipython
+RUN pip uninstall -y pytest pytest-cov nbmake ruff mypy pre-commit jupyter ipython
 EXPOSE 5000
 CMD ["python", "dashboard/main.py"]
 

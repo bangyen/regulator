@@ -4,9 +4,10 @@ Unit tests for the minimalist firm agents.
 
 import numpy as np
 import pytest
+
 from regulator.agents.firm_agents import (
-    RandomAgent,
     BestResponseAgent,
+    RandomAgent,
     TitForTatAgent,
 )
 from regulator.cartel.cartel_env import CartelEnv

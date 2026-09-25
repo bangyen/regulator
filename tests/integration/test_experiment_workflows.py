@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.run_experiment import run_experiment
+from regulator.experiments.experiment_runner import run_experiment
 
 
 class TestExperimentWorkflows:

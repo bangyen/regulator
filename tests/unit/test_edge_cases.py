@@ -6,7 +6,6 @@ across the codebase to ensure robust error handling.
 """
 
 import tempfile
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -14,9 +13,7 @@ import pytest
 from regulator.agents.firm_agents import RandomAgent
 from regulator.agents.regulator import Regulator
 from regulator.cartel.cartel_env import CartelEnv
-from regulator.detectors.llm_detector import LLMDetector
 from regulator.episode_logging.logger import Logger
-from regulator.episode_logging.episode_logger import EpisodeLogger
 
 
 class TestEdgeCases:
@@ -80,36 +77,6 @@ class TestEdgeCases:
         detection_results = regulator.monitor_step(identical_prices, step=1)
         assert "parallel_violation" in detection_results
 
-    def test_llm_detector_edge_cases(self) -> None:
-        """Test LLM detector with edge cases."""
-        detector = LLMDetector(model_type="stubbed")
-
-        # Test with empty message
-        result = detector.classify_message("", sender_id=0, receiver_id=1, step=1)
-        assert "collusive_probability" in result
-        assert "confidence" in result
-
-        # Test with very long message
-        long_message = "Let's coordinate our pricing strategy " * 100
-        result = detector.classify_message(
-            long_message, sender_id=0, receiver_id=1, step=1
-        )
-        assert "collusive_probability" in result
-
-        # Test with special characters
-        special_message = "Let's coordinate! @#$%^&*()_+-=[]{}|;':\",./<>?"
-        result = detector.classify_message(
-            special_message, sender_id=0, receiver_id=1, step=1
-        )
-        assert "collusive_probability" in result
-
-        # Test with unicode characters
-        unicode_message = "Let's coordinate our pricing strategy 🚀💰📈"
-        result = detector.classify_message(
-            unicode_message, sender_id=0, receiver_id=1, step=1
-        )
-        assert "collusive_probability" in result
-
     def test_logger_edge_cases(self) -> None:
         """Test logger with edge cases."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -125,14 +92,6 @@ class TestEdgeCases:
             # Test with reasonable number of firms
             logger = Logger(log_dir=temp_dir, episode_id="test", n_firms=100)
             assert logger.n_firms == 100
-
-    def test_episode_logger_edge_cases(self) -> None:
-        """Test episode logger with edge cases."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Test with reasonable file path
-            log_file = Path(temp_dir) / "test_episode.jsonl"
-            logger = EpisodeLogger(log_file=log_file, n_firms=2)
-            assert logger.log_file == log_file
 
     def test_agent_history_edge_cases(self) -> None:
         """Test agent history with edge cases."""

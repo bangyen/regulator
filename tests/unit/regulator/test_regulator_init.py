@@ -46,7 +46,7 @@ class TestRegulatorPackage:
 
         assert __email__ is not None
         assert isinstance(__email__, str)
-        assert __email__ == "bangyenp@gmail.com"
+        assert __email__ == "bangyen99@gmail.com"
 
     def test_email_format(self):
         """Test that email has valid format."""
@@ -62,14 +62,13 @@ class TestRegulatorPackage:
 
         assert regulator.__doc__ is not None
         assert (
-            "Regulator: Market Competition & Collusion Detection" in regulator.__doc__
+            "can label-free screens detect algorithmic collusion" in regulator.__doc__
         )
-        assert "machine learning" in regulator.__doc__
-        assert "Python package" in regulator.__doc__
+        assert "Q-learning" in regulator.__doc__
 
     def test_package_metadata_consistency(self):
         """Test that package metadata is consistent."""
-        from regulator import __version__, __author__, __email__
+        from regulator import __author__, __email__, __version__
 
         # All metadata should be strings
         assert isinstance(__version__, str)
@@ -102,7 +101,7 @@ class TestRegulatorPackage:
             "detectors",
             "episode_logging",
             "experiments",
-            "monitoring",
+            "screens",
             "economic_validation",
             "cli",
             "CartelEnv",
@@ -115,7 +114,7 @@ class TestRegulatorPackage:
 
     def test_import_all_metadata_together(self):
         """Test importing all metadata attributes together."""
-        from regulator import __version__, __author__, __email__
+        from regulator import __author__, __email__, __version__
 
         # Should all be accessible
         metadata = {"version": __version__, "author": __author__, "email": __email__}
@@ -131,10 +130,9 @@ class TestRegulatorPackage:
 
         # Should mention key concepts
         assert "market" in docstring
-        assert "competition" in docstring
-        assert "collusion" in docstring or "collusive" in docstring
-        assert "detection" in docstring or "detecting" in docstring
-        assert "machine learning" in docstring
+        assert "collusion" in docstring
+        assert "screens" in docstring
+        assert "q-learning" in docstring
 
     def test_version_incrementability(self):
         """Test that version number is in a format that can be incremented."""

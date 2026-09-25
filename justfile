@@ -8,18 +8,18 @@ init:
     #!/usr/bin/env bash
     if command -v uv >/dev/null 2>&1; then
         echo "Using uv..."
-        uv sync --extra dev
+        uv sync --all-extras
         uv run pre-commit install
     else
         echo "Using pip..."
         python -m pip install -U pip
-        pip install -e ".[dev]"
+        pip install -e ".[dev,ml,dashboard]"
         pre-commit install
     fi
 
 # format code
 fmt:
-    {{PYTHON}} -m black .
+    {{PYTHON}} -m ruff format .
 
 # lint code
 lint:

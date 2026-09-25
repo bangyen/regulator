@@ -1,27 +1,29 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = []
 
+[tool.setuptools.package-data]
+regulator = ["py.typed"]
+
 [project]
 name = "regulator"
 version = "0.1.0"
-description = "A Python package for simulating market competition and detecting collusive behavior using machine learning"
+description = "Simulated oligopolies for testing whether label-free screens and regulators can detect (algorithmic) collusion"
 readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "MIT"}
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    {name = "Bangyen Pham", email = "bangyenp@gmail.com"},
+    {name = "Bangyen Pham", email = "bangyen99@gmail.com"},
 ]
-keywords = ["python", "economics", "collusion", "detection", "machine-learning", "simulation"]
+keywords = ["economics", "collusion", "algorithmic-collusion", "screening", "q-learning", "simulation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -32,16 +34,24 @@ dependencies = [
     "gymnasium>=0.29.0",
     "numpy>=1.21.0",
     "scikit-learn>=1.0.0",
+    "scipy>=1.7.0",
     "pandas>=1.3.0",
     "python-dotenv>=1.0.0",
-    "openai>=1.0.0",
     "matplotlib>=3.0.0",
-    "flask>=2.3.0",
 ]
 
 [project.optional-dependencies]
 ml = [
     "lightgbm>=4.0.0",
+]
+# Flask monitoring dashboard (dashboard/main.py, `regulator dashboard`)
+dashboard = [
+    "flask>=2.3.0",
+]
+# Browser tests for the dashboard (`pytest -m e2e`)
+e2e = [
+    "flask>=2.3.0",
+    "pytest-playwright>=0.5.0",
 ]
 # Kept as an extra so `pip install -e ".[dev,ml]"` (used by docker/Dockerfile
 # and CI) keeps working; mirrored in [dependency-groups] below so that a bare
@@ -49,7 +59,7 @@ ml = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
-    "black>=23.0.0",
+    "nbmake>=1.5.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
@@ -60,11 +70,12 @@ dev = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
-    "black>=23.0.0",
+    "nbmake>=1.5.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
     "lightgbm>=4.0.0",
+    "flask>=2.3.0",
 ]
 
 [project.scripts]
@@ -81,12 +92,8 @@ where = ["src"]
 [tool.setuptools.package-dir]
 "" = "src"
 
-[tool.black]
-line-length = 88
-target-version = ['py39']
-
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -100,7 +107,9 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q"
+# Browser tests need Playwright + Chromium; run them with `pytest -m e2e`
+addopts = "-ra -q -m 'not e2e'"
+markers = ["e2e: browser tests of the dashboard (need the e2e extra)"]
 testpaths = [
     "tests",
 ]
@@ -115,6 +124,10 @@ omit = [
     "*/tests/*",
     "*/test_*",
 ]
+
+[tool.coverage.report]
+fail_under = 88
+show_missing = true
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -151,14 +164,13 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-# Support Python 3.9+.
-target-version = "py39"
+# Support Python 3.10+.
+target-version = "py310"
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# Microsoft-specific warnings (`ANN`) by default.
-select = ["E4", "E7", "E9", "F"]
+# Pyflakes, a subset of pycodestyle, plus import sorting (I), likely bugs
+# (B), outdated syntax (UP) and simplifications (SIM).
+select = ["E4", "E7", "E9", "F", "I", "B", "UP", "SIM"]
 ignore = []
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -169,14 +181,14 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.format]
-# Like Black, use double quotes for strings.
+# Black-compatible: use double quotes for strings.
 quote-style = "double"
 
-# Like Black, indent with spaces, rather than tabs.
+# Black-compatible: indent with spaces, rather than tabs.
 indent-style = "space"
 
-# Like Black, respect magic trailing commas.
+# Black-compatible: respect magic trailing commas.
 skip-magic-trailing-comma = false
 
-# Like Black, automatically detect the appropriate line ending.
+# Black-compatible: automatically detect the appropriate line ending.
 line-ending = "auto"

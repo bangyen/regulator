@@ -6,9 +6,10 @@ monitoring with graduated penalties, continuous risk scores, and market-aware
 detection mechanisms.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
-import numpy as np
 from enum import Enum
+from typing import Any
+
+import numpy as np
 
 from .regulator import Regulator
 
@@ -40,15 +41,13 @@ class EnhancedRegulator(Regulator):
         parallel_steps: int = 4,
         structural_break_threshold: float = 30.0,
         base_fine_amount: float = 25.0,
-        leniency_enabled: bool = True,
-        leniency_reduction: float = 0.5,
         # Enhanced parameters
         use_graduated_penalties: bool = True,
         use_market_awareness: bool = True,
         cumulative_penalty_multiplier: float = 1.2,  # Penalty increases with repeat violations
         max_penalty_multiplier: float = 5.0,  # Maximum penalty multiplier
         market_volatility_threshold: float = 0.3,  # High volatility threshold
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the enhanced regulator.
@@ -58,8 +57,6 @@ class EnhancedRegulator(Regulator):
             parallel_steps: Steps required for parallel pricing detection
             structural_break_threshold: Price change threshold for structural breaks
             base_fine_amount: Base fine amount for violations
-            leniency_enabled: Whether leniency program is enabled
-            leniency_reduction: Fine reduction for leniency participants
             use_graduated_penalties: Whether to use graduated penalty system
             use_continuous_scores: Whether to use continuous risk scores
             use_market_awareness: Whether to adjust thresholds based on market conditions
@@ -73,8 +70,6 @@ class EnhancedRegulator(Regulator):
             parallel_steps=parallel_steps,
             structural_break_threshold=structural_break_threshold,
             fine_amount=base_fine_amount,
-            leniency_enabled=leniency_enabled,
-            leniency_reduction=leniency_reduction,
             seed=seed,
         )
 
@@ -85,9 +80,9 @@ class EnhancedRegulator(Regulator):
         self.market_volatility_threshold = market_volatility_threshold
 
         # Enhanced monitoring state
-        self.violation_counts: Dict[int, int] = {}  # firm_id -> violation_count
-        self.market_volatility_history: List[float] = []
-        self.penalty_multipliers: Dict[int, float] = {}  # firm_id -> current_multiplier
+        self.violation_counts: dict[int, int] = {}  # firm_id -> violation_count
+        self.market_volatility_history: list[float] = []
+        self.penalty_multipliers: dict[int, float] = {}  # firm_id -> current_multiplier
 
         # Graduated penalty structure
         self.penalty_structure = {
@@ -101,8 +96,8 @@ class EnhancedRegulator(Regulator):
         self,
         prices: np.ndarray,
         step: int,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        info: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Enhanced monitoring with continuous scores and graduated penalties.
 
@@ -122,7 +117,7 @@ class EnhancedRegulator(Regulator):
         self.market_volatility_history.append(market_volatility)
 
         # Enhanced detection results
-        detection_results: Dict[str, Any] = {
+        detection_results: dict[str, Any] = {
             "step": step,
             "parallel_violation": False,
             "structural_break_violation": False,
@@ -251,7 +246,7 @@ class EnhancedRegulator(Regulator):
         prices: np.ndarray,
         parallel_violation: bool,
         structural_break_violation: bool,
-    ) -> Tuple[np.ndarray, List[ViolationSeverity], List[float]]:
+    ) -> tuple[np.ndarray, list[ViolationSeverity], list[float]]:
         """
         Calculate graduated penalties based on violation type.
 
@@ -260,8 +255,8 @@ class EnhancedRegulator(Regulator):
         """
         n_firms = len(prices)
         fines = np.zeros(n_firms)
-        severities: List[ViolationSeverity] = []
-        multipliers: List[float] = []
+        severities: list[ViolationSeverity] = []
+        multipliers: list[float] = []
 
         if not (parallel_violation or structural_break_violation):
             return fines, severities, multipliers
@@ -287,18 +282,32 @@ class EnhancedRegulator(Regulator):
             # Calculate final fine
             fine = base_fine * severity_multiplier * cumulative_multiplier
 
-            # Apply leniency reductions if enabled
-            if self.leniency_program is not None:
-                reduction = self.leniency_program.get_fine_reduction(i)
-                fine *= 1.0 - reduction
-
             fines[i] = fine
             severities.append(severity)
             multipliers.append(cumulative_multiplier)
 
         return fines, severities, multipliers
 
-    def get_monitoring_summary(self) -> Dict[str, Any]:
+    def apply_penalties(
+        self, rewards: np.ndarray, detection_results: dict[str, Any]
+    ) -> np.ndarray:
+        """
+        Subtract the graduated fines computed in monitor_step.
+
+        The base class only fines on its own ``violation_detected`` flag and
+        would overwrite ``fines_applied`` with zeros, so it is not reused here.
+        """
+        self.profit_history.append(rewards.copy())
+        fines = np.asarray(
+            detection_results.get("fines_applied", np.zeros(len(rewards))),
+            dtype=float,
+        )
+        self.total_fines_applied += float(np.sum(fines))
+        detection_results["fines_applied"] = fines
+        modified: np.ndarray = (rewards - fines).astype(np.float32)
+        return modified
+
+    def get_monitoring_summary(self) -> dict[str, Any]:
         """Get comprehensive monitoring summary."""
         return {
             "total_violations": len(self.parallel_violations)
@@ -319,7 +328,7 @@ class EnhancedRegulator(Regulator):
             "market_volatility_history": self.market_volatility_history.copy(),
         }
 
-    def reset(self, n_firms: Optional[int] = None) -> None:
+    def reset(self, n_firms: int | None = None) -> None:
         """Reset regulator state for new episode."""
         super().reset(n_firms)
         self.violation_counts.clear()

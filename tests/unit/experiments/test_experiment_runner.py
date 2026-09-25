@@ -5,24 +5,27 @@ This module tests the core experiment execution functions including
 agent creation, regulator creation, welfare calculations, and experiment execution.
 """
 
-import tempfile
-from unittest.mock import Mock, patch
+import json
+from pathlib import Path
+from typing import Any
 
-import numpy as np
 import pytest
 
+# Import the actual classes that experiment_runner uses
+from regulator.agents.enhanced_regulator import EnhancedRegulator
+from regulator.agents.firm_agents import BaseAgent
+from regulator.agents.ml_regulator import MLRegulator
+from regulator.agents.regulator import Regulator
+from regulator.cartel.cartel_env import CartelEnv
 from regulator.experiments.experiment_runner import (
+    REGULATOR_CONFIGS,
     calculate_welfare_metrics,
     create_agent,
     create_regulator,
     print_experiment_summary,
     run_experiment,
+    validate_episode,
 )
-
-# Import the actual classes that experiment_runner uses
-from regulator.agents.firm_agents import BaseAgent
-from regulator.agents.regulator import Regulator
-from regulator.cartel.cartel_env import CartelEnv
 
 
 class TestCreateAgent:
@@ -80,441 +83,253 @@ class TestCreateAgent:
 class TestCreateRegulator:
     """Test regulator creation functionality."""
 
-    def test_create_regulator_rule_based(self) -> None:
-        """Test creating a rule-based regulator."""
+    def test_rule_based(self) -> None:
         regulator = create_regulator("rule_based", seed=42)
-        assert isinstance(regulator, Regulator)
+        assert type(regulator) is Regulator
 
-    def test_create_regulator_ml(self) -> None:
-        """Test creating an ML regulator."""
-        regulator = create_regulator("ml", seed=42)
-        assert isinstance(regulator, Regulator)
+    def test_ml(self) -> None:
+        assert isinstance(create_regulator("ml", seed=42), MLRegulator)
 
-    def test_create_regulator_none(self) -> None:
-        """Test creating a 'none' regulator (dummy)."""
-        regulator = create_regulator("none", seed=42)
-        assert isinstance(regulator, Regulator)
+    def test_enhanced(self) -> None:
+        assert isinstance(create_regulator("enhanced", seed=42), EnhancedRegulator)
 
-    def test_create_regulator_with_seed(self) -> None:
-        """Test creating regulators with different seeds."""
-        regulator1 = create_regulator("rule_based", seed=42)
-        regulator2 = create_regulator("rule_based", seed=123)
+    @pytest.mark.parametrize("config", ["none", "disabled", "NONE"])
+    def test_none_means_no_regulator(self, config: str) -> None:
+        assert create_regulator(config, seed=42) is None
 
-        assert isinstance(regulator1, Regulator)
-        assert isinstance(regulator2, Regulator)
-        # Should be different instances
-        assert regulator1 is not regulator2
+    def test_case_insensitive(self) -> None:
+        assert isinstance(create_regulator("ML", seed=42), MLRegulator)
 
-    def test_create_regulator_invalid_config(self) -> None:
-        """Test creating regulator with invalid config."""
-        # Note: The current implementation doesn't validate config,
-        # so this test documents current behavior
-        regulator = create_regulator("invalid_config", seed=42)
-        assert isinstance(regulator, Regulator)
+    def test_every_listed_config_is_accepted(self) -> None:
+        for config in REGULATOR_CONFIGS:
+            create_regulator(config, seed=0)
+
+    def test_invalid_config(self) -> None:
+        with pytest.raises(ValueError, match="Unknown regulator config"):
+            create_regulator("invalid_config", seed=42)
 
 
 class TestCalculateWelfareMetrics:
     """Test welfare metrics calculation functionality."""
 
-    def test_calculate_welfare_metrics_empty_data(self) -> None:
-        """Test welfare calculation with empty episode data."""
-        env = CartelEnv(n_firms=2, max_steps=10, seed=42)
-        episode_data = []
+    ZERO = {
+        "consumer_surplus": 0.0,
+        "producer_surplus": 0.0,
+        "total_welfare": 0.0,
+        "deadweight_loss": 0.0,
+    }
 
-        metrics = calculate_welfare_metrics(episode_data, env)
+    def test_empty_data(self) -> None:
+        env = CartelEnv(n_firms=2, seed=42)
+        assert calculate_welfare_metrics({}, env) == self.ZERO
+        assert (
+            calculate_welfare_metrics(
+                {"episode_prices": [], "episode_profits": []}, env
+            )
+            == self.ZERO
+        )
 
-        assert metrics["consumer_surplus"] == 0.0
-        assert metrics["producer_surplus"] == 0.0
-        assert metrics["total_welfare"] == 0.0
-        assert metrics["deadweight_loss"] == 0.0
+    def test_single_step(self) -> None:
+        """CS uses the linear demand curve at the average market price."""
+        env = CartelEnv(n_firms=2, seed=42)  # a=100, b=-1, mc=10
+        data = {"episode_prices": [[20.0, 30.0]], "episode_profits": [[100.0, 120.0]]}
 
-    def test_calculate_welfare_metrics_single_step(self) -> None:
-        """Test welfare calculation with single step data."""
-        env = CartelEnv(n_firms=2, max_steps=10, seed=42)
-        episode_data = [
-            {
-                "market_price": 20.0,
-                "total_quantity": 80.0,
-                "profits": [100.0, 120.0],
-            }
-        ]
+        metrics = calculate_welfare_metrics(data, env)
 
-        metrics = calculate_welfare_metrics(episode_data, env)
+        # p = 25, q per firm = (100 - 25) / 2 = 37.5, CS = 0.5 * 75 * 37.5
+        assert metrics["consumer_surplus"] == pytest.approx(1406.25)
+        assert metrics["producer_surplus"] == pytest.approx(220.0)
+        assert metrics["total_welfare"] == pytest.approx(1626.25)
 
-        # Consumer surplus = 0.5 * (demand_intercept - market_price) * total_quantity
-        # = 0.5 * (100 - 20) * 80 = 0.5 * 80 * 80 = 3200
-        expected_consumer_surplus = 0.5 * (env.demand_intercept - 20.0) * 80.0
-        assert metrics["consumer_surplus"] == expected_consumer_surplus
+    def test_deadweight_loss_positive_for_high_prices(self) -> None:
+        env = CartelEnv(n_firms=2, seed=42)
+        data = {"episode_prices": [[90.0, 90.0]], "episode_profits": [[10.0, 10.0]]}
 
-        # Producer surplus = total profits = 100 + 120 = 220
-        assert metrics["producer_surplus"] == 220.0
+        assert calculate_welfare_metrics(data, env)["deadweight_loss"] > 0
 
-        # Total welfare = consumer + producer surplus
-        expected_total = expected_consumer_surplus + 220.0
-        assert metrics["total_welfare"] == expected_total
+    def test_quantities_never_negative(self) -> None:
+        env = CartelEnv(n_firms=2, seed=42)
+        data = {"episode_prices": [[150.0, 150.0]], "episode_profits": [[0.0, 0.0]]}
 
-        # Deadweight loss should be calculated
-        assert metrics["deadweight_loss"] >= 0.0
-
-    def test_calculate_welfare_metrics_multiple_steps(self) -> None:
-        """Test welfare calculation with multiple step data."""
-        env = CartelEnv(n_firms=2, max_steps=10, seed=42)
-        episode_data = [
-            {
-                "market_price": 20.0,
-                "total_quantity": 80.0,
-                "profits": [100.0, 120.0],
-            },
-            {
-                "market_price": 25.0,
-                "total_quantity": 75.0,
-                "profits": [90.0, 110.0],
-            },
-        ]
-
-        metrics = calculate_welfare_metrics(episode_data, env)
-
-        # Should sum across all steps
-        assert metrics["consumer_surplus"] > 0.0
-        assert metrics["producer_surplus"] == 420.0  # 100+120+90+110
-        assert metrics["total_welfare"] > 0.0
-        assert metrics["deadweight_loss"] >= 0.0
-
-    def test_calculate_welfare_metrics_missing_data(self) -> None:
-        """Test welfare calculation with missing data fields."""
-        env = CartelEnv(n_firms=2, max_steps=10, seed=42)
-        episode_data = [
-            {
-                "market_price": 20.0,
-                # Missing total_quantity and profits
-            }
-        ]
-
-        metrics = calculate_welfare_metrics(episode_data, env)
-
-        # Should handle missing data gracefully
-        assert metrics["consumer_surplus"] >= 0.0
-        assert metrics["producer_surplus"] == 0.0  # No profits data
-        assert metrics["total_welfare"] >= 0.0
-        assert metrics["deadweight_loss"] >= 0.0
-
-    def test_calculate_welfare_metrics_negative_consumer_surplus(self) -> None:
-        """Test welfare calculation when consumer surplus would be negative."""
-        env = CartelEnv(n_firms=2, max_steps=10, seed=42)
-        episode_data = [
-            {
-                "market_price": 150.0,  # Higher than demand_intercept (100)
-                "total_quantity": 80.0,
-                "profits": [100.0, 120.0],
-            }
-        ]
-
-        metrics = calculate_welfare_metrics(episode_data, env)
-
-        # Consumer surplus should be 0 (max with 0)
-        assert metrics["consumer_surplus"] == 0.0
-        assert metrics["producer_surplus"] == 220.0
-        assert metrics["total_welfare"] == 220.0
+        assert calculate_welfare_metrics(data, env)["consumer_surplus"] == 0.0
 
 
 class TestPrintExperimentSummary:
     """Test experiment summary printing functionality."""
 
-    @patch("builtins.print")
-    def test_print_experiment_summary_basic(self, mock_print: Mock) -> None:
-        """Test printing basic experiment summary."""
+    WELFARE = {
+        "consumer_surplus": 1000.0,
+        "producer_surplus": 220.0,
+        "total_welfare": 1220.0,
+        "deadweight_loss": 50.0,
+    }
+
+    def test_basic(self, capsys: pytest.CaptureFixture[str]) -> None:
         results = {
             "episode_id": "test_episode",
             "log_file": "/path/to/log.jsonl",
+            "episode_summary": {
+                "agent_types": ["random", "titfortat"],
+                "avg_prices": [20.0, 25.0],
+                "total_profits": [100.0, 120.0],
+            },
         }
-        episode_data = [
-            {
-                "prices": [20.0, 25.0],
-                "profits": [100.0, 120.0],
-                "market_price": 22.5,
-            }
-        ]
-        welfare_metrics = {
-            "consumer_surplus": 1000.0,
-            "producer_surplus": 220.0,
-            "total_welfare": 1220.0,
-            "deadweight_loss": 50.0,
+        episode_data = {
+            "total_steps": 1,
+            "total_fines": 12.5,
+            "violations": {"parallel": 1, "structural_break": 0},
         }
 
-        print_experiment_summary(results, episode_data, welfare_metrics)
+        print_experiment_summary(results, episode_data, self.WELFARE)
 
-        # Verify that print was called multiple times
-        assert mock_print.call_count > 0
+        out = capsys.readouterr().out
+        assert "test_episode" in out
+        assert "random, titfortat" in out
+        assert "Total Fines Applied: 12.50" in out
+        assert "/path/to/log.jsonl" in out
 
-        # Check that key information is printed
-        printed_text = " ".join(str(call) for call in mock_print.call_args_list)
-        assert "test_episode" in printed_text
-        assert "Results saved to:" in printed_text
+    def test_empty_data(self, capsys: pytest.CaptureFixture[str]) -> None:
+        print_experiment_summary({"episode_id": "empty"}, {}, self.WELFARE)
 
-    @patch("builtins.print")
-    def test_print_experiment_summary_empty_data(self, mock_print: Mock) -> None:
-        """Test printing summary with empty episode data."""
-        results = {"episode_id": "empty_episode"}
-        episode_data = []
-        welfare_metrics = {
-            "consumer_surplus": 0.0,
-            "producer_surplus": 0.0,
-            "total_welfare": 0.0,
-            "deadweight_loss": 0.0,
-        }
-
-        print_experiment_summary(results, episode_data, welfare_metrics)
-
-        # Should still print without errors
-        assert mock_print.call_count > 0
+        assert "empty" in capsys.readouterr().out
 
 
 class TestRunExperiment:
-    """Test main experiment execution functionality."""
+    """Run small real experiments end to end."""
 
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_basic(self, mock_run_episode: Mock) -> None:
-        """Test running a basic experiment."""
-        # Mock the episode runner
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {
-            "steps": [
-                {
-                    "prices": [20.0, 25.0],
-                    "profits": [100.0, 120.0],
-                    "market_price": 22.5,
-                    "total_quantity": 77.5,
-                }
-            ]
+    def _run(self, tmp_path: Path, **kwargs: Any) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "firms": ["random", "random"],
+            "steps": 5,
+            "regulator_config": "rule_based",
+            "seed": 42,
+            "log_dir": str(tmp_path),
+            "episode_id": "test_experiment",
         }
-        mock_run_episode.return_value = {
-            "episode_data": [
-                {
-                    "prices": [20.0, 25.0],
-                    "profits": [100.0, 120.0],
-                    "market_price": 22.5,
-                    "total_quantity": 77.5,
-                }
-            ],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
-        }
+        params.update(kwargs)
+        return run_experiment(**params)
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            results = run_experiment(
-                firms=["random", "random"],
-                steps=10,
-                regulator_config="rule_based",
-                seed=42,
-                log_dir=temp_dir,
-                episode_id="test_experiment",
-            )
+    def test_basic(self, tmp_path: Path) -> None:
+        results = self._run(tmp_path)
 
-        # Verify results structure
-        assert "episode_id" in results
-        assert "episode_data" in results
-        assert "experiment_params" in results
-        assert "welfare_metrics" in results
-        assert "log_file" in results
-
-        # Verify experiment parameters
+        for key in (
+            "episode_id",
+            "episode_data",
+            "experiment_params",
+            "welfare_metrics",
+            "log_file",
+        ):
+            assert key in results
         assert results["episode_id"] == "test_experiment"
-        exp_params = results["experiment_params"]
-        assert exp_params["firms"] == ["random", "random"]
-        assert exp_params["steps"] == 10
-        assert exp_params["regulator_config"] == "rule_based"
-        assert exp_params["seed"] == 42
-
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_with_env_params(self, mock_run_episode: Mock) -> None:
-        """Test running experiment with custom environment parameters."""
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {"steps": []}
-        mock_run_episode.return_value = {
-            "episode_data": [],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
+        assert results["episode_data"]["total_steps"] == 5
+        assert Path(results["log_file"]).exists()
+        assert results["experiment_params"] == {
+            "firms": ["random", "random"],
+            "steps": 5,
+            "regulator_config": "rule_based",
+            "seed": 42,
+            "env_params": results["experiment_params"]["env_params"],
         }
 
-        env_params = {
-            "marginal_cost": 15.0,
-            "demand_intercept": 120.0,
-            "demand_slope": -1.5,
-        }
+    def test_env_params_are_applied(self, tmp_path: Path) -> None:
+        results = self._run(
+            tmp_path,
+            env_params={"marginal_cost": 15.0, "demand_intercept": 120.0},
+        )
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            results = run_experiment(
-                firms=["random"],
-                steps=5,
-                regulator_config="rule_based",
-                seed=42,
-                log_dir=temp_dir,
-                env_params=env_params,
-            )
+        env_params = results["experiment_params"]["env_params"]
+        assert env_params["marginal_cost"] == 15.0
+        assert env_params["demand_intercept"] == 120.0
+        assert results["episode_summary"]["environment_params"]["marginal_cost"] == 15.0
 
-        # Verify environment parameters are saved
-        exp_params = results["experiment_params"]
-        assert exp_params["env_params"]["marginal_cost"] == 15.0
-        assert exp_params["env_params"]["demand_intercept"] == 120.0
-        assert exp_params["env_params"]["demand_slope"] == -1.5
+    def test_auto_episode_id(self, tmp_path: Path) -> None:
+        results = self._run(tmp_path, episode_id=None)
 
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_auto_episode_id(self, mock_run_episode: Mock) -> None:
-        """Test running experiment with auto-generated episode ID."""
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {"steps": []}
-        mock_run_episode.return_value = {
-            "episode_data": [],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
-        }
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            results = run_experiment(
-                firms=["random"],
-                steps=5,
-                regulator_config="rule_based",
-                seed=42,
-                log_dir=temp_dir,
-                # No episode_id provided
-            )
-
-        # Should have auto-generated episode ID
-        assert "episode_id" in results
         assert results["episode_id"].startswith("experiment_")
-        assert len(results["episode_id"]) > 20  # Should include timestamp
 
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_numpy_type_conversion(self, mock_run_episode: Mock) -> None:
-        """Test that numpy types are converted to Python native types."""
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {
-            "steps": [
-                {
-                    "prices": np.array([20.0, 25.0]),
-                    "profits": np.array([100.0, 120.0]),
-                    "market_price": np.float32(22.5),
-                    "total_quantity": np.int32(77),
-                }
-            ]
-        }
-        mock_run_episode.return_value = {
-            "episode_data": [
-                {
-                    "prices": np.array([20.0, 25.0]),
-                    "profits": np.array([100.0, 120.0]),
-                    "market_price": np.float32(22.5),
-                    "total_quantity": np.int32(77),
-                }
-            ],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
+    def test_results_are_json_native(self, tmp_path: Path) -> None:
+        results = self._run(tmp_path)
+        results.pop("logger")
+
+        json.dumps(results)
+
+    def test_three_firms(self, tmp_path: Path) -> None:
+        results = self._run(tmp_path, firms=["random", "bestresponse", "titfortat"])
+
+        assert results["experiment_params"]["env_params"]["n_firms"] == 3
+
+    def test_no_regulator_means_no_fines(self, tmp_path: Path) -> None:
+        results = self._run(
+            tmp_path, firms=["stealth", "stealth"], steps=20, regulator_config="none"
+        )
+
+        assert results["episode_data"]["total_fines"] == 0.0
+        assert results["episode_data"]["violations"] == {
+            "parallel": 0,
+            "structural_break": 0,
         }
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            results = run_experiment(
-                firms=["random"],
-                steps=5,
-                regulator_config="rule_based",
-                seed=42,
-                log_dir=temp_dir,
-            )
+    @pytest.mark.parametrize("config", ["rule_based", "enhanced"])
+    def test_regulators_fine_colluders(self, tmp_path: Path, config: str) -> None:
+        results = self._run(
+            tmp_path, firms=["stealth", "stealth"], steps=30, regulator_config=config
+        )
 
-        # Verify numpy types are converted
-        episode_data = results["episode_data"][0]
-        assert isinstance(episode_data["prices"], list)
-        assert isinstance(episode_data["profits"], list)
-        assert isinstance(episode_data["market_price"], float)
-        assert isinstance(episode_data["total_quantity"], int)
+        assert results["episode_data"]["total_fines"] > 0
 
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_different_agent_types(self, mock_run_episode: Mock) -> None:
-        """Test running experiment with different agent types."""
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {"steps": []}
-        mock_run_episode.return_value = {
-            "episode_data": [],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
-        }
+    def test_ml_regulator_runs(self, tmp_path: Path) -> None:
+        results = self._run(tmp_path, steps=15, regulator_config="ml")
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            results = run_experiment(
-                firms=["random", "bestresponse", "titfortat"],
-                steps=5,
-                regulator_config="rule_based",
-                seed=42,
-                log_dir=temp_dir,
-            )
+        assert results["experiment_params"]["regulator_config"] == "ml"
 
-        # Verify all agent types are recorded
-        exp_params = results["experiment_params"]
-        assert exp_params["firms"] == ["random", "bestresponse", "titfortat"]
-        assert exp_params["env_params"]["n_firms"] == 3
-
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_different_regulator_configs(
-        self, mock_run_episode: Mock
+    def test_logs_progress(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test running experiment with different regulator configurations."""
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {"steps": []}
-        mock_run_episode.return_value = {
-            "episode_data": [],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
+        with caplog.at_level("INFO", logger="regulator.experiments.experiment_runner"):
+            self._run(tmp_path, episode_id="test_print")
+
+        assert "test_print" in caplog.text
+        assert "random" in caplog.text
+        assert "rule_based" in caplog.text
+
+
+class TestEconomicValidation:
+    """run_experiment checks the logged episode with EconomicValidator."""
+
+    def test_valid_episode_passes(self, tmp_path: Path) -> None:
+        results = run_experiment(
+            firms=["random", "titfortat"], steps=10, seed=1, log_dir=str(tmp_path)
+        )
+
+        assert results["economic_validation"] == {
+            "valid": True,
+            "n_issues": 0,
+            "issues": [],
         }
 
-        configs = ["rule_based", "ml", "none"]
+    def test_tampered_log_is_flagged(self, tmp_path: Path) -> None:
+        results = run_experiment(
+            firms=["random", "random"], steps=5, seed=1, log_dir=str(tmp_path)
+        )
+        log_file = Path(results["log_file"])
+        lines = log_file.read_text().splitlines()
+        tampered = []
+        for line in lines:
+            record = json.loads(line)
+            if record.get("type") == "step":
+                record["market_price"] += 10.0  # no longer the mean price
+            tampered.append(json.dumps(record))
+        log_file.write_text("\n".join(tampered) + "\n")
 
-        for config in configs:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                results = run_experiment(
-                    firms=["random"],
-                    steps=5,
-                    regulator_config=config,
-                    seed=42,
-                    log_dir=temp_dir,
-                )
+        validation = validate_episode(str(log_file), CartelEnv(n_firms=2))
 
-            # Verify regulator config is recorded
-            exp_params = results["experiment_params"]
-            assert exp_params["regulator_config"] == config
+        assert validation["valid"] is False
+        assert validation["n_issues"] >= 5
+        assert "Market price" in validation["issues"][0]
 
-    @patch("builtins.print")
-    @patch("regulator.experiments.experiment_runner.run_episode_with_regulator_logging")
-    def test_run_experiment_prints_progress(
-        self, mock_run_episode: Mock, mock_print: Mock
+    def test_summary_reports_validation(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Test that experiment prints progress information."""
-        mock_logger = Mock()
-        mock_logger.get_log_file_path.return_value = "/path/to/log.jsonl"
-        mock_logger.load_episode_data.return_value = {"steps": []}
-        mock_run_episode.return_value = {
-            "episode_data": [],
-            "log_file": "/path/to/log.jsonl",
-            "logger": mock_logger,
-        }
+        run_experiment(firms=["random"], steps=5, seed=1, log_dir=str(tmp_path))
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            run_experiment(
-                firms=["random"],
-                steps=5,
-                regulator_config="rule_based",
-                seed=42,
-                log_dir=temp_dir,
-                episode_id="test_print",
-            )
-
-        # Verify progress information is printed
-        assert mock_print.call_count > 0
-        printed_text = " ".join(str(call) for call in mock_print.call_args_list)
-        assert "test_print" in printed_text
-        assert "random" in printed_text
-        assert "rule_based" in printed_text
+        assert "ECONOMIC VALIDATION: passed" in capsys.readouterr().out
