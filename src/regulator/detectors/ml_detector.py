@@ -54,6 +54,100 @@ def _safe_correlation(x: np.ndarray, y: np.ndarray) -> float:
         return 0.0
 
 
+def _environment_params(episode_info: dict[str, Any] | None) -> dict[str, Any]:
+    """Environment parameters from an episode header (current or old layout)."""
+    if not episode_info:
+        return {}
+    params = episode_info.get("environment_params")
+    if params is None:
+        params = episode_info.get("episode_summary", {}).get("environment_params")
+    return dict(params or {})
+
+
+STRATEGIC_FEATURE_NAMES = [
+    "normalized_markup",
+    "sync_change_corr",
+    "lead_lag_corr",
+    "rigidity",
+    "cut_rate",
+    "rival_response_to_cut",
+    "cut_recovery_rate",
+]
+
+
+def _strategic_features(
+    prices: np.ndarray,
+    marginal_cost: float,
+    demand_intercept: float,
+    cut_threshold: float = 0.03,
+    recovery_window: int = 3,
+) -> np.ndarray:
+    """
+    Features about how firms respond to each other, not just price levels.
+
+    - normalized_markup: mean (p - mc) / (a - mc); 0 at marginal cost, 1 at
+      the demand choke price
+    - sync_change_corr: mean same-period correlation of firms' price changes
+    - lead_lag_corr: mean correlation of one firm's change with a rival's
+      change in the next period (following/matching)
+    - rigidity: share of periods in which no firm moves by more than 0.5%
+    - cut_rate: share of firm-periods with an unprovoked unilateral cut of
+      more than cut_threshold (relative)
+    - rival_response_to_cut: mean relative price change of rivals in the
+      period after a cut (negative = retaliation)
+    - cut_recovery_rate: share of cuts where the cutter restores at least
+      half the cut within recovery_window periods (punish-and-return)
+    """
+    n_steps, n_firms = prices.shape
+    features = np.zeros(len(STRATEGIC_FEATURE_NAMES))
+    span = max(demand_intercept - marginal_cost, 1e-6)
+    features[0] = float(np.mean((prices - marginal_cost) / span))
+    if n_steps < 3:
+        return features
+
+    changes = np.diff(prices, axis=0)
+    relative = changes / np.maximum(prices[:-1], 1e-6)
+
+    sync, lead_lag = [], []
+    for i in range(n_firms):
+        for j in range(n_firms):
+            if i == j:
+                continue
+            if i < j:
+                sync.append(_safe_correlation(changes[:, i], changes[:, j]))
+            lead_lag.append(_safe_correlation(changes[:-1, i], changes[1:, j]))
+    features[1] = float(np.mean(sync)) if sync else 0.0
+    features[2] = float(np.mean(lead_lag)) if lead_lag else 0.0
+
+    features[3] = float(np.mean(np.all(np.abs(relative) < 0.005, axis=1)))
+
+    responses, recoveries, n_cuts = [], [], 0
+    for t in range(len(relative) - 1):
+        for i in range(n_firms):
+            rivals = [j for j in range(n_firms) if j != i]
+            unilateral = relative[t, i] < -cut_threshold and all(
+                relative[t, j] > -cut_threshold / 2 for j in rivals
+            )
+            # A cut that answers a rival's cut is a response, not a deviation
+            provoked = t > 0 and any(
+                relative[t - 1, j] < -cut_threshold for j in rivals
+            )
+            if not unilateral or provoked:
+                continue
+            n_cuts += 1
+            responses.append(float(np.mean(relative[t + 1, rivals])))
+            cut_size = -changes[t, i]
+            window = prices[t + 2 : t + 2 + recovery_window, i]
+            recovered = window.size > 0 and window.max() >= prices[t + 1, i] + (
+                cut_size / 2
+            )
+            recoveries.append(float(recovered))
+    features[4] = n_cuts / (len(relative) * n_firms)
+    features[5] = float(np.mean(responses)) if responses else 0.0
+    features[6] = float(np.mean(recoveries)) if recoveries else 0.0
+    return features
+
+
 class FeatureExtractor:
     """
     Extracts features from episode logs for collusion detection.
@@ -161,14 +255,9 @@ class FeatureExtractor:
         features.append(np.mean(autocorrs) if autocorrs else 0.0)
 
         # 3. Profit margin features
-        # Calculate profit margins (assuming marginal cost from episode info)
-        marginal_cost = 10.0  # Default
-        if episode_info and "environment_params" in episode_info.get(
-            "episode_summary", {}
-        ):
-            marginal_cost = episode_info["episode_summary"]["environment_params"].get(
-                "marginal_cost", 10.0
-            )
+        # Calculate profit margins using the episode's marginal cost
+        env_params = _environment_params(episode_info)
+        marginal_cost = float(env_params.get("marginal_cost", 10.0))
 
         profit_margins = (prices - marginal_cost) / prices
         profit_margins = np.clip(profit_margins, 0, 1)  # Clip to [0, 1]
@@ -232,6 +321,12 @@ class FeatureExtractor:
         # 10. Episode length and firm count
         features.append(n_steps)
         features.append(n_firms)
+
+        # 11. Strategic-interaction features (firm-count independent)
+        demand_intercept = float(env_params.get("demand_intercept", 100.0))
+        features.extend(
+            _strategic_features(prices, marginal_cost, demand_intercept).tolist()
+        )
 
         return np.array(features, dtype=np.float32)  # type: ignore[no-any-return]
 
