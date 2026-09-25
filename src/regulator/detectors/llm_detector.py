@@ -9,6 +9,7 @@ with the ability to swap in real LLM models later.
 import json
 import os
 import re
+import time
 from typing import Any
 
 import numpy as np
@@ -39,6 +40,7 @@ class LLMDetector:
         model_type: str = "stubbed",
         confidence_threshold: float = 0.7,
         seed: int | None = None,
+        model_name: str | None = None,
     ) -> None:
         """
         Initialize the LLM detector.
@@ -47,6 +49,8 @@ class LLMDetector:
             model_type: Type of model to use ("stubbed" for testing, "llm" for real model)
             confidence_threshold: Minimum confidence for collusion classification
             seed: Random seed for reproducibility
+            model_name: OpenAI model for model_type="llm" (default: $OPENAI_MODEL
+                or gpt-4o-mini)
         """
         if model_type not in ["stubbed", "llm"]:
             raise ValueError("model_type must be 'stubbed' or 'llm'")
@@ -54,6 +58,9 @@ class LLMDetector:
             raise ValueError("confidence_threshold must be between 0 and 1")
 
         self.model_type = model_type
+        self.model_name = model_name or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
+        self.max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "500"))
         self.confidence_threshold = confidence_threshold
         self.np_random = np.random.default_rng(seed)
 
@@ -62,10 +69,10 @@ class LLMDetector:
         self.total_messages_analyzed = 0
         self.collusive_messages_detected = 0
 
-        # Initialize model based on type
-        if model_type == "stubbed":
-            self._initialize_stubbed_model()
-        else:
+        # The stubbed model is always set up: it is also the fallback when an
+        # LLM call fails
+        self._initialize_stubbed_model()
+        if model_type == "llm":
             self._initialize_llm_model()
 
     def _initialize_stubbed_model(self) -> None:
@@ -197,11 +204,11 @@ class LLMDetector:
                 'OpenAI package not available. Install with: pip install "regulator[llm]"'
             )
 
-        # Get API key from environment
-        api_key = os.getenv("OPENAI_KEY")
+        # Get API key from environment (OPENAI_KEY kept for backward compatibility)
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_KEY")
         if not api_key:
             raise ValueError(
-                "OPENAI_KEY environment variable not set. "
+                "OPENAI_API_KEY environment variable not set. "
                 "Please set it in your .env file or environment."
             )
 
@@ -384,15 +391,23 @@ Step: {step}"""
 
         try:
             # Call OpenAI API
+            started = time.perf_counter()
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": user_message},
                 ],
-                temperature=0.1,  # Low temperature for consistent results
-                max_tokens=500,
+                temperature=self.temperature,  # Low for consistent results
+                max_tokens=self.max_tokens,
+                response_format={"type": "json_object"},
             )
+            latency_s = time.perf_counter() - started
+            usage = getattr(response, "usage", None)
+            tokens = {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                "completion_tokens": getattr(usage, "completion_tokens", 0),
+            }
 
             # Parse the response
             response_content = response.choices[0].message.content
@@ -421,11 +436,15 @@ Step: {step}"""
             # Ensure confidence is in valid range
             confidence = max(0.0, min(1.0, confidence))
 
-        except Exception:
-            # Fallback to stubbed model if LLM fails
-            return self._classify_with_stubbed_model(
+        except Exception as e:
+            # Fallback to stubbed model if LLM fails; flag it so callers
+            # (e.g. the benchmark) can tell real answers from fallbacks
+            result = self._classify_with_stubbed_model(
                 message, sender_id, receiver_id, step, context
             )
+            result["llm_fallback"] = True
+            result["llm_error"] = str(e)
+            return result
 
         # Create result
         result = {
@@ -439,6 +458,9 @@ Step: {step}"""
             "reasoning": reasoning,
             "evidence": evidence,
             "model_type": self.model_type,
+            "model_name": self.model_name,
+            "latency_s": latency_s,
+            "usage": tokens,
             "context": context or {},
         }
 

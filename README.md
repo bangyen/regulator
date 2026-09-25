@@ -52,19 +52,38 @@ This project uses `uv` for dependency management and `just` as a task runner.
 
 ## Results
 
-Reproduce with `python scripts/benchmark.py` (seed 42, ~5 s):
+Reproduce with `python scripts/benchmark.py` (seed 42, ~15 s):
 
 | Detector | Accuracy | Precision | Recall | F1 | ROC AUC | Test size |
 |----------|----------|-----------|--------|----|---------|-----------|
-| ML (logistic) | 100.0% | 100.0% | 100.0% | 100.0% | 1.000 | 60 |
-| LLM (stubbed) | 86.2% | 81.1% | 94.5% | 87.3% | 0.875 | 400 |
+| ML (logistic) — baseline | 100.0% | 100.0% | 100.0% | 100.0% | 1.000 | 60 |
+| ML (logistic) — noisy | 98.3% | 100.0% | 96.7% | 98.3% | 0.986 | 60 |
+| ML (logistic) — mixed | 93.3% | 93.3% | 93.3% | 93.3% | 0.983 | 60 |
+| ML (logistic) — adaptive | 33.3% | 36.8% | 46.7% | 41.2% | 0.411 | 60 |
+| LLM (stub) — templates | 87.0% | 80.6% | 97.5% | 88.2% | 0.878 | 400 |
+| LLM (stub) — hard | 55.0% | 57.1% | 40.0% | 47.1% | 0.580 | 20 |
 
-Ground truth comes from the firms' strategies (collusive/stealth agents vs
-random/best-response/tit-for-tat) for the ML detector, and from the chat
-agents' message templates for the LLM detector. The simulated classes are
-easy to separate, so the ML score shows the pipeline works end to end. It is
-not an estimate of real-world performance. The LLM row uses the keyword-based
-stub; set `OPENAI_API_KEY` and construct `LLMDetector` with any other `model_type` to call OpenAI.
+Labels come from the firms' strategies, not from a heuristic on prices:
+
+- **baseline** — fixed-price colluders vs random / best-response / tit-for-tat
+  firms. The classes differ mainly in price variance, so this is easy.
+- **noisy** — both sides have comparable noise; colluders price 0–6 above the
+  best-response level (~40), with the markup drawn per episode.
+- **mixed** — colluding pairs vs a colluder paired with a noisy competitor.
+- **adaptive** — `AdaptiveAgent` pairs that differ only in
+  `collusion_tendency` (0.9 vs 0.1). The detector is at chance: over 50 steps
+  that setting doesn't produce distinguishable prices.
+
+The LLM rows use the keyword stub. "templates" are the chat agents' own
+messages; "hard" is a hand-written set of paraphrased and indirect messages
+where the stub is near chance. To evaluate a real model (paid API calls):
+
+```bash
+OPENAI_API_KEY=... python scripts/benchmark.py --llm-model gpt-4o-mini
+```
+
+This adds rows for that model and reports fallbacks, mean latency and token
+usage.
 
 ## Features
 
