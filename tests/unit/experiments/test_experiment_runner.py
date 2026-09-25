@@ -24,6 +24,7 @@ from regulator.experiments.experiment_runner import (
     create_regulator,
     print_experiment_summary,
     run_experiment,
+    validate_episode,
 )
 
 
@@ -290,3 +291,45 @@ class TestRunExperiment:
         assert "test_print" in caplog.text
         assert "random" in caplog.text
         assert "rule_based" in caplog.text
+
+
+class TestEconomicValidation:
+    """run_experiment checks the logged episode with EconomicValidator."""
+
+    def test_valid_episode_passes(self, tmp_path: Path) -> None:
+        results = run_experiment(
+            firms=["random", "titfortat"], steps=10, seed=1, log_dir=str(tmp_path)
+        )
+
+        assert results["economic_validation"] == {
+            "valid": True,
+            "n_issues": 0,
+            "issues": [],
+        }
+
+    def test_tampered_log_is_flagged(self, tmp_path: Path) -> None:
+        results = run_experiment(
+            firms=["random", "random"], steps=5, seed=1, log_dir=str(tmp_path)
+        )
+        log_file = Path(results["log_file"])
+        lines = log_file.read_text().splitlines()
+        tampered = []
+        for line in lines:
+            record = json.loads(line)
+            if record.get("type") == "step":
+                record["market_price"] += 10.0  # no longer the mean price
+            tampered.append(json.dumps(record))
+        log_file.write_text("\n".join(tampered) + "\n")
+
+        validation = validate_episode(str(log_file), CartelEnv(n_firms=2))
+
+        assert validation["valid"] is False
+        assert validation["n_issues"] >= 5
+        assert "Market price" in validation["issues"][0]
+
+    def test_summary_reports_validation(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        run_experiment(firms=["random"], steps=5, seed=1, log_dir=str(tmp_path))
+
+        assert "ECONOMIC VALIDATION: passed" in capsys.readouterr().out
