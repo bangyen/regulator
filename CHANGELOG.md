@@ -14,8 +14,6 @@ All notable changes to this project are documented here. The format follows
 - `enhanced` regulator config (`EnhancedRegulator`).
 - `LLMDetector(model_name=...)`; honours `OPENAI_MODEL`,
   `OPENAI_TEMPERATURE`, `OPENAI_MAX_TOKENS`.
-- Release workflow: tag `v*` to publish to PyPI (trusted publishing) and
-  create a GitHub release.
 - Playwright browser tests for the dashboard (`pytest -m e2e`, `e2e` extra)
   and a CI job that runs them.
 - `REGULATOR_LOG_DIR` sets the dashboard's log directory.

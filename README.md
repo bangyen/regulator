@@ -12,14 +12,7 @@
 
 ## Quickstart
 
-Install from PyPI (extras: `ml` for LightGBM, `llm` for OpenAI, `dashboard` for Flask):
-
-```bash
-pip install "regulator[ml]"
-regulator experiment --firms random,stealth --regulator ml --steps 100
-```
-
-Or clone the repo for the scripts, dashboard and tests:
+Clone the repo and run the demo:
 
 ```bash
 git clone https://github.com/bangyen/regulator.git
@@ -56,18 +49,6 @@ This project uses `uv` for dependency management and `just` as a task runner.
 - **Run all checks**: `just all`
 - **Benchmark detectors**: `python scripts/benchmark.py`
 - **Browser tests** (dashboard front end): `pip install -e ".[e2e]" && playwright install chromium && pytest -m e2e`
-
-### Releasing
-
-1. Bump `version` in `pyproject.toml` (the only place it lives) and move the
-   `Unreleased` CHANGELOG entries under the new version.
-2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
-
-The `Release` workflow checks the tag matches the version, builds, publishes to
-PyPI via trusted publishing and creates a GitHub release. One-time setup: add
-this repository, workflow `release.yml` and environment `pypi` as a trusted
-publisher at https://pypi.org/manage/account/publishing/.
-
 
 ## Results
 
