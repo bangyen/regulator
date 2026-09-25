@@ -12,11 +12,13 @@ from .firm_agents import (
     TitForTatAgent,
 )
 from .regulator import Regulator
+from .stealth_agent import StealthCollusiveAgent
 
 __all__ = [
     "RandomAgent",
     "BestResponseAgent",
     "TitForTatAgent",
     "CollusiveAgent",
+    "StealthCollusiveAgent",
     "Regulator",
 ]

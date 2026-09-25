@@ -18,6 +18,7 @@ from regulator.agents.firm_agents import (
     TitForTatAgent,
 )
 from regulator.agents.regulator import Regulator
+from regulator.agents.stealth_agent import StealthCollusiveAgent
 from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
@@ -25,13 +26,16 @@ from regulator.episode_logging.episode_runner import (
 
 logger = logging.getLogger(__name__)
 
+# Agent types accepted by create_agent (after normalization)
+AGENT_TYPES = ("random", "bestresponse", "titfortat", "stealth")
+
 
 def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> BaseAgent:
     """
     Create an agent of the specified type.
 
     Args:
-        agent_type: Type of agent to create ('random', 'bestresponse', 'titfortat')
+        agent_type: Type of agent to create (one of AGENT_TYPES)
         agent_id: Unique identifier for the agent
         seed: Random seed for reproducibility
 
@@ -48,6 +52,8 @@ def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> Bas
         return BestResponseAgent(agent_id=agent_id, seed=seed)
     elif agent_type == "titfortat":
         return TitForTatAgent(agent_id=agent_id, seed=seed)
+    elif agent_type == "stealth":
+        return StealthCollusiveAgent(agent_id=agent_id, seed=seed)
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
 
