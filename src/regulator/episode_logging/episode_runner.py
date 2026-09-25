@@ -206,7 +206,7 @@ def run_episode_with_logging(
 def run_episode_with_regulator_logging(
     env: CartelEnv,
     agents: list[Any],
-    regulator: Any,
+    regulator: Any | None,
     logger: Logger | None = None,
     log_dir: str = "logs",
     episode_id: str | None = None,
@@ -221,7 +221,8 @@ def run_episode_with_regulator_logging(
     Args:
         env: CartelEnv environment instance
         agents: List of agent instances
-        regulator: Regulator instance for monitoring
+        regulator: Regulator instance for monitoring, or None for an
+            unregulated episode (no detection, no fines)
         logger: Optional Logger instance (created if None)
         log_dir: Directory to save log files
         episode_id: Unique identifier for this episode
@@ -283,13 +284,24 @@ def run_episode_with_regulator_logging(
         action = np.array(prices, dtype=np.float32)
 
         # Regulator monitors the step
-        detection_results = regulator.monitor_step(action, step, info)
+        if regulator is not None:
+            detection_results = regulator.monitor_step(action, step, info)
+        else:
+            detection_results = {
+                "parallel_violation": False,
+                "structural_break_violation": False,
+                "fines_applied": np.zeros(env.n_firms),
+                "violation_details": [],
+            }
 
         # Take step in environment
         next_obs, rewards, terminated, truncated, step_info = env.step(action)
 
         # Apply regulator penalties
-        modified_rewards = regulator.apply_penalties(rewards, detection_results)
+        if regulator is not None:
+            modified_rewards = regulator.apply_penalties(rewards, detection_results)
+        else:
+            modified_rewards = np.asarray(rewards, dtype=float)
 
         # Update agent histories
         for i, agent in enumerate(agents):
@@ -341,7 +353,9 @@ def run_episode_with_regulator_logging(
         # Update episode tracking
         episode_data["total_steps"] = step + 1
         episode_data["total_rewards"] += modified_rewards
-        episode_data["total_fines"] += np.sum(detection_results["fines_applied"])
+        episode_data["total_fines"] += np.sum(
+            detection_results["fines_applied"]
+        ) + np.sum(detection_results.get("ml_fines_applied", 0.0))
         prices_list = episode_data["episode_prices"]
         if isinstance(prices_list, list):
             prices_list.append(prices.copy())

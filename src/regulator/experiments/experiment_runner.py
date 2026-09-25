@@ -11,12 +11,14 @@ from typing import Any
 
 import numpy as np
 
+from regulator.agents.enhanced_regulator import EnhancedRegulator
 from regulator.agents.firm_agents import (
     BaseAgent,
     BestResponseAgent,
     RandomAgent,
     TitForTatAgent,
 )
+from regulator.agents.ml_regulator import MLRegulator
 from regulator.agents.regulator import Regulator
 from regulator.agents.stealth_agent import StealthCollusiveAgent
 from regulator.cartel.cartel_env import CartelEnv
@@ -28,6 +30,9 @@ logger = logging.getLogger(__name__)
 
 # Agent types accepted by create_agent (after normalization)
 AGENT_TYPES = ("random", "bestresponse", "titfortat", "stealth")
+
+# Regulator configurations accepted by create_regulator
+REGULATOR_CONFIGS = ("rule_based", "ml", "enhanced", "none")
 
 
 def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> BaseAgent:
@@ -58,38 +63,56 @@ def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> Bas
         raise ValueError(f"Unknown agent type: {agent_type}")
 
 
-def create_regulator(regulator_config: str, seed: int | None = None) -> Regulator:
+def create_regulator(
+    regulator_config: str, seed: int | None = None
+) -> Regulator | None:
     """
     Create a regulator with the specified configuration.
 
     Args:
-        regulator_config: Regulator configuration ('ml', 'rule_based', 'none')
+        regulator_config: One of REGULATOR_CONFIGS:
+            'rule_based' - parallel-pricing and structural-break rules
+            'ml' - rule-based detection plus ML anomaly/collusion models
+            'enhanced' - graduated penalties and market-aware monitoring
+            'none' - no regulator ('disabled' is accepted as an alias)
         seed: Random seed for reproducibility
 
     Returns:
-        Regulator instance
+        Regulator instance, or None when regulation is off
     """
-    if regulator_config == "none":
-        # Create a dummy regulator that doesn't do anything
+    config = regulator_config.lower()
+
+    if config == "rule_based":
         return Regulator(seed=seed)
-    else:
-        return Regulator(seed=seed)
+    if config == "ml":
+        return MLRegulator(seed=seed)
+    if config == "enhanced":
+        return EnhancedRegulator(seed=seed)
+    if config in ("none", "disabled"):
+        return None
+    raise ValueError(
+        f"Unknown regulator config: {regulator_config}. "
+        f"Valid configs: {', '.join(REGULATOR_CONFIGS)}"
+    )
 
 
 def calculate_welfare_metrics(
-    episode_data: list[dict[str, Any]], env: CartelEnv
-) -> dict[str, Any]:
+    episode_data: dict[str, Any], env: CartelEnv
+) -> dict[str, float]:
     """
     Calculate welfare metrics from episode data.
 
     Args:
-        episode_data: List of step data from the episode
-        env: The environment used for the episode
+        episode_data: Episode data containing prices and profits
+        env: Environment instance for parameters
 
     Returns:
         Dictionary containing welfare metrics
     """
-    if not episode_data:
+    episode_prices = episode_data.get("episode_prices", [])
+    episode_profits = episode_data.get("episode_profits", [])
+
+    if not episode_prices or not episode_profits:
         return {
             "consumer_surplus": 0.0,
             "producer_surplus": 0.0,
@@ -97,113 +120,116 @@ def calculate_welfare_metrics(
             "deadweight_loss": 0.0,
         }
 
-    # Calculate total consumer surplus and producer surplus
-    total_consumer_surplus = 0.0
-    total_producer_surplus = 0.0
+    # Convert to numpy arrays
+    prices_array = np.array(episode_prices)
+    profits_array = np.array(episode_profits)
 
-    for step_data in episode_data:
-        market_price = step_data.get("market_price", 0.0)
-        total_quantity = step_data.get("total_quantity", 0.0)
+    # Check if arrays are empty or have unexpected shapes
+    if prices_array.size == 0 or profits_array.size == 0:
+        return {
+            "consumer_surplus": 0.0,
+            "producer_surplus": 0.0,
+            "total_welfare": 0.0,
+            "deadweight_loss": 0.0,
+        }
 
-        # Consumer surplus = 0.5 * (demand_intercept - market_price) * total_quantity
-        consumer_surplus = 0.5 * (env.demand_intercept - market_price) * total_quantity
-        total_consumer_surplus += max(0, consumer_surplus)
+    # Calculate market prices and quantities
+    market_prices = np.mean(prices_array, axis=1)
+    quantities = np.maximum(
+        0.0,
+        (env.demand_intercept + env.demand_slope * market_prices) / env.n_firms,
+    )
 
-        # Producer surplus = total profits
-        total_profits = sum(step_data.get("profits", [0.0]))
-        total_producer_surplus += total_profits
+    # Consumer surplus: area under demand curve above market price
+    # For linear demand D = a + b*p, CS = 0.5 * (a - p) * q
+    consumer_surplus = 0.5 * (env.demand_intercept - market_prices) * quantities
+    total_consumer_surplus: float = np.sum(consumer_surplus)
 
+    # Producer surplus: total profits
+    total_producer_surplus: float = np.sum(profits_array)
+
+    # Total welfare
     total_welfare = total_consumer_surplus + total_producer_surplus
 
-    # Calculate deadweight loss (simplified)
-    # In a competitive market, welfare would be higher
+    # Deadweight loss: difference from competitive equilibrium
+    # Competitive price = marginal cost
+    competitive_price = env.marginal_cost
+    competitive_quantity = max(
+        0.0, (env.demand_intercept + env.demand_slope * competitive_price) / env.n_firms
+    )
     competitive_welfare = (
-        total_welfare * 1.1
-    )  # Assume 10% higher welfare in competitive market
-    deadweight_loss = max(0, competitive_welfare - total_welfare)
+        0.5 * (env.demand_intercept - competitive_price) * competitive_quantity
+        + (competitive_price - env.marginal_cost) * competitive_quantity
+    ) * env.n_firms
+
+    deadweight_loss = max(0.0, competitive_welfare - total_welfare)
 
     return {
-        "consumer_surplus": total_consumer_surplus,
-        "producer_surplus": total_producer_surplus,
-        "total_welfare": total_welfare,
-        "deadweight_loss": deadweight_loss,
+        "consumer_surplus": float(total_consumer_surplus),
+        "producer_surplus": float(total_producer_surplus),
+        "total_welfare": float(total_welfare),
+        "deadweight_loss": float(deadweight_loss),
     }
 
 
 def print_experiment_summary(
     results: dict[str, Any],
-    episode_data: list[dict[str, Any]],
-    welfare_metrics: dict[str, Any],
+    episode_data: dict[str, Any],
+    welfare_metrics: dict[str, float],
 ) -> None:
-    """Print a summary of the experiment results."""
+    """
+    Print a summary of the experiment results.
+
+    Args:
+        results: Results from episode runner
+        episode_data: Episode data
+        welfare_metrics: Calculated welfare metrics
+    """
+    episode_summary = results.get("episode_summary", {})
+
     print("\n" + "=" * 80)
     print("EXPERIMENT SUMMARY")
     print("=" * 80)
-    print(f"Episode ID: {results.get('episode_id', 'unknown')}")
-    print(f"Total Steps: {len(episode_data)}")
-    print(
-        f"Agent Types: {', '.join(results.get('experiment_params', {}).get('firms', []))}"
-    )
-    print(
-        f"Number of Firms: {len(results.get('experiment_params', {}).get('firms', []))}"
-    )
-    print()
 
-    if episode_data:
-        # Calculate average prices
-        avg_prices = []
-        for step_data in episode_data:
-            prices = step_data.get("prices", [])
-            if len(prices) > 0:
-                avg_prices.append(np.mean(prices))
+    # Basic episode info
+    print(f"Episode ID: {results.get('episode_id', 'N/A')}")
+    print(f"Total Steps: {episode_data.get('total_steps', 0)}")
+    print(f"Agent Types: {', '.join(episode_summary.get('agent_types', []))}")
+    print(f"Number of Firms: {len(episode_summary.get('agent_types', []))}")
 
-        if avg_prices:
-            print(f"Average Prices: {[f'{p:.2f}' for p in avg_prices]}")
-            print(f"Overall Average Price: {np.mean(avg_prices):.2f}")
-            print(f"Price Standard Deviation: {np.std(avg_prices):.2f}")
-            print()
+    # Price statistics
+    avg_prices = episode_summary.get("avg_prices", [])
+    if avg_prices and len(avg_prices) > 0:
+        print(f"\nAverage Prices: {[f'{p:.2f}' for p in avg_prices]}")
+        print(f"Overall Average Price: {np.mean(avg_prices):.2f}")
+        print(f"Price Standard Deviation: {np.std(avg_prices):.2f}")
 
-        # Calculate total profits
-        total_profits = []
-        for step_data in episode_data:
-            profits = step_data.get("profits", [])
-            if len(profits) > 0:
-                total_profits.append(sum(profits))
+    # Profit statistics
+    total_profits = episode_summary.get("total_profits", [])
+    if total_profits and len(total_profits) > 0:
+        print(f"\nTotal Profits: {[f'{p:.2f}' for p in total_profits]}")
+        print(f"Total Industry Profits: {sum(total_profits):.2f}")
+        print(f"Average Profit per Firm: {np.mean(total_profits):.2f}")
 
-        if total_profits:
-            print(f"Total Profits: {[f'{p:.2f}' for p in total_profits]}")
-            print(f"Total Industry Profits: {sum(total_profits):.2f}")
-            print(
-                f"Average Profit per Firm: {sum(total_profits) / len(results.get('experiment_params', {}).get('firms', [1])):.2f}"
-            )
-            print()
+    # Welfare metrics
+    print("\nWELFARE METRICS:")
+    print(f"  Consumer Surplus: {welfare_metrics['consumer_surplus']:.2f}")
+    print(f"  Producer Surplus: {welfare_metrics['producer_surplus']:.2f}")
+    print(f"  Total Welfare: {welfare_metrics['total_welfare']:.2f}")
+    print(f"  Deadweight Loss: {welfare_metrics['deadweight_loss']:.2f}")
 
-    # Print welfare metrics
-    print("WELFARE METRICS:")
-    print(f"  Consumer Surplus: {welfare_metrics.get('consumer_surplus', 0):.2f}")
-    print(f"  Producer Surplus: {welfare_metrics.get('producer_surplus', 0):.2f}")
-    print(f"  Total Welfare: {welfare_metrics.get('total_welfare', 0):.2f}")
-    print(f"  Deadweight Loss: {welfare_metrics.get('deadweight_loss', 0):.2f}")
-    print()
+    # Regulator results
+    total_fines = episode_data.get("total_fines", 0.0)
+    violations = episode_data.get("violations", {})
 
-    # Print regulator results
-    if "regulator_results" in results:
-        regulator_results = results["regulator_results"]
-        print("REGULATOR RESULTS:")
-        print(f"  Total Fines Applied: {regulator_results.get('total_fines', 0):.2f}")
-        print(
-            f"  Parallel Pricing Violations: {regulator_results.get('parallel_pricing_violations', 0)}"
-        )
-        print(
-            f"  Structural Break Violations: {regulator_results.get('structural_break_violations', 0)}"
-        )
-        print()
+    print("\nREGULATOR RESULTS:")
+    print(f"  Total Fines Applied: {total_fines:.2f}")
+    print(f"  Parallel Pricing Violations: {violations.get('parallel', 0)}")
+    print(f"  Structural Break Violations: {violations.get('structural_break', 0)}")
 
-    print(f"Log File: {results.get('log_file', 'unknown')}")
+    # Log file info
+    print(f"\nLog File: {results.get('log_file', 'N/A')}")
     print("=" * 80)
-    print()
-    print("Experiment completed successfully!")
-    print(f"Results saved to: {results.get('log_file', 'unknown')}")
 
 
 def run_experiment(
@@ -221,7 +247,7 @@ def run_experiment(
     Args:
         firms: List of agent types for each firm
         steps: Number of steps to run
-        regulator_config: Regulator configuration ('ml', 'rule_based', 'none')
+        regulator_config: One of REGULATOR_CONFIGS
         seed: Random seed for reproducibility
         log_dir: Directory to save log files
         episode_id: Unique identifier for this episode
@@ -232,8 +258,8 @@ def run_experiment(
     """
     n_firms = len(firms)
 
-    # Default environment parameters with simplified economic model
-    default_env_params = {
+    # Default environment parameters; env_params overrides any of them
+    default_env_params: dict[str, Any] = {
         "n_firms": n_firms,
         "max_steps": steps,
         "marginal_cost": 10.0,
@@ -243,20 +269,12 @@ def run_experiment(
         "price_min": 1.0,
         "price_max": 100.0,
         "seed": seed,
-        # Simplified economic features - only essential ones
-        "use_fixed_costs": True,  # Realistic cost structure
-        "use_capacity_constraints": False,  # Optional capacity limits
-        "fixed_cost": 50.0,
-        "capacity": None,  # No capacity constraints by default
     }
 
     if env_params:
         default_env_params.update(env_params)
 
-    # Create environment with simplified economic features
-    env = CartelEnv(
-        n_firms=n_firms, max_steps=steps, seed=seed, **env_params if env_params else {}
-    )
+    env = CartelEnv(**default_env_params)
 
     # Create agents
     agents = []
@@ -317,13 +335,11 @@ def run_experiment(
     # Convert numpy types in results
     results = convert_numpy_types(results)  # type: ignore
 
-    # Calculate welfare metrics from logger data
-    episode_logger = results["logger"]
-    episode_data = episode_logger.load_episode_data(episode_logger.get_log_file_path())
-    welfare_metrics = calculate_welfare_metrics(episode_data["steps"], env)
+    # Calculate welfare metrics
+    welfare_metrics = calculate_welfare_metrics(results["episode_data"], env)
     results["welfare_metrics"] = welfare_metrics
 
     # Print summary
-    print_experiment_summary(results, episode_data["steps"], welfare_metrics)
+    print_experiment_summary(results, results["episode_data"], welfare_metrics)
 
     return results  # type: ignore

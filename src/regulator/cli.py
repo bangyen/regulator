@@ -12,7 +12,7 @@ import click
 from dotenv import load_dotenv
 
 # Import from the package
-from regulator.experiments.experiment_runner import run_experiment
+from regulator.experiments.experiment_runner import REGULATOR_CONFIGS, run_experiment
 
 
 @click.group()
@@ -37,7 +37,8 @@ def main() -> None:
 @click.option(
     "--regulator",
     default="rule_based",
-    help="Regulator configuration (ml, rule_based, none)",
+    type=click.Choice([*REGULATOR_CONFIGS, "disabled"], case_sensitive=False),
+    help="Regulator configuration",
 )
 @click.option("--seed", default=42, help="Random seed")
 @click.option("--log-dir", default="logs", help="Output directory for logs")

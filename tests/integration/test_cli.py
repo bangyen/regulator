@@ -14,7 +14,10 @@ from typing import Any
 import pytest
 
 # Import from the package
-from scripts.run_experiment import (
+from regulator.agents.enhanced_regulator import EnhancedRegulator
+from regulator.agents.ml_regulator import MLRegulator
+from regulator.agents.regulator import Regulator
+from regulator.experiments.experiment_runner import (
     calculate_welfare_metrics,
     create_agent,
     create_regulator,
@@ -48,21 +51,10 @@ class TestCLIFunctions:
 
     def test_create_regulator(self) -> None:
         """Test regulator creation with different configurations."""
-        # Test ML regulator
-        ml_regulator = create_regulator("ml", seed=42)
-        assert ml_regulator.parallel_threshold == 1.5
-        assert ml_regulator.parallel_steps == 2
-        assert ml_regulator.fine_amount == 75.0
-
-        # Test rule-based regulator
-        rule_regulator = create_regulator("rule_based", seed=42)
-        assert rule_regulator.parallel_threshold == 8.0
-        assert rule_regulator.parallel_steps == 10
-        assert rule_regulator.fine_amount == 50.0
-
-        # Test no regulator
-        none_regulator = create_regulator("none", seed=42)
-        assert none_regulator.fine_amount == 0.0
+        assert isinstance(create_regulator("ml", seed=42), MLRegulator)
+        assert isinstance(create_regulator("rule_based", seed=42), Regulator)
+        assert isinstance(create_regulator("enhanced", seed=42), EnhancedRegulator)
+        assert create_regulator("none", seed=42) is None
 
         # Test invalid regulator config
         with pytest.raises(ValueError, match="Unknown regulator config"):

@@ -299,6 +299,25 @@ class EnhancedRegulator(Regulator):
 
         return fines, severities, multipliers
 
+    def apply_penalties(
+        self, rewards: np.ndarray, detection_results: dict[str, Any]
+    ) -> np.ndarray:
+        """
+        Subtract the graduated fines computed in monitor_step.
+
+        The base class only fines on its own ``violation_detected`` flag and
+        would overwrite ``fines_applied`` with zeros, so it is not reused here.
+        Leniency reductions are already folded into the graduated fines.
+        """
+        self.profit_history.append(rewards.copy())
+        fines = np.asarray(
+            detection_results.get("fines_applied", np.zeros(len(rewards))),
+            dtype=float,
+        )
+        self.total_fines_applied += float(np.sum(fines))
+        detection_results["fines_applied"] = fines
+        return (rewards - fines).astype(np.float32)
+
     def get_monitoring_summary(self) -> dict[str, Any]:
         """Get comprehensive monitoring summary."""
         return {
