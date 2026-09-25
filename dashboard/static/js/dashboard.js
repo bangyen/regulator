@@ -388,7 +388,9 @@ const AGENT_LABELS = {
     random: 'Random',
     bestresponse: 'Best response',
     titfortat: 'Tit-for-tat',
-    stealth: 'Stealth colluder'
+    stealth: 'Stealth colluder',
+    chatcolluder: 'Chat colluder',
+    chatcompetitor: 'Chat competitor'
 };
 
 const REGULATOR_LABELS = {
@@ -436,7 +438,8 @@ function readRunConfig() {
         firms,
         regulator: document.getElementById('regulator-select').value,
         steps: parseInt(document.getElementById('steps-input').value, 10),
-        seed: seed === '' ? null : parseInt(seed, 10)
+        seed: seed === '' ? null : parseInt(seed, 10),
+        chat: document.getElementById('chat-input').checked
     };
 }
 

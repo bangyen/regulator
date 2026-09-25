@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 
+from regulator.agents.chat_firm import CollusiveChatAgent, CompetitiveChatAgent
 from regulator.agents.enhanced_regulator import EnhancedRegulator
 from regulator.agents.firm_agents import (
     BaseAgent,
@@ -22,6 +23,7 @@ from regulator.agents.ml_regulator import MLRegulator
 from regulator.agents.regulator import Regulator
 from regulator.agents.stealth_agent import StealthCollusiveAgent
 from regulator.cartel.cartel_env import CartelEnv
+from regulator.detectors.llm_detector import ChatRegulator, LLMDetector
 from regulator.economic_validation import EconomicValidator
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
@@ -32,7 +34,14 @@ from regulator.experiments.ml_training import train_collusion_classifier
 logger = logging.getLogger(__name__)
 
 # Agent types accepted by create_agent (after normalization)
-AGENT_TYPES = ("random", "bestresponse", "titfortat", "stealth")
+AGENT_TYPES = (
+    "random",
+    "bestresponse",
+    "titfortat",
+    "stealth",
+    "chatcolluder",
+    "chatcompetitor",
+)
 
 # Regulator configurations accepted by create_regulator
 REGULATOR_CONFIGS = ("rule_based", "ml", "enhanced", "none")
@@ -62,6 +71,10 @@ def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> Bas
         return TitForTatAgent(agent_id=agent_id, seed=seed)
     elif agent_type == "stealth":
         return StealthCollusiveAgent(agent_id=agent_id, seed=seed)
+    elif agent_type == "chatcolluder":
+        return CollusiveChatAgent(agent_id=agent_id, seed=seed)
+    elif agent_type == "chatcompetitor":
+        return CompetitiveChatAgent(agent_id=agent_id, seed=seed)
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
 
@@ -230,6 +243,10 @@ def print_experiment_summary(
     print(f"  Total Fines Applied: {total_fines:.2f}")
     print(f"  Parallel Pricing Violations: {violations.get('parallel', 0)}")
     print(f"  Structural Break Violations: {violations.get('structural_break', 0)}")
+    if episode_data.get("messages_sent"):
+        print(f"  Messages Sent: {episode_data['messages_sent']}")
+        print(f"  Collusive Messages Fined: {episode_data['message_violations']}")
+        print(f"  Chat Fines: {episode_data['chat_fines']:.2f}")
 
     # Economic consistency checks
     validation = results.get("economic_validation")
@@ -277,6 +294,8 @@ def run_experiment(
     log_dir: str = "logs",
     episode_id: str | None = None,
     env_params: dict[str, Any] | None = None,
+    chat_monitoring: bool = False,
+    llm_model: str | None = None,
 ) -> dict[str, Any]:
     """
     Run a complete experiment with the specified parameters.
@@ -289,6 +308,9 @@ def run_experiment(
         log_dir: Directory to save log files
         episode_id: Unique identifier for this episode
         env_params: Additional environment parameters
+        chat_monitoring: Classify chat messages (from chatcolluder /
+            chatcompetitor firms) and fine senders of collusive ones
+        llm_model: OpenAI model for chat monitoring; the keyword stub if None
 
     Returns:
         Dictionary containing experiment results
@@ -334,6 +356,15 @@ def run_experiment(
     logger.info("Seed: %s", seed)
 
     # Run episode with regulator
+    chat_regulator = None
+    if chat_monitoring:
+        detector = (
+            LLMDetector(model_type="llm", model_name=llm_model, seed=seed)
+            if llm_model
+            else LLMDetector(model_type="stubbed", seed=seed)
+        )
+        chat_regulator = ChatRegulator(llm_detector=detector)
+
     results = run_episode_with_regulator_logging(
         env=env,
         agents=agents,
@@ -341,6 +372,7 @@ def run_experiment(
         log_dir=log_dir,
         episode_id=episode_id,
         agent_types=firms,
+        chat_regulator=chat_regulator,
     )
 
     # Add experiment metadata
@@ -351,6 +383,7 @@ def run_experiment(
         "regulator_config": regulator_config,
         "seed": seed,
         "env_params": default_env_params,
+        "chat_monitoring": chat_monitoring,
     }
 
     # Ensure all numpy types are converted to Python native types for JSON serialization

@@ -43,6 +43,12 @@ def main() -> None:
 @click.option("--seed", default=42, help="Random seed")
 @click.option("--log-dir", default="logs", help="Output directory for logs")
 @click.option("--episode-id", help="Custom episode ID (auto-generated if not provided)")
+@click.option(
+    "--chat",
+    is_flag=True,
+    help="Monitor messages from chat firms (chatcolluder, chatcompetitor)",
+)
+@click.option("--llm-model", help="OpenAI model for --chat (default: keyword stub)")
 def experiment(
     steps: int,
     firms: str,
@@ -50,6 +56,8 @@ def experiment(
     seed: int,
     log_dir: str,
     episode_id: str | None,
+    chat: bool,
+    llm_model: str | None,
 ) -> None:
     """Run a single episode experiment."""
     click.echo("Running experiment...")
@@ -66,6 +74,8 @@ def experiment(
             seed=seed,
             log_dir=log_dir,
             episode_id=episode_id,
+            chat_monitoring=chat,
+            llm_model=llm_model,
         )
         click.echo("✅ Experiment completed successfully!")
     except Exception as e:
