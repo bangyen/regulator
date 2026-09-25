@@ -15,14 +15,14 @@ from pathlib import Path
 import numpy as np
 
 from regulator.agents.chat_firm import (
+    ChatMessageManager,
     CollusiveChatAgent,
     CompetitiveChatAgent,
-    ChatMessageManager,
 )
-from regulator.detectors.llm_detector import LLMDetector, ChatRegulator
 from regulator.cartel.cartel_env import CartelEnv
-from regulator.episode_logging.episode_runner import run_episode_with_logging
+from regulator.detectors.llm_detector import ChatRegulator, LLMDetector
 from regulator.episode_logging.episode_logger import EpisodeLogger
+from regulator.episode_logging.episode_runner import run_episode_with_logging
 
 
 class TestChatIntegration:

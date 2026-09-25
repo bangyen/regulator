@@ -6,7 +6,6 @@ and analyzing results.
 """
 
 import sys
-from typing import Optional
 
 import click
 from dotenv import load_dotenv
@@ -47,7 +46,7 @@ def experiment(
     regulator: str,
     seed: int,
     log_dir: str,
-    episode_id: Optional[str],
+    episode_id: str | None,
 ) -> None:
     """Run a single episode experiment."""
     click.echo("Running experiment...")

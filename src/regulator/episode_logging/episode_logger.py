@@ -8,7 +8,7 @@ and regulator monitoring data for comprehensive episode analysis.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -25,7 +25,7 @@ class EpisodeLogger(Logger):
 
     def __init__(
         self,
-        log_file: Union[str, Path],
+        log_file: str | Path,
         n_firms: int = 3,
     ) -> None:
         """
@@ -54,8 +54,8 @@ class EpisodeLogger(Logger):
         episode_id: int,
         n_firms: int,
         n_steps: int,
-        agent_types: List[str],
-        environment_params: Dict[str, Any],
+        agent_types: list[str],
+        environment_params: dict[str, Any],
     ) -> None:
         """
         Log enhanced episode header with agent and environment information.
@@ -93,15 +93,15 @@ class EpisodeLogger(Logger):
         demand_shock: float,
         market_price: float,
         total_demand: float,
-        individual_quantity: Union[float, np.ndarray],
+        individual_quantity: float | np.ndarray,
         total_profits: np.ndarray,
-        regulator_flags: Optional[Dict[str, Any]] = None,
-        additional_info: Optional[Dict[str, Any]] = None,
+        regulator_flags: dict[str, Any] | None = None,
+        additional_info: dict[str, Any] | None = None,
         # Additional parameters for chat functionality
-        rewards: Optional[List[float]] = None,
-        messages: Optional[List[Dict[str, Any]]] = None,
-        chat_monitoring: Optional[Dict[str, Any]] = None,
-        price_monitoring: Optional[Dict[str, Any]] = None,
+        rewards: list[float] | None = None,
+        messages: list[dict[str, Any]] | None = None,
+        chat_monitoring: dict[str, Any] | None = None,
+        price_monitoring: dict[str, Any] | None = None,
     ) -> None:
         """
         Log enhanced step data including chat messages and monitoring results.
@@ -148,7 +148,7 @@ class EpisodeLogger(Logger):
 
         # Add chat monitoring results if provided
         if chat_monitoring is not None:
-            chat_monitoring_data: Dict[str, Any] = {
+            chat_monitoring_data: dict[str, Any] = {
                 "messages_analyzed": chat_monitoring.get("messages_analyzed", 0),
                 "collusive_messages": chat_monitoring.get("collusive_messages", 0),
                 "fines_applied": float(chat_monitoring.get("fines_applied", 0.0)),
@@ -191,11 +191,11 @@ class EpisodeLogger(Logger):
         self,
         total_reward: float,
         total_steps: int,
-        final_prices: List[float],
-        final_profits: List[float],
-        chat_summary: Optional[Dict[str, Any]] = None,
-        price_summary: Optional[Dict[str, Any]] = None,
-        additional_summary: Optional[Dict[str, Any]] = None,
+        final_prices: list[float],
+        final_profits: list[float],
+        chat_summary: dict[str, Any] | None = None,
+        price_summary: dict[str, Any] | None = None,
+        additional_summary: dict[str, Any] | None = None,
     ) -> None:
         """
         Log enhanced episode summary with chat and price monitoring results.
@@ -264,7 +264,7 @@ class EpisodeLogger(Logger):
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(summary_data) + "\n")
 
-    def get_chat_statistics(self) -> Dict[str, Any]:
+    def get_chat_statistics(self) -> dict[str, Any]:
         """
         Get statistics about chat messages from the episode.
 
@@ -274,8 +274,8 @@ class EpisodeLogger(Logger):
         total_messages = 0
         total_collusive_messages = 0
         total_chat_fines = 0.0
-        messages_by_agent: Dict[int, int] = {}
-        collusive_messages_by_agent: Dict[int, int] = {}
+        messages_by_agent: dict[int, int] = {}
+        collusive_messages_by_agent: dict[int, int] = {}
 
         for step_data in self.episode_data:
             if "messages" in step_data:
@@ -311,7 +311,7 @@ class EpisodeLogger(Logger):
             "collusive_messages_by_agent": collusive_messages_by_agent,
         }
 
-    def get_price_statistics(self) -> Dict[str, Any]:
+    def get_price_statistics(self) -> dict[str, Any]:
         """
         Get statistics about price monitoring from the episode.
 
@@ -347,7 +347,7 @@ class EpisodeLogger(Logger):
             "structural_break_steps": structural_break_steps,
         }
 
-    def get_episode_statistics(self) -> Dict[str, Any]:
+    def get_episode_statistics(self) -> dict[str, Any]:
         """
         Get comprehensive episode statistics.
 
@@ -390,7 +390,7 @@ class EpisodeLogger(Logger):
         }
 
     @classmethod
-    def load_chat_episode_data(cls, log_file: Union[str, Path]) -> Dict[str, Any]:
+    def load_chat_episode_data(cls, log_file: str | Path) -> dict[str, Any]:
         """
         Load chat-enabled episode data from a JSONL log file.
 
@@ -405,13 +405,13 @@ class EpisodeLogger(Logger):
         if not log_file.exists():
             raise FileNotFoundError(f"Log file not found: {log_file}")
 
-        episode_data: Dict[str, Any] = {
+        episode_data: dict[str, Any] = {
             "header": None,
             "steps": [],
             "summary": None,
         }
 
-        with open(log_file, "r", encoding="utf-8") as f:
+        with open(log_file, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     data = json.loads(line.strip())
@@ -426,7 +426,7 @@ class EpisodeLogger(Logger):
         return episode_data
 
     @classmethod
-    def validate_chat_log_file(cls, log_file: Union[str, Path]) -> bool:
+    def validate_chat_log_file(cls, log_file: str | Path) -> bool:
         """
         Validate that a chat log file contains required data structure.
 

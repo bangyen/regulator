@@ -5,8 +5,8 @@ These tests verify that the core simulation components can be imported
 and run without external API calls or complex dependencies.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 
 # Test imports without external dependencies
@@ -82,10 +82,11 @@ def test_regulator_creation():
 
 def test_minimal_simulation():
     """Test a minimal simulation run without external dependencies."""
-    from regulator.cartel.cartel_env import CartelEnv
+    import numpy as np
+
     from regulator.agents.firm_agents import RandomAgent
     from regulator.agents.regulator import Regulator
-    import numpy as np
+    from regulator.cartel.cartel_env import CartelEnv
 
     # Create minimal simulation
     env = CartelEnv(n_firms=2, max_steps=5, seed=42)

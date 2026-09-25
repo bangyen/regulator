@@ -69,7 +69,7 @@ class TestRegulatorPackage:
 
     def test_package_metadata_consistency(self):
         """Test that package metadata is consistent."""
-        from regulator import __version__, __author__, __email__
+        from regulator import __author__, __email__, __version__
 
         # All metadata should be strings
         assert isinstance(__version__, str)
@@ -115,7 +115,7 @@ class TestRegulatorPackage:
 
     def test_import_all_metadata_together(self):
         """Test importing all metadata attributes together."""
-        from regulator import __version__, __author__, __email__
+        from regulator import __author__, __email__, __version__
 
         # Should all be accessible
         metadata = {"version": __version__, "author": __author__, "email": __email__}

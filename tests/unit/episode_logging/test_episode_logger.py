@@ -5,6 +5,7 @@ This module tests the enhanced episode logging functionality including
 chat messages, LLM detection results, and regulator monitoring data.
 """
 
+import contextlib
 import json
 import tempfile
 from pathlib import Path
@@ -44,7 +45,7 @@ class TestEpisodeLogger:
             # Check that file was created and contains header
             assert log_file.exists()
 
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 1
 
@@ -74,7 +75,7 @@ class TestEpisodeLogger:
             # Check that file was created and contains step data
             assert log_file.exists()
 
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 2  # Header + step
 
@@ -119,7 +120,7 @@ class TestEpisodeLogger:
             # Check that file was created and contains step data with messages
             assert log_file.exists()
 
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 2  # Header + step
 
@@ -159,7 +160,7 @@ class TestEpisodeLogger:
             # Check that file was created and contains step data with monitoring
             assert log_file.exists()
 
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 2  # Header + step
 
@@ -186,7 +187,7 @@ class TestEpisodeLogger:
             # Check that file was created and contains summary data
             assert log_file.exists()
 
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 2  # Header + summary
 
@@ -248,7 +249,7 @@ class TestEpisodeLogger:
             # Check that all entries were logged
             assert log_file.exists()
 
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert (
                     len(lines) == 3
@@ -288,7 +289,7 @@ class TestEpisodeLogger:
             )
 
             # Check that numpy arrays were converted to lists
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 step = json.loads(lines[1])  # Second line (first is header)
                 assert step["prices"] == [10.5, 11.2]
@@ -317,7 +318,7 @@ class TestEpisodeLogger:
             assert log_file.exists()
 
             # Check that a header was automatically created and step was logged
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 2  # Header + step
                 header = json.loads(lines[0])
@@ -333,7 +334,7 @@ class TestEpisodeLogger:
 
             # Test with data that can't be JSON serialized
             # Should not raise an exception, but handle gracefully
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 logger.log_step(
                     step=1,
                     prices=np.array([10.0, 11.0]),
@@ -344,9 +345,6 @@ class TestEpisodeLogger:
                     individual_quantity=50.0,
                     total_profits=np.array([100.0, 120.0]),
                 )
-            except (TypeError, ValueError):
-                # This is expected behavior
-                pass
 
     def test_logger_reset_functionality(self) -> None:
         """Test that logger can be reset for new episodes."""
@@ -391,7 +389,7 @@ class TestEpisodeLogger:
             )
 
             # Check that both episodes are logged in separate files
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
                 assert len(lines) == 2  # Header + step
 
@@ -403,7 +401,7 @@ class TestEpisodeLogger:
                 step1 = json.loads(lines[1])
                 assert step1["prices"] == [10.0, 11.0]
 
-            with open(log_file2, "r") as f:
+            with open(log_file2) as f:
                 lines2 = f.readlines()
                 assert len(lines2) == 2  # Header + step
 

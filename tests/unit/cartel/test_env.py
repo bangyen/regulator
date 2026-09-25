@@ -335,9 +335,9 @@ class TestCartelEnv:
         assert len(rewards) == 2, "Should have rewards for 2 firms"
         assert np.allclose(info["market_price"], 25.0)
         assert np.allclose(info["total_demand"], 75.0)
-        assert (
-            len(info["individual_quantities"]) == 2
-        ), "Should have quantities for 2 firms"
+        assert len(info["individual_quantities"]) == 2, (
+            "Should have quantities for 2 firms"
+        )
         assert np.allclose(np.sum(info["individual_quantities"]), 75.0, rtol=1e-3)
 
     def test_step_reward_calculation_edge_cases(self) -> None:
@@ -431,7 +431,7 @@ class TestCartelEnv:
         prices = np.array([20.0, 30.0], dtype=np.float32)
         total_expected_profits = np.array([0.0, 0.0], dtype=np.float32)
 
-        for step in range(3):
+        for _ in range(3):
             obs, rewards, terminated, truncated, info = env.step(prices)
             total_expected_profits += rewards
 
@@ -503,9 +503,9 @@ class TestCartelEnv:
         # Check that profits are negative (exact values may vary due to learning curves)
         # Expected: (10-20)*5 = -50, (15-20)*8 = -40
         # But with learning curves, costs may be different
-        assert np.all(
-            profits < 0.0
-        ), "Profits should be negative when prices < marginal cost"
+        assert np.all(profits < 0.0), (
+            "Profits should be negative when prices < marginal cost"
+        )
 
     def test_price_change_constraint(self) -> None:
         """Test that price changes are constrained for market stability."""

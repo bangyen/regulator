@@ -14,11 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
+from regulator.agents.firm_agents import BestResponseAgent, RandomAgent, TitForTatAgent
 from regulator.agents.regulator import Regulator
-from regulator.agents.firm_agents import RandomAgent, BestResponseAgent, TitForTatAgent
 from regulator.cartel.cartel_env import CartelEnv
-from regulator.episode_logging.episode_runner import run_episode_with_regulator_logging
 from regulator.episode_logging.episode_logger import EpisodeLogger
+from regulator.episode_logging.episode_runner import run_episode_with_regulator_logging
 
 
 class TestRegulatorMonitoringIntegration:

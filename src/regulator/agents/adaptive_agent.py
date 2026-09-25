@@ -5,9 +5,10 @@ This module implements an AdaptiveAgent class that learns from past outcomes
 and adjusts its pricing strategy based on market conditions and performance.
 """
 
-from typing import Any, Dict, Optional, Deque
-import numpy as np
 from collections import deque
+from typing import Any
+
+import numpy as np
 
 from regulator.agents.firm_agents import BaseAgent
 
@@ -30,7 +31,7 @@ class AdaptiveAgent(BaseAgent):
         min_exploration_rate: float = 0.01,
         risk_aversion: float = 1.0,
         collusion_tendency: float = 0.5,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the adaptive learning agent.
@@ -57,11 +58,11 @@ class AdaptiveAgent(BaseAgent):
         self.collusion_tendency = collusion_tendency
 
         # Learning state (use separate deques to avoid type conflicts with base class)
-        self.learning_price_history: Deque[float] = deque(maxlen=memory_size)
-        self.profit_history: Deque[float] = deque(maxlen=memory_size)
-        self.market_price_history: Deque[float] = deque(maxlen=memory_size)
-        self.regulator_history: Deque[bool] = deque(maxlen=memory_size)
-        self.learning_rival_price_history: Deque[float] = deque(maxlen=memory_size)
+        self.learning_price_history: deque[float] = deque(maxlen=memory_size)
+        self.profit_history: deque[float] = deque(maxlen=memory_size)
+        self.market_price_history: deque[float] = deque(maxlen=memory_size)
+        self.regulator_history: deque[bool] = deque(maxlen=memory_size)
+        self.learning_rival_price_history: deque[float] = deque(maxlen=memory_size)
 
         # Strategy parameters (learned over time)
         self.base_price = 50.0  # Base pricing strategy
@@ -78,8 +79,8 @@ class AdaptiveAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose price using adaptive learning strategy.
@@ -124,7 +125,7 @@ class AdaptiveAgent(BaseAgent):
 
         return float(price)
 
-    def _analyze_market_conditions(self, env: Optional[Any]) -> Dict[str, Any]:
+    def _analyze_market_conditions(self, env: Any | None) -> dict[str, Any]:
         """
         Analyze current market conditions.
 
@@ -181,7 +182,7 @@ class AdaptiveAgent(BaseAgent):
         return float(self.np_random.random()) < self.exploration_rate
 
     def _explore_price(
-        self, env: Optional[Any], market_conditions: Dict[str, Any]
+        self, env: Any | None, market_conditions: dict[str, Any]
     ) -> float:
         """
         Explore different pricing strategies.
@@ -240,7 +241,7 @@ class AdaptiveAgent(BaseAgent):
         return float(price)
 
     def _exploit_price(
-        self, env: Optional[Any], market_conditions: Dict[str, Any]
+        self, env: Any | None, market_conditions: dict[str, Any]
     ) -> float:
         """
         Exploit learned pricing strategy.
@@ -268,13 +269,12 @@ class AdaptiveAgent(BaseAgent):
             # High competitive pressure - be more aggressive
             price *= 0.9  # Reduce price by 10%
 
-        elif market_conditions["regulatory_risk"] > 0.3:
+        elif market_conditions["regulatory_risk"] > 0.3 and self.price_history:
             # High regulatory risk - be more defensive
             # Vary price to avoid detection
-            if len(self.price_history) > 0:
-                last_price = self.price_history[-1]
-                variation = self.np_random.uniform(-3, 3)
-                price = last_price + variation
+            last_price = self.price_history[-1]
+            variation = self.np_random.uniform(-3, 3)
+            price = last_price + variation
 
         # Adjust based on demand conditions
         if hasattr(env, "current_demand_shock"):
@@ -287,7 +287,7 @@ class AdaptiveAgent(BaseAgent):
         return price
 
     def _apply_risk_aversion(
-        self, price: float, env: Optional[Any], market_conditions: Dict[str, Any]
+        self, price: float, env: Any | None, market_conditions: dict[str, Any]
     ) -> float:
         """
         Apply risk aversion to price choice.
@@ -320,7 +320,7 @@ class AdaptiveAgent(BaseAgent):
         profit: float,
         market_price: float,
         was_violation: bool,
-        info: Optional[Dict[str, Any]] = None,
+        info: dict[str, Any] | None = None,
     ) -> None:
         """
         Update strategy based on outcome.
@@ -395,7 +395,7 @@ class AdaptiveAgent(BaseAgent):
             # Decrease sensitivity to be more stable
             self.price_sensitivity = max(0.5, self.price_sensitivity * 0.95)
 
-    def get_strategy_statistics(self) -> Dict[str, Any]:
+    def get_strategy_statistics(self) -> dict[str, Any]:
         """
         Get statistics about the agent's strategy and performance.
 

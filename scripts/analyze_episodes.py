@@ -4,20 +4,20 @@ Comprehensive episode analysis utility.
 Combines message analysis, conversation realism, and episode viewing functionality.
 """
 
+import argparse
 import json
 import sys
-from typing import Dict, Any, Optional
-from collections import defaultdict, Counter
-import argparse
+from collections import Counter, defaultdict
+from typing import Any
 
 
-def load_episode_data(file_path: str) -> Dict[str, Any]:
+def load_episode_data(file_path: str) -> dict[str, Any]:
     """Load episode data from JSONL file."""
     steps = []
     header = None
     summary = None
 
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         for line in f:
             data = json.loads(line.strip())
             if data.get("type") == "episode_header":
@@ -30,7 +30,7 @@ def load_episode_data(file_path: str) -> Dict[str, Any]:
     return {"header": header, "steps": steps, "summary": summary}
 
 
-def analyze_messages(episode_data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_messages(episode_data: dict[str, Any]) -> dict[str, Any]:
     """Analyze messages in the episode."""
     all_messages = []
     message_types = Counter()
@@ -51,7 +51,7 @@ def analyze_messages(episode_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def analyze_conversation_realism(episode_data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_conversation_realism(episode_data: dict[str, Any]) -> dict[str, Any]:
     """Analyze conversation realism and patterns."""
     steps = episode_data["steps"]
 
@@ -90,7 +90,7 @@ def analyze_conversation_realism(episode_data: Dict[str, Any]) -> Dict[str, Any]
     }
 
 
-def analyze_collusion_detection(episode_data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_collusion_detection(episode_data: dict[str, Any]) -> dict[str, Any]:
     """Analyze collusion detection results."""
     collusive_messages = 0
     total_confidence = 0
@@ -116,7 +116,7 @@ def analyze_collusion_detection(episode_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def view_messages(episode_data: Dict[str, Any], limit: Optional[int] = None) -> None:
+def view_messages(episode_data: dict[str, Any], limit: int | None = None) -> None:
     """Display messages from the episode."""
     all_messages = []
 
@@ -150,7 +150,7 @@ def view_messages(episode_data: Dict[str, Any], limit: Optional[int] = None) -> 
 
 
 def print_analysis_summary(
-    episode_data: Dict[str, Any], analysis_results: Dict[str, Any]
+    episode_data: dict[str, Any], analysis_results: dict[str, Any]
 ) -> None:
     """Print comprehensive analysis summary."""
     print("📊 Episode Analysis Summary")

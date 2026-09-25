@@ -5,12 +5,13 @@ This module implements an MLRegulator class that combines traditional rule-based
 detection with machine learning models to identify sophisticated collusion patterns.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+import warnings
+from typing import Any
+
 import numpy as np
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
-import warnings
+from sklearn.preprocessing import StandardScaler
 
 from .regulator import Regulator
 
@@ -38,7 +39,7 @@ class MLRegulator(Regulator):
         ml_collusion_threshold: float = 0.7,  # Threshold for collusion classification
         feature_window_size: int = 10,  # Number of steps to use for feature extraction
         retrain_frequency: int = 50,  # Retrain ML models every N steps
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the ML-enhanced regulator.
@@ -80,8 +81,8 @@ class MLRegulator(Regulator):
         self.feature_scaler = StandardScaler()
 
         # Training data storage
-        self.training_features: List[np.ndarray] = []
-        self.training_labels: List[bool] = []
+        self.training_features: list[np.ndarray] = []
+        self.training_labels: list[bool] = []
         self.step_count = 0
 
         # Initialize ML models if enabled
@@ -102,7 +103,7 @@ class MLRegulator(Regulator):
             n_estimators=100, random_state=self.seed, class_weight="balanced"
         )
 
-    def _extract_features(self, price_history: List[np.ndarray]) -> np.ndarray:
+    def _extract_features(self, price_history: list[np.ndarray]) -> np.ndarray:
         """
         Extract features from price history for ML models.
 
@@ -200,7 +201,7 @@ class MLRegulator(Regulator):
         result_features: np.ndarray = np.array(features, dtype=np.float32)
         return result_features
 
-    def _detect_ml_anomalies(self, features: np.ndarray) -> Tuple[bool, float]:
+    def _detect_ml_anomalies(self, features: np.ndarray) -> tuple[bool, float]:
         """
         Detect anomalies using machine learning.
 
@@ -238,10 +239,10 @@ class MLRegulator(Regulator):
             import sys
 
             if "pytest" not in sys.modules:
-                warnings.warn(f"ML anomaly detection failed: {e}")
+                warnings.warn(f"ML anomaly detection failed: {e}", stacklevel=2)
             return False, 0.0
 
-    def _classify_collusion(self, features: np.ndarray) -> Tuple[bool, float]:
+    def _classify_collusion(self, features: np.ndarray) -> tuple[bool, float]:
         """
         Classify collusion using machine learning.
 
@@ -271,10 +272,7 @@ class MLRegulator(Regulator):
             )[0]
 
             # Assuming binary classification: [normal, collusion]
-            if len(collusion_proba) >= 2:
-                collusion_prob = collusion_proba[1]  # Probability of collusion
-            else:
-                collusion_prob = 0.0
+            collusion_prob = collusion_proba[1] if len(collusion_proba) >= 2 else 0.0
 
             is_collusion = collusion_prob > self.ml_collusion_threshold
 
@@ -284,7 +282,7 @@ class MLRegulator(Regulator):
             import sys
 
             if "pytest" not in sys.modules:
-                warnings.warn(f"ML collusion classification failed: {e}")
+                warnings.warn(f"ML collusion classification failed: {e}", stacklevel=2)
             return False, 0.0
 
     def _update_training_data(self, features: np.ndarray, is_collusion: bool) -> None:
@@ -331,14 +329,14 @@ class MLRegulator(Regulator):
                 print(f"ML Regulator: Retrained models with accuracy: {accuracy:.3f}")
 
         except Exception as e:
-            warnings.warn(f"ML model retraining failed: {e}")
+            warnings.warn(f"ML model retraining failed: {e}", stacklevel=2)
 
     def monitor_step(
         self,
         prices: np.ndarray,
         step: int,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        info: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Monitor a single step with enhanced ML detection.
 
@@ -405,7 +403,7 @@ class MLRegulator(Regulator):
         return detection_results
 
     def apply_penalties(
-        self, rewards: np.ndarray, detection_results: Dict[str, Any]
+        self, rewards: np.ndarray, detection_results: dict[str, Any]
     ) -> np.ndarray:
         """
         Apply penalties including ML-based fines.
@@ -427,7 +425,7 @@ class MLRegulator(Regulator):
 
         return modified_rewards
 
-    def get_ml_statistics(self) -> Dict[str, Any]:
+    def get_ml_statistics(self) -> dict[str, Any]:
         """
         Get statistics about ML model performance.
 
@@ -452,7 +450,7 @@ class MLRegulator(Regulator):
 
         return stats
 
-    def reset(self, n_firms: Optional[int] = None) -> None:
+    def reset(self, n_firms: int | None = None) -> None:
         """Reset the ML regulator state."""
         super().reset(n_firms=n_firms)
         self.training_features = []

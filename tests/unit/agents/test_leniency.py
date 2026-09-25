@@ -5,19 +5,19 @@ This module tests the leniency program implementation, including whistleblower
 incentives, fine reductions, and the integration with the regulator system.
 """
 
-import pytest
 import numpy as np
+import pytest
 
+from regulator.agents.firm_agents import (
+    StrategicWhistleblowerAgent,
+    WhistleblowerTitForTatAgent,
+)
 from regulator.agents.leniency import (
     LeniencyProgram,
     LeniencyStatus,
     WhistleblowerAgent,
 )
 from regulator.agents.regulator import Regulator
-from regulator.agents.firm_agents import (
-    WhistleblowerTitForTatAgent,
-    StrategicWhistleblowerAgent,
-)
 from regulator.cartel.cartel_env import CartelEnv
 
 

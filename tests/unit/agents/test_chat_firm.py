@@ -6,19 +6,17 @@ and related chat functionality to ensure proper message classification and
 regulator behavior.
 """
 
-import pytest
-from typing import List
-
 import numpy as np
+import pytest
 
 from regulator.agents.chat_firm import (
     ChatFirmAgent,
+    ChatMessageManager,
     CollusiveChatAgent,
     CompetitiveChatAgent,
-    ChatMessageManager,
 )
-from regulator.detectors.llm_detector import LLMDetector, ChatRegulator
 from regulator.cartel.cartel_env import CartelEnv
+from regulator.detectors.llm_detector import ChatRegulator, LLMDetector
 
 
 class TestChatFirmAgent:
@@ -515,7 +513,7 @@ def sample_cartel_env() -> CartelEnv:
 
 
 @pytest.fixture
-def sample_chat_agents() -> List[ChatFirmAgent]:
+def sample_chat_agents() -> list[ChatFirmAgent]:
     """Provide sample chat agents for testing."""
     return [
         ChatFirmAgent(agent_id=0, message_frequency=1.0, seed=42),
@@ -541,7 +539,7 @@ def sample_chat_regulator(sample_llm_detector: LLMDetector) -> ChatRegulator:
 
 # Test data fixtures
 @pytest.fixture
-def collusive_messages() -> List[str]:
+def collusive_messages() -> list[str]:
     """Provide sample collusive messages for testing."""
     return [
         "We should coordinate our pricing strategy to maximize profits.",
@@ -553,7 +551,7 @@ def collusive_messages() -> List[str]:
 
 
 @pytest.fixture
-def non_collusive_messages() -> List[str]:
+def non_collusive_messages() -> list[str]:
     """Provide sample non-collusive messages for testing."""
     return [
         "I'm focused on delivering the best value to customers.",

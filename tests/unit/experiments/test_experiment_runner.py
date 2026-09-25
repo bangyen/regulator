@@ -11,6 +11,10 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
+# Import the actual classes that experiment_runner uses
+from regulator.agents.firm_agents import BaseAgent
+from regulator.agents.regulator import Regulator
+from regulator.cartel.cartel_env import CartelEnv
 from regulator.experiments.experiment_runner import (
     calculate_welfare_metrics,
     create_agent,
@@ -18,11 +22,6 @@ from regulator.experiments.experiment_runner import (
     print_experiment_summary,
     run_experiment,
 )
-
-# Import the actual classes that experiment_runner uses
-from regulator.agents.firm_agents import BaseAgent
-from regulator.agents.regulator import Regulator
-from regulator.cartel.cartel_env import CartelEnv
 
 
 class TestCreateAgent:

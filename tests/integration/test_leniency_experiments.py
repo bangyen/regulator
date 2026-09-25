@@ -12,9 +12,8 @@ import json
 import tempfile
 from pathlib import Path
 
-
-from scripts.leniency_experiment import run_leniency_experiment
 from regulator.agents.leniency import LeniencyProgram
+from scripts.leniency_experiment import run_leniency_experiment
 
 
 class TestLeniencyExperimentIntegration:

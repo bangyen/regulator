@@ -6,7 +6,7 @@ to generate and exchange messages that can be monitored by an LLM-based regulato
 for collusion detection.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -28,7 +28,7 @@ class ChatFirmAgent(BaseAgent):
         agent_id: int,
         chat_enabled: bool = True,
         message_frequency: float = 0.3,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize a chat-enabled firm agent.
@@ -42,14 +42,14 @@ class ChatFirmAgent(BaseAgent):
         super().__init__(agent_id, seed)
         self.chat_enabled = chat_enabled
         self.message_frequency = message_frequency
-        self.message_history: List[Dict[str, Any]] = []
-        self.received_messages: List[Dict[str, Any]] = []
+        self.message_history: list[dict[str, Any]] = []
+        self.received_messages: list[dict[str, Any]] = []
 
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a price for the current step.
@@ -74,8 +74,8 @@ class ChatFirmAgent(BaseAgent):
         self,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> Optional[str]:
+        info: dict[str, Any] | None = None,
+    ) -> str | None:
         """
         Generate a message for this step.
 
@@ -104,7 +104,7 @@ class ChatFirmAgent(BaseAgent):
         self,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
+        info: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate a basic message based on current market conditions.
@@ -152,7 +152,7 @@ class ChatFirmAgent(BaseAgent):
         }
         self.received_messages.append(message_data)
 
-    def send_message(self, message: str, step: int) -> Dict[str, Any]:
+    def send_message(self, message: str, step: int) -> dict[str, Any]:
         """
         Send a message and record it in history.
 
@@ -175,7 +175,7 @@ class ChatFirmAgent(BaseAgent):
         self.message_history.append(message_data)
         return message_data
 
-    def get_message_history(self) -> List[Dict[str, Any]]:
+    def get_message_history(self) -> list[dict[str, Any]]:
         """
         Get the agent's message history.
 
@@ -184,7 +184,7 @@ class ChatFirmAgent(BaseAgent):
         """
         return self.message_history.copy()
 
-    def get_received_messages(self) -> List[Dict[str, Any]]:
+    def get_received_messages(self) -> list[dict[str, Any]]:
         """
         Get messages received by this agent.
 
@@ -214,7 +214,7 @@ class CollusiveChatAgent(ChatFirmAgent):
         chat_enabled: bool = True,
         message_frequency: float = 0.5,
         collusion_intensity: float = 0.7,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize a collusive chat agent.
@@ -232,8 +232,8 @@ class CollusiveChatAgent(ChatFirmAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a price for the current step.
@@ -261,7 +261,7 @@ class CollusiveChatAgent(ChatFirmAgent):
         self,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
+        info: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate a message that may contain collusive intent.
@@ -284,7 +284,7 @@ class CollusiveChatAgent(ChatFirmAgent):
         self,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
+        info: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate a message with collusive intent.
@@ -316,7 +316,7 @@ class CollusiveChatAgent(ChatFirmAgent):
         self,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
+        info: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate a normal, non-collusive message.
@@ -358,7 +358,7 @@ class CompetitiveChatAgent(ChatFirmAgent):
         agent_id: int,
         chat_enabled: bool = True,
         message_frequency: float = 0.3,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize a competitive chat agent.
@@ -374,8 +374,8 @@ class CompetitiveChatAgent(ChatFirmAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a price for the current step.
@@ -403,7 +403,7 @@ class CompetitiveChatAgent(ChatFirmAgent):
         self,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
+        info: dict[str, Any] | None = None,
     ) -> str:
         """
         Generate a competitive, non-collusive message.
@@ -440,7 +440,7 @@ class ChatMessageManager:
     across all chat-enabled agents in an episode.
     """
 
-    def __init__(self, agents: List[ChatFirmAgent]) -> None:
+    def __init__(self, agents: list[ChatFirmAgent]) -> None:
         """
         Initialize the message manager.
 
@@ -448,15 +448,15 @@ class ChatMessageManager:
             agents: List of chat-enabled agents
         """
         self.agents = agents
-        self.episode_messages: List[Dict[str, Any]] = []
+        self.episode_messages: list[dict[str, Any]] = []
 
     def collect_messages(
         self,
         step: int,
         observation: np.ndarray,
         env: CartelEnv,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        info: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Collect messages from all agents for the current step.
 
@@ -484,7 +484,7 @@ class ChatMessageManager:
 
     def distribute_messages(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         step: int,
     ) -> None:
         """
@@ -503,7 +503,7 @@ class ChatMessageManager:
                 if agent.agent_id != sender_id and agent.chat_enabled:
                     agent.receive_message(message, sender_id, step)
 
-    def get_episode_messages(self) -> List[Dict[str, Any]]:
+    def get_episode_messages(self) -> list[dict[str, Any]]:
         """
         Get all messages from the current episode.
 

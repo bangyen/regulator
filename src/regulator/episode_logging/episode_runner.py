@@ -6,7 +6,7 @@ structured data logging, making it easy to integrate logging into existing
 environment loops.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -16,14 +16,14 @@ from regulator.episode_logging.logger import Logger
 
 def run_episode_with_logging(
     env: CartelEnv,
-    agents: List[Any],
-    logger: Optional[Logger] = None,
+    agents: list[Any],
+    logger: Logger | None = None,
     log_dir: str = "logs",
-    episode_id: Optional[str] = None,
-    agent_types: Optional[List[str]] = None,
-    regulator_flags: Optional[Dict[str, Any]] = None,
-    additional_info: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    episode_id: str | None = None,
+    agent_types: list[str] | None = None,
+    regulator_flags: dict[str, Any] | None = None,
+    additional_info: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Run a CartelEnv episode with integrated structured data logging.
 
@@ -58,7 +58,7 @@ def run_episode_with_logging(
             agent.reset()
 
     # Track episode data
-    episode_data: Dict[str, Any] = {
+    episode_data: dict[str, Any] = {
         "total_steps": 0,
         "total_rewards": np.zeros(env.n_firms),
         "episode_prices": [],
@@ -73,7 +73,7 @@ def run_episode_with_logging(
     while step < env.max_steps:
         # Each agent chooses a price
         prices = []
-        for i, agent in enumerate(agents):
+        for agent in agents:
             price = agent.choose_price(obs, info=info)
             prices.append(price)
 
@@ -205,13 +205,13 @@ def run_episode_with_logging(
 
 def run_episode_with_regulator_logging(
     env: CartelEnv,
-    agents: List[Any],
+    agents: list[Any],
     regulator: Any,
-    logger: Optional[Logger] = None,
+    logger: Logger | None = None,
     log_dir: str = "logs",
-    episode_id: Optional[str] = None,
-    agent_types: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    episode_id: str | None = None,
+    agent_types: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Run a CartelEnv episode with regulator monitoring and integrated logging.
 
@@ -276,7 +276,7 @@ def run_episode_with_regulator_logging(
     while step < env.max_steps:
         # Each agent chooses a price
         prices = []
-        for i, agent in enumerate(agents):
+        for agent in agents:
             price = agent.choose_price(obs, info=info)
             prices.append(price)
 

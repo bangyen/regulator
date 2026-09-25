@@ -9,7 +9,7 @@ with the ability to swap in real LLM models later.
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from dotenv import load_dotenv
@@ -38,7 +38,7 @@ class LLMDetector:
         self,
         model_type: str = "stubbed",
         confidence_threshold: float = 0.7,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the LLM detector.
@@ -58,7 +58,7 @@ class LLMDetector:
         self.np_random = np.random.default_rng(seed)
 
         # Detection state
-        self.detection_history: List[Dict[str, Any]] = []
+        self.detection_history: list[dict[str, Any]] = []
         self.total_messages_analyzed = 0
         self.collusive_messages_detected = 0
 
@@ -194,7 +194,7 @@ class LLMDetector:
         """
         if not OPENAI_AVAILABLE:
             raise ImportError(
-                "OpenAI package not available. Install with: pip install \"regulator[llm]\""
+                'OpenAI package not available. Install with: pip install "regulator[llm]"'
             )
 
         # Get API key from environment
@@ -213,7 +213,7 @@ class LLMDetector:
             # Simple test call to verify API key works
             self.client.models.list()
         except Exception as e:
-            raise ValueError(f"Failed to initialize OpenAI client: {e}")
+            raise ValueError(f"Failed to initialize OpenAI client: {e}") from e
 
         # Set up the system prompt for collusion detection
         self.system_prompt = """You are an expert economic analyst specializing in detecting collusive behavior in market communications. 
@@ -239,8 +239,8 @@ Be conservative in your assessments - only flag clear evidence of collusive inte
         sender_id: int,
         receiver_id: int,
         step: int,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Classify a single message as collusive or non-collusive.
 
@@ -269,8 +269,8 @@ Be conservative in your assessments - only flag clear evidence of collusive inte
         sender_id: int,
         receiver_id: int,
         step: int,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Classify message using the stubbed rule-based model.
 
@@ -316,10 +316,8 @@ Be conservative in your assessments - only flag clear evidence of collusive inte
 
         # Normalize scores
         total_score = collusive_score + non_collusive_score
-        if total_score > 0:
-            collusive_prob = collusive_score / total_score
-        else:
-            collusive_prob = 0.5  # Default to neutral if no patterns detected
+        # Default to neutral if no patterns detected
+        collusive_prob = collusive_score / total_score if total_score > 0 else 0.5
 
         # Ensure probability is in valid range
         collusive_prob = max(0.0, min(1.0, collusive_prob))
@@ -358,8 +356,8 @@ Be conservative in your assessments - only flag clear evidence of collusive inte
         sender_id: int,
         receiver_id: int,
         step: int,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Classify message using the real LLM model.
 
@@ -456,9 +454,9 @@ Step: {step}"""
 
     def classify_messages_batch(
         self,
-        messages: List[Dict[str, Any]],
-        context: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        messages: list[dict[str, Any]],
+        context: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Classify multiple messages in batch.
 
@@ -482,7 +480,7 @@ Step: {step}"""
 
         return results
 
-    def get_detection_summary(self) -> Dict[str, Any]:
+    def get_detection_summary(self) -> dict[str, Any]:
         """
         Get a summary of detection results.
 
@@ -512,7 +510,7 @@ Step: {step}"""
             "model_type": self.model_type,
         }
 
-    def get_collusive_messages(self) -> List[Dict[str, Any]]:
+    def get_collusive_messages(self) -> list[dict[str, Any]]:
         """
         Get all messages classified as collusive.
 
@@ -521,7 +519,7 @@ Step: {step}"""
         """
         return [result for result in self.detection_history if result["is_collusive"]]
 
-    def get_detection_history(self) -> List[Dict[str, Any]]:
+    def get_detection_history(self) -> list[dict[str, Any]]:
         """
         Get the complete detection history.
 
@@ -559,7 +557,7 @@ Step: {step}"""
         Args:
             filepath: Path to load the results from
         """
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             data = json.load(f)
 
         self.detection_history = data.get("detection_history", [])
@@ -596,15 +594,15 @@ class ChatRegulator:
         self.collusion_threshold = collusion_threshold
 
         # Monitoring state
-        self.message_violations: List[Dict[str, Any]] = []
+        self.message_violations: list[dict[str, Any]] = []
         self.total_message_fines = 0.0
 
     def monitor_messages(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         step: int,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Monitor messages for collusive behavior.
 
@@ -665,7 +663,7 @@ class ChatRegulator:
             "classifications": classifications,
         }
 
-    def get_message_violation_summary(self) -> Dict[str, Any]:
+    def get_message_violation_summary(self) -> dict[str, Any]:
         """
         Get a summary of message violations.
 
@@ -679,14 +677,14 @@ class ChatRegulator:
             "violations_by_agent": self._get_violations_by_agent(),
         }
 
-    def _get_violations_by_agent(self) -> Dict[int, int]:
+    def _get_violations_by_agent(self) -> dict[int, int]:
         """
         Get violation counts by agent.
 
         Returns:
             Dictionary mapping agent_id to violation count
         """
-        violations_by_agent: Dict[int, int] = {}
+        violations_by_agent: dict[int, int] = {}
         for violation in self.message_violations:
             sender_id = violation["sender_id"]
             violations_by_agent[sender_id] = violations_by_agent.get(sender_id, 0) + 1

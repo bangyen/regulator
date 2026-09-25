@@ -10,12 +10,12 @@ These agents serve as baselines for testing and benchmarking the CartelEnv.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
 from collections import deque
+from typing import Any
 
 import numpy as np
 
-from regulator.agents.leniency import WhistleblowerAgent, LeniencyProgram
+from regulator.agents.leniency import LeniencyProgram, WhistleblowerAgent
 
 
 class BaseAgent(ABC):
@@ -24,7 +24,7 @@ class BaseAgent(ABC):
     """
 
     def __init__(
-        self, agent_id: int, seed: Optional[int] = None, history_len: int = 10
+        self, agent_id: int, seed: int | None = None, history_len: int = 10
     ) -> None:
         """
         Initialize the base agent.
@@ -44,8 +44,8 @@ class BaseAgent(ABC):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a price for the current step.
@@ -80,8 +80,8 @@ class RandomAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a random price within market bounds.
@@ -105,8 +105,8 @@ class BestResponseAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose the price that maximizes profit against rival average.
@@ -138,7 +138,7 @@ class BestResponseAgent(BaseAgent):
         return float(best_response)
 
     def _calculate_nash_equilibrium_price(
-        self, env: Optional[Any] = None, params: Optional[Dict[str, Any]] = None
+        self, env: Any | None = None, params: dict[str, Any] | None = None
     ) -> float:
         """
         Calculate the Nash equilibrium price.
@@ -201,8 +201,8 @@ class TitForTatAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a price equal to the previous rival average price.
@@ -240,7 +240,7 @@ class CollusiveAgent(BaseAgent):
         agent_id: int,
         collusive_price: float = 30.0,
         deviation_penalty: float = 0.1,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the collusive agent.
@@ -258,8 +258,8 @@ class CollusiveAgent(BaseAgent):
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a collusive price.
@@ -308,7 +308,7 @@ class WhistleblowerTitForTatAgent(TitForTatAgent, WhistleblowerAgent):
         leniency_program: LeniencyProgram,
         whistleblow_threshold: float = 10.0,
         risk_aversion: float = 1.0,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the whistleblower tit-for-tat agent.
@@ -330,8 +330,8 @@ class WhistleblowerTitForTatAgent(TitForTatAgent, WhistleblowerAgent):
         current_fine: float,
         collusion_probability: float,
         step: int,
-        rival_firms: List[int],
-    ) -> Tuple[bool, float]:
+        rival_firms: list[int],
+    ) -> tuple[bool, float]:
         """
         Evaluate whether to whistleblow and submit a report if beneficial.
 
@@ -362,7 +362,7 @@ class WhistleblowerTitForTatAgent(TitForTatAgent, WhistleblowerAgent):
 
         return False, incentive
 
-    def get_combined_statistics(self) -> Dict[str, Any]:
+    def get_combined_statistics(self) -> dict[str, Any]:
         """
         Get combined statistics from both pricing and whistleblowing behavior.
 
@@ -398,7 +398,7 @@ class StrategicWhistleblowerAgent(BestResponseAgent, WhistleblowerAgent):
         leniency_program: LeniencyProgram,
         whistleblow_threshold: float = 15.0,
         risk_aversion: float = 1.2,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the strategic whistleblower agent.
@@ -420,8 +420,8 @@ class StrategicWhistleblowerAgent(BestResponseAgent, WhistleblowerAgent):
         current_fine: float,
         collusion_probability: float,
         step: int,
-        rival_firms: List[int],
-    ) -> Tuple[bool, float]:
+        rival_firms: list[int],
+    ) -> tuple[bool, float]:
         """
         Evaluate whether to whistleblow and submit a report if beneficial.
 
@@ -450,7 +450,7 @@ class StrategicWhistleblowerAgent(BestResponseAgent, WhistleblowerAgent):
 
         return False, incentive
 
-    def get_combined_statistics(self) -> Dict[str, Any]:
+    def get_combined_statistics(self) -> dict[str, Any]:
         """
         Get combined statistics from both pricing and whistleblowing behavior.
 

@@ -5,8 +5,9 @@ This module tests the MLRegulator class including ML-based detection,
 feature extraction, and model training functionality.
 """
 
-import numpy as np
 from unittest.mock import patch
+
+import numpy as np
 
 from regulator.agents.ml_regulator import MLRegulator
 

@@ -8,10 +8,9 @@ This module contains comprehensive tests for all baseline firm agents:
 """
 
 import math
+from typing import Any
 
 import numpy as np
-
-from typing import Any, Dict, Optional
 
 from regulator.agents.firm_agents import (
     BaseAgent,
@@ -34,7 +33,7 @@ class TestBaseAgent:
                 self,
                 observation: np.ndarray,
                 env: CartelEnv,
-                info: Optional[Dict[str, Any]] = None,
+                info: dict[str, Any] | None = None,
             ) -> float:
                 return 10.0
 
@@ -52,7 +51,7 @@ class TestBaseAgent:
                 self,
                 observation: np.ndarray,
                 env: CartelEnv,
-                info: Optional[Dict[str, Any]] = None,
+                info: dict[str, Any] | None = None,
             ) -> float:
                 return 10.0
 
@@ -72,7 +71,7 @@ class TestBaseAgent:
                 self,
                 observation: np.ndarray,
                 env: CartelEnv,
-                info: Optional[Dict[str, Any]] = None,
+                info: dict[str, Any] | None = None,
             ) -> float:
                 return 10.0
 
@@ -322,7 +321,7 @@ class TestTitForTatAgent:
         # Add some rival price history
         rival_prices_sequence = [20.0, 25.0, 30.0, 35.0]
 
-        for i, rival_avg in enumerate(rival_prices_sequence):
+        for rival_avg in rival_prices_sequence:
             # Simulate rival prices that average to the target
             rival_prices = np.array([rival_avg - 2.0, rival_avg + 2.0])
             agent.update_history(my_price=15.0, rival_prices=rival_prices)
@@ -387,10 +386,10 @@ class TestAgentIntegration:
 
         obs, _ = env.reset(seed=42)
 
-        for step in range(5):
+        for _ in range(5):
             # Each agent chooses a price
             prices = []
-            for i, agent in enumerate(agents):
+            for agent in agents:
                 price = agent.choose_price(obs, env)
                 prices.append(price)
 
@@ -456,7 +455,7 @@ class TestAgentIntegration:
 
         # Play one episode
         obs, _ = env.reset(seed=42)
-        for step in range(2):
+        for _ in range(2):
             prices = [agent.choose_price(obs, env) for agent in agents]
             action = np.array(prices, dtype=np.float32)
             obs, rewards, terminated, truncated, info = env.step(action)

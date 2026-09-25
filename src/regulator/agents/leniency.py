@@ -7,9 +7,9 @@ can strategically decide to report collusion when facing audit threats or
 detection risks.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 import numpy as np
 
@@ -29,7 +29,7 @@ class LeniencyReport:
 
     firm_id: int
     step: int
-    reported_firms: List[int]
+    reported_firms: list[int]
     evidence_strength: float
     fine_reduction: float
 
@@ -50,7 +50,7 @@ class LeniencyProgram:
         max_reports_per_episode: int = 3,
         evidence_threshold: float = 0.7,
         audit_probability: float = 0.1,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the leniency program.
@@ -78,10 +78,10 @@ class LeniencyProgram:
         self.np_random = np.random.default_rng(seed)
 
         # Episode state
-        self.reports: List[LeniencyReport] = []
-        self.firm_status: Dict[int, LeniencyStatus] = {}
-        self.audit_threats: Dict[int, float] = {}  # firm_id -> threat_level
-        self.collusion_evidence: Dict[int, float] = {}  # firm_id -> evidence_strength
+        self.reports: list[LeniencyReport] = []
+        self.firm_status: dict[int, LeniencyStatus] = {}
+        self.audit_threats: dict[int, float] = {}  # firm_id -> threat_level
+        self.collusion_evidence: dict[int, float] = {}  # firm_id -> evidence_strength
 
     def reset(self, n_firms: int) -> None:
         """
@@ -149,15 +149,12 @@ class LeniencyProgram:
             return False
 
         # Check if maximum reports reached
-        if len(self.reports) >= self.max_reports_per_episode:
-            return False
-
-        return True
+        return len(self.reports) < self.max_reports_per_episode
 
     def submit_report(
         self,
         firm_id: int,
-        reported_firms: List[int],
+        reported_firms: list[int],
         evidence_strength: float,
         step: int,
     ) -> bool:
@@ -306,7 +303,7 @@ class LeniencyProgram:
         """
         return self.collusion_evidence.get(firm_id, 0.0)
 
-    def get_program_summary(self) -> Dict[str, Any]:
+    def get_program_summary(self) -> dict[str, Any]:
         """
         Get a summary of the leniency program's current state.
 
@@ -339,7 +336,7 @@ class LeniencyProgram:
             "evidence_threshold": self.evidence_threshold,
         }
 
-    def get_reports_summary(self) -> List[Dict[str, Any]]:
+    def get_reports_summary(self) -> list[dict[str, Any]]:
         """
         Get a summary of all leniency reports.
 
@@ -373,7 +370,7 @@ class WhistleblowerAgent:
         leniency_program: LeniencyProgram,
         whistleblow_threshold: float = 10.0,
         risk_aversion: float = 1.0,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the whistleblower agent.
@@ -392,16 +389,16 @@ class WhistleblowerAgent:
         self.np_random = np.random.default_rng(seed)
 
         # Track whistleblowing history
-        self.whistleblow_history: List[Tuple[int, bool, float]] = (
-            []
-        )  # (step, whistled, incentive)
+        self.whistleblow_history: list[
+            tuple[int, bool, float]
+        ] = []  # (step, whistled, incentive)
 
     def evaluate_whistleblow_decision(
         self,
         current_fine: float,
         collusion_probability: float,
         step: int,
-    ) -> Tuple[bool, float]:
+    ) -> tuple[bool, float]:
         """
         Evaluate whether to whistleblow based on current incentives.
 
@@ -427,7 +424,7 @@ class WhistleblowerAgent:
 
         return should_whistleblow, incentive
 
-    def get_whistleblow_statistics(self) -> Dict[str, Any]:
+    def get_whistleblow_statistics(self) -> dict[str, Any]:
         """
         Get statistics about whistleblowing behavior.
 
