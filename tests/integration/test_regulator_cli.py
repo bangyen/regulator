@@ -140,7 +140,7 @@ class TestRegulatorCLIIntegration:
         # Test main help
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
-        assert "Regulator: Market Competition" in result.output
+        assert "algorithmic collusion" in result.output
 
         # Test experiment help
         result = runner.invoke(experiment, ["--help"])

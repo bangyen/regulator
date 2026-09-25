@@ -62,10 +62,9 @@ class TestRegulatorPackage:
 
         assert regulator.__doc__ is not None
         assert (
-            "Regulator: Market Competition & Collusion Detection" in regulator.__doc__
+            "can label-free screens detect algorithmic collusion" in regulator.__doc__
         )
-        assert "machine learning" in regulator.__doc__
-        assert "Python package" in regulator.__doc__
+        assert "Q-learning" in regulator.__doc__
 
     def test_package_metadata_consistency(self):
         """Test that package metadata is consistent."""
@@ -102,7 +101,7 @@ class TestRegulatorPackage:
             "detectors",
             "episode_logging",
             "experiments",
-            "monitoring",
+            "screens",
             "economic_validation",
             "cli",
             "CartelEnv",
@@ -131,10 +130,9 @@ class TestRegulatorPackage:
 
         # Should mention key concepts
         assert "market" in docstring
-        assert "competition" in docstring
-        assert "collusion" in docstring or "collusive" in docstring
-        assert "detection" in docstring or "detecting" in docstring
-        assert "machine learning" in docstring
+        assert "collusion" in docstring
+        assert "screens" in docstring
+        assert "q-learning" in docstring
 
     def test_version_incrementability(self):
         """Test that version number is in a format that can be incremented."""
