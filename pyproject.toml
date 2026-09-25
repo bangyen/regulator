@@ -44,10 +44,6 @@ dependencies = [
 ml = [
     "lightgbm>=4.0.0",
 ]
-# OpenAI-backed LLM detector and chat firms (falls back to stubs without it)
-llm = [
-    "openai>=1.0.0",
-]
 # Flask monitoring dashboard (dashboard/main.py, `regulator dashboard`)
 dashboard = [
     "flask>=2.3.0",
@@ -79,7 +75,6 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
     "lightgbm>=4.0.0",
-    "openai>=1.0.0",
     "flask>=2.3.0",
 ]
 

@@ -30,13 +30,9 @@ jobs:
         
     - name: Run test suite
       run: |
-        # Create minimal .env file for testing
-        echo "OPENAI_API_KEY=test_key" > .env
-        
         # Run the full suite in container (unit + integration + smoke)
         docker run --rm \
           -v $(pwd)/tests:/app/tests \
-          --env-file .env \
           regulator-smoke-test \
           python -m pytest tests/ -v --tb=short
 
@@ -59,11 +55,9 @@ jobs:
         
     - name: Test container startup
       run: |
-        echo "OPENAI_API_KEY=test_key" > .env
         docker run -d \
           --name regulator-test \
           -p 5000:5000 \
-          --env-file .env \
           regulator-prod
 
         # Poll the health endpoint; fail the job if it never comes up
@@ -100,11 +94,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e ".[dev,ml,llm,dashboard]"
+        pip install -e ".[dev,ml,dashboard]"
 
     - name: Run tests with coverage
-      env:
-        OPENAI_API_KEY: test_key
       run: pytest --cov=src/regulator --cov-report=term-missing
 
     - name: Execute demo notebook

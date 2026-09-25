@@ -17,7 +17,7 @@ Clone the repo and run the demo:
 ```bash
 git clone https://github.com/bangyen/regulator.git
 cd regulator
-pip install -e ".[dev,ml,llm,dashboard]"   # ".[ml]" alone is enough to just run the demo
+pip install -e ".[dev,ml,dashboard]"   # ".[ml]" alone is enough to just run the demo
 pytest   # optional: run tests
 python scripts/run_experiment.py --firms "random,titfortat" --steps 100
 ```
