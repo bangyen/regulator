@@ -84,6 +84,57 @@ def experiment(
 
 
 @main.command()
+@click.option(
+    "--lineups",
+    default="random,random;bestresponse,bestresponse;stealth,stealth",
+    help="Firm line-ups: semicolon-separated, each comma-separated",
+)
+@click.option(
+    "--regulators",
+    default="none,rule_based,ml",
+    help="Comma-separated regulator configs",
+)
+@click.option("--seeds", default=10, help="Seeds per combination (0..N-1)")
+@click.option("--steps", default=100, help="Steps per episode")
+@click.option("--jobs", type=int, help="Worker processes (default: CPU count)")
+@click.option("--csv", "csv_path", type=click.Path(), help="Write per-run rows here")
+@click.option("--log-dir", help="Keep episode logs here (default: discard)")
+def batch(
+    lineups: str,
+    regulators: str,
+    seeds: int,
+    steps: int,
+    jobs: int | None,
+    csv_path: str | None,
+    log_dir: str | None,
+) -> None:
+    """Run seeds x line-ups x regulators and compare outcomes with 95% CIs."""
+    from regulator.experiments.batch import format_summary, run_batch, summarize
+
+    lineup_list = [
+        [firm.strip() for firm in lineup.split(",")]
+        for lineup in lineups.split(";")
+        if lineup.strip()
+    ]
+    regulator_list = [r.strip() for r in regulators.split(",") if r.strip()]
+    click.echo(
+        f"Running {len(lineup_list) * len(regulator_list) * seeds} episodes "
+        f"({len(lineup_list)} line-ups x {len(regulator_list)} regulators x "
+        f"{seeds} seeds)..."
+    )
+    runs = run_batch(
+        lineup_list, regulator_list, range(seeds), steps, log_dir=log_dir, jobs=jobs
+    )
+    if csv_path:
+        runs.to_csv(csv_path, index=False)
+        click.echo(f"Per-run results written to {csv_path}")
+    click.echo(format_summary(summarize(runs)))
+    invalid = int((~runs["economically_valid"]).sum())
+    if invalid:
+        click.echo(f"\n{invalid} run(s) failed economic validation", err=True)
+
+
+@main.command()
 @click.option("--port", default=5000, help="Port for the dashboard")
 @click.option("--host", default="127.0.0.1", help="Host address for the dashboard")
 def dashboard(port: int, host: str) -> None:

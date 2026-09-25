@@ -242,7 +242,7 @@ class CollusiveAgent(BaseAgent):
     def __init__(
         self,
         agent_id: int,
-        collusive_price: float = 30.0,
+        collusive_price: float = 55.0,
         deviation_penalty: float = 0.1,
         seed: int | None = None,
     ) -> None:
@@ -251,7 +251,8 @@ class CollusiveAgent(BaseAgent):
 
         Args:
             agent_id: Unique identifier for this agent
-            collusive_price: Target collusive price level
+            collusive_price: Target collusive price level (default: the joint-
+                profit-maximizing price of the default CartelEnv)
             deviation_penalty: Penalty factor for deviating from collusive price
             seed: Random seed for reproducibility
         """

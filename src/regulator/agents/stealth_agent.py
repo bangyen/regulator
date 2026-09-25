@@ -27,7 +27,7 @@ class StealthCollusiveAgent(BaseAgent):
     def __init__(
         self,
         agent_id: int,
-        target_collusive_price: float = 40.0,
+        target_collusive_price: float = 50.0,
         jitter_std: float = 2.0,
         risk_threshold: float = 0.5,
         seed: int | None = None,
@@ -37,7 +37,9 @@ class StealthCollusiveAgent(BaseAgent):
 
         Args:
             agent_id: Unique identifier for this agent.
-            target_collusive_price: The price level the agent wants to maintain.
+            target_collusive_price: The price level the agent wants to maintain
+                (default 50: between the default market's one-shot Nash price,
+                40, and its joint-profit maximum, 55).
             jitter_std: Standard deviation of the noise added to prices.
             risk_threshold: Threshold for regulatory risk above which the agent
                             becomes more competitive.

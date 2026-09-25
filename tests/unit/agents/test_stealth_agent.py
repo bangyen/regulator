@@ -24,7 +24,7 @@ class TestStealthCollusiveAgent:
         agent = StealthCollusiveAgent(agent_id=3, seed=0)
 
         assert agent.agent_id == 3
-        assert agent.target_collusive_price == 40.0
+        assert agent.target_collusive_price == 50.0
         assert agent.jitter_std == 2.0
         assert agent.risk_threshold == 0.5
         assert agent.violation_history == []
@@ -35,7 +35,7 @@ class TestStealthCollusiveAgent:
 
         prices = [agent.choose_price(OBS, info=MARKET) for _ in range(200)]
 
-        assert abs(np.mean(prices) - 40.0) < 1.0
+        assert abs(np.mean(prices) - 50.0) < 1.0
         # Jitter keeps prices from being identical
         assert np.std(prices) > 0.5
 
@@ -43,7 +43,7 @@ class TestStealthCollusiveAgent:
         """With zero jitter the agent prices exactly at the target."""
         agent = StealthCollusiveAgent(agent_id=0, jitter_std=0.0, seed=1)
 
-        assert agent.choose_price(OBS, info=MARKET) == 40.0
+        assert agent.choose_price(OBS, info=MARKET) == 50.0
 
     def test_blends_toward_rival_price(self) -> None:
         """Once rival history exists, price blends target and rival average."""
@@ -52,7 +52,7 @@ class TestStealthCollusiveAgent:
 
         price = agent.choose_price(OBS, info=MARKET)
 
-        assert price == 0.7 * 40.0 + 0.3 * 20.0
+        assert price == 0.7 * 50.0 + 0.3 * 20.0
 
     def test_high_ml_probability_triggers_retreat(self) -> None:
         """A high collusion probability pushes price toward marginal cost."""
@@ -77,7 +77,7 @@ class TestStealthCollusiveAgent:
         for _ in range(10):
             agent.record_violation(False)
 
-        assert agent.choose_price(OBS, info=MARKET) == 40.0
+        assert agent.choose_price(OBS, info=MARKET) == 50.0
 
     def test_price_clipped_to_bounds(self) -> None:
         """Prices are clipped to the market's price range."""

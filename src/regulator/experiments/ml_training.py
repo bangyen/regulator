@@ -31,10 +31,10 @@ def _colluder(i: int, rng: np.random.Generator) -> BaseAgent:
     kind = rng.integers(3)
     seed = int(rng.integers(2**31))
     if kind == 0:
-        return CollusiveAgent(i, collusive_price=float(rng.uniform(25, 60)), seed=seed)
+        return CollusiveAgent(i, collusive_price=float(rng.uniform(45, 60)), seed=seed)
     return StealthCollusiveAgent(
         i,
-        target_collusive_price=float(rng.uniform(40, 60)),
+        target_collusive_price=float(rng.uniform(44, 60)),
         jitter_std=float(rng.uniform(0.5, 6.0)),
         seed=seed,
     )
