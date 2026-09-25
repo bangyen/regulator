@@ -121,3 +121,40 @@ class TestInformationFrictions:
 
         # Old behaviour hid 1 - 0.8**4 ≈ 59% of prices with 5 firms
         assert abs(hidden - 0.2) < 0.02
+
+
+class TestLearningCurves:
+    """Learning-curve cost reductions are opt-in and reset each episode."""
+
+    @staticmethod
+    def _profit_after(env: CartelEnv, steps: int) -> float:
+        env.reset(seed=0)
+        for _ in range(steps):
+            env.step(np.array([30.0, 30.0]))
+        return float(env._calculate_profits(np.array([30.0]), np.array([10.0]))[0])
+
+    def test_off_by_default(self) -> None:
+        env = CartelEnv(n_firms=2, seed=0)
+
+        # (30 - 10) * 10, however much has been produced
+        assert self._profit_after(env, 200) == 200.0
+
+    def test_enabled_costs_fall_with_output(self) -> None:
+        env = CartelEnv(n_firms=2, seed=0, use_learning_curves=True)
+
+        early = self._profit_after(env, 1)
+        late = self._profit_after(env, 200)
+
+        assert late > early > 200.0
+
+    def test_reset_clears_cumulative_production(self) -> None:
+        env = CartelEnv(n_firms=2, seed=0, use_learning_curves=True)
+        for _ in range(50):
+            env.step(np.array([30.0, 30.0]))
+
+        env.reset(seed=0)
+
+        assert not env.cumulative_production.any()
+
+    def test_agent_learning_rate_is_not_overwritten(self) -> None:
+        assert CartelEnv(n_firms=2, learning_rate=0.3).learning_rate == 0.3
