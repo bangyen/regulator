@@ -304,7 +304,8 @@ class EnhancedRegulator(Regulator):
         )
         self.total_fines_applied += float(np.sum(fines))
         detection_results["fines_applied"] = fines
-        return (rewards - fines).astype(np.float32)
+        modified: np.ndarray = (rewards - fines).astype(np.float32)
+        return modified
 
     def get_monitoring_summary(self) -> dict[str, Any]:
         """Get comprehensive monitoring summary."""
