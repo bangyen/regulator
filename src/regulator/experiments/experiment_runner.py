@@ -25,6 +25,7 @@ from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
+from regulator.experiments.ml_training import train_collusion_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,8 @@ def create_regulator(
     if config == "rule_based":
         return Regulator(seed=seed)
     if config == "ml":
-        return MLRegulator(seed=seed)
+        # Classifier is trained once per process on simulated labeled windows
+        return MLRegulator(seed=seed, collusion_classifier=train_collusion_classifier())
     if config == "enhanced":
         return EnhancedRegulator(seed=seed)
     if config in ("none", "disabled"):

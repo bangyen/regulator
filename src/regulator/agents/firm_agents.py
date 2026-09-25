@@ -294,6 +294,44 @@ class CollusiveAgent(BaseAgent):
         return float(price)
 
 
+class NoisyAgent(BaseAgent):
+    """Wraps another agent and adds Gaussian noise to its prices."""
+
+    def __init__(
+        self, inner: BaseAgent, noise_std: float, seed: int | None = None
+    ) -> None:
+        """
+        Args:
+            inner: Agent whose prices are perturbed
+            noise_std: Standard deviation of the added noise
+            seed: Random seed for the noise
+        """
+        super().__init__(inner.agent_id, seed)
+        self.inner = inner
+        self.noise_std = noise_std
+
+    def choose_price(
+        self,
+        observation: np.ndarray,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
+    ) -> float:
+        params = info.get("market_params", {}) if info else {}
+        price_min = params.get("price_min", getattr(env, "price_min", 1.0))
+        price_max = params.get("price_max", getattr(env, "price_max", 100.0))
+        price = self.inner.choose_price(observation, env, info)
+        noisy = price + self.np_random.normal(0, self.noise_std)
+        return float(min(price_max, max(price_min, noisy)))
+
+    def update_history(self, my_price: float, rival_prices: np.ndarray) -> None:
+        super().update_history(my_price, rival_prices)
+        self.inner.update_history(my_price, rival_prices)
+
+    def reset(self) -> None:
+        super().reset()
+        self.inner.reset()
+
+
 class WhistleblowerTitForTatAgent(TitForTatAgent, WhistleblowerAgent):
     """
     Agent that combines tit-for-tat pricing with strategic whistleblowing.

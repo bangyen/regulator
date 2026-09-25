@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from .regulator import Regulator
@@ -41,8 +41,9 @@ class MLRegulator(Regulator):
         ml_anomaly_threshold: float = 0.1,  # Threshold for anomaly detection
         ml_collusion_threshold: float = 0.7,  # Threshold for collusion classification
         feature_window_size: int = 10,  # Number of steps to use for feature extraction
-        retrain_frequency: int = 50,  # Retrain ML models every N steps
+        retrain_frequency: int = 50,  # Refit the anomaly detector every N steps
         seed: int | None = None,
+        collusion_classifier: Any | None = None,
     ) -> None:
         """
         Initialize the ML-enhanced regulator.
@@ -58,8 +59,15 @@ class MLRegulator(Regulator):
             ml_anomaly_threshold: Threshold for anomaly detection (0.0-1.0)
             ml_collusion_threshold: Threshold for collusion classification (0.0-1.0)
             feature_window_size: Number of steps to use for feature extraction
-            retrain_frequency: How often to retrain ML models
+            retrain_frequency: How often to refit the (unsupervised) anomaly
+                detector on the windows seen so far
             seed: Random seed for reproducibility
+            collusion_classifier: A fitted classifier (``predict_proba``) over
+                window features, e.g. from
+                ``regulator.experiments.ml_training.train_collusion_classifier``.
+                A regulator has no ground truth during an episode, so the
+                classifier is never trained online; without one (and without
+                calling ``fit_classifier``) only anomaly detection runs.
         """
         super().__init__(
             parallel_threshold=parallel_threshold,
@@ -78,35 +86,48 @@ class MLRegulator(Regulator):
         self.retrain_frequency = retrain_frequency
         self.seed = seed
 
-        # ML models
-        self.anomaly_detector = None
-        self.collusion_classifier = None
-        self.feature_scaler = StandardScaler()
+        # ML models. Both are pipelines so scaling at fit and predict time
+        # always matches.
+        self.anomaly_detector: Pipeline | None = None
+        self.collusion_classifier = collusion_classifier
 
-        # Training data storage
+        # Unlabeled windows seen so far (anomaly detector training data)
         self.training_features: list[np.ndarray] = []
-        self.training_labels: list[bool] = []
         self.step_count = 0
 
-        # Initialize ML models if enabled
         if self.use_ml_detection:
-            self._initialize_ml_models()
+            self._initialize_anomaly_detector()
 
-    def _initialize_ml_models(self) -> None:
-        """Initialize machine learning models."""
-        # Anomaly detection model (unsupervised)
-        self.anomaly_detector = IsolationForest(
-            contamination=self.ml_anomaly_threshold,
-            random_state=self.seed,
-            n_estimators=100,
+    def _initialize_anomaly_detector(self) -> None:
+        """Create an unfitted anomaly detector (unsupervised)."""
+        self.anomaly_detector = make_pipeline(
+            StandardScaler(),
+            IsolationForest(
+                contamination=self.ml_anomaly_threshold,
+                random_state=self.seed,
+                n_estimators=100,
+            ),
         )
 
-        # Collusion classification model (supervised)
-        self.collusion_classifier = RandomForestClassifier(
-            n_estimators=100, random_state=self.seed, class_weight="balanced"
-        )
+    def fit_classifier(self, X: np.ndarray, y: np.ndarray) -> None:
+        """
+        Fit the collusion classifier on labeled window features.
 
-    def _extract_features(self, price_history: list[np.ndarray]) -> np.ndarray:
+        Args:
+            X: Features from ``_extract_features``, one row per window
+            y: 1 where the window came from colluding firms, else 0
+        """
+        classifier = make_pipeline(
+            StandardScaler(),
+            RandomForestClassifier(
+                n_estimators=100, random_state=self.seed, class_weight="balanced"
+            ),
+        )
+        classifier.fit(X, y)
+        self.collusion_classifier = classifier
+
+    @staticmethod
+    def _extract_features(price_history: list[np.ndarray]) -> np.ndarray:
         """
         Extract features from price history for ML models.
 
@@ -143,7 +164,9 @@ class MLRegulator(Regulator):
             for i in range(min(n_firms, 3)):  # Limit to first 3 firms
                 for j in range(i + 1, min(n_firms, 3)):
                     if len(prices) > 1:
-                        corr = np.corrcoef(prices[:, i], prices[:, j])[0, 1]
+                        # Constant series have undefined correlation -> 0
+                        with np.errstate(invalid="ignore", divide="ignore"):
+                            corr = np.corrcoef(prices[:, i], prices[:, j])[0, 1]
                         features.append(float(corr) if not np.isnan(corr) else 0.0)
                     else:
                         features.append(0.0)
@@ -218,11 +241,8 @@ class MLRegulator(Regulator):
             return False, 0.0
 
         try:
-            # Check if model is fitted
-            if (
-                not hasattr(self.anomaly_detector, "estimators_")
-                or self.anomaly_detector.estimators_ is None
-            ):
+            # Not fitted until the first refit
+            if not hasattr(self.anomaly_detector[-1], "estimators_"):
                 return False, 0.0
 
             # Reshape for sklearn
@@ -259,11 +279,8 @@ class MLRegulator(Regulator):
             return False, 0.0
 
         try:
-            # Check if model is fitted
-            if (
-                not hasattr(self.collusion_classifier, "classes_")
-                or self.collusion_classifier.classes_ is None
-            ):
+            # Unfitted classifiers have no classes_
+            if not hasattr(self.collusion_classifier, "classes_"):
                 return False, 0.0
 
             # Reshape for sklearn
@@ -288,51 +305,35 @@ class MLRegulator(Regulator):
                 warnings.warn(f"ML collusion classification failed: {e}", stacklevel=2)
             return False, 0.0
 
-    def _update_training_data(self, features: np.ndarray, is_collusion: bool) -> None:
+    def _update_training_data(self, features: np.ndarray) -> None:
         """
-        Update training data for ML models.
+        Store an (unlabeled) window for refitting the anomaly detector.
 
         Args:
             features: Feature vector
-            is_collusion: Whether this step involved collusion (ground truth)
         """
         self.training_features.append(features)
-        self.training_labels.append(is_collusion)
 
         # Keep only recent training data to avoid memory issues
         max_training_samples = 1000
         if len(self.training_features) > max_training_samples:
             self.training_features = self.training_features[-max_training_samples:]
-            self.training_labels = self.training_labels[-max_training_samples:]
 
     def _retrain_models(self) -> None:
-        """Retrain ML models with accumulated training data."""
-        if not self.use_ml_detection or len(self.training_features) < 20:
+        """Refit the anomaly detector on the windows seen so far."""
+        if (
+            not self.use_ml_detection
+            or self.anomaly_detector is None
+            or len(self.training_features) < 20
+        ):
             return
 
         try:
-            # Prepare training data
-            X = np.array(self.training_features)
-            y = np.array(self.training_labels)
-
-            # Scale features
-            X_scaled = self.feature_scaler.fit_transform(X)
-
-            # Retrain anomaly detector (unsupervised)
-            if self.anomaly_detector is not None:
-                self.anomaly_detector.fit(X_scaled)
-
-            # Retrain collusion classifier (supervised)
-            if self.collusion_classifier is not None and len(np.unique(y)) > 1:
-                self.collusion_classifier.fit(X_scaled, y)
-
-                # Evaluate model performance
-                y_pred = self.collusion_classifier.predict(X_scaled)
-                accuracy = accuracy_score(y, y_pred)
-                logger.info(
-                    "ML Regulator: Retrained models with accuracy: %.3f", accuracy
-                )
-
+            self.anomaly_detector.fit(np.array(self.training_features))
+            logger.info(
+                "ML Regulator: refit anomaly detector on %d windows",
+                len(self.training_features),
+            )
         except Exception as e:
             warnings.warn(f"ML model retraining failed: {e}", stacklevel=2)
 
@@ -394,13 +395,10 @@ class MLRegulator(Regulator):
                     f"ML-detected collusion (prob: {collusion_prob:.3f})"
                 ]
 
-            # Update training data (using traditional detection as ground truth for now)
-            is_traditional_collusion = detection_results.get(
-                "parallel_violation", False
-            ) or detection_results.get("structural_break_violation", False)
-            self._update_training_data(features, is_traditional_collusion)
+            # Unlabeled: only the anomaly detector learns online
+            self._update_training_data(features)
 
-            # Retrain models periodically
+            # Refit the anomaly detector periodically
             self.step_count += 1
             if self.step_count % self.retrain_frequency == 0:
                 self._retrain_models()
@@ -442,6 +440,7 @@ class MLRegulator(Regulator):
 
         stats = {
             "ml_enabled": True,
+            "classifier_fitted": hasattr(self.collusion_classifier, "classes_"),
             "training_samples": len(self.training_features),
             "anomaly_threshold": self.ml_anomaly_threshold,
             "collusion_threshold": self.ml_collusion_threshold,
@@ -449,19 +448,15 @@ class MLRegulator(Regulator):
             "retrain_frequency": self.retrain_frequency,
         }
 
-        if self.training_labels:
-            stats["collusion_rate"] = float(np.mean(self.training_labels))
-            stats["normal_rate"] = 1.0 - stats["collusion_rate"]
-
         return stats
 
     def reset(self, n_firms: int | None = None) -> None:
         """Reset the ML regulator state."""
         super().reset(n_firms=n_firms)
         self.training_features = []
-        self.training_labels = []
         self.step_count = 0
 
-        # Reinitialize ML models
+        # The anomaly detector learns per episode; the classifier was trained
+        # offline and is kept
         if self.use_ml_detection:
-            self._initialize_ml_models()
+            self._initialize_anomaly_detector()
