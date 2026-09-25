@@ -8,15 +8,21 @@ the CartelEnv environment, including random, best response, and tit-for-tat stra
 from .firm_agents import (
     BestResponseAgent,
     CollusiveAgent,
+    NoisyAgent,
     RandomAgent,
     TitForTatAgent,
 )
+from .q_learning_agent import QLearningAgent
 from .regulator import Regulator
+from .stealth_agent import StealthCollusiveAgent
 
 __all__ = [
     "RandomAgent",
     "BestResponseAgent",
     "TitForTatAgent",
     "CollusiveAgent",
+    "QLearningAgent",
+    "NoisyAgent",
+    "StealthCollusiveAgent",
     "Regulator",
 ]

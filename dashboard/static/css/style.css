@@ -171,6 +171,51 @@ body {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.run-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.field-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+}
+
+.field select,
+.field input {
+    height: 38px;
+    padding: 0 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: var(--font-primary);
+    font-size: 14px;
+}
+
+.field-narrow input {
+    width: 88px;
+}
+
+.field select:focus,
+.field input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
 }
 
 .btn-primary,

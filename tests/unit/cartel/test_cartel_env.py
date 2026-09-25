@@ -3,7 +3,9 @@ Unit tests for the minimalist CartelEnv environment.
 """
 
 import math
+
 import numpy as np
+
 from regulator.cartel.cartel_env import CartelEnv
 
 
@@ -73,3 +75,86 @@ class TestCartelEnv:
         shares = env._calculate_market_shares(prices)
         assert shares[0] > shares[1]
         assert math.isclose(np.sum(shares), 1.0)
+
+
+class TestInformationFrictions:
+    """Tests for observation noise and limited price visibility."""
+
+    def test_disabled_returns_exact_copy(self) -> None:
+        env = CartelEnv(n_firms=3, seed=0)
+        prices = np.array([10.0, 20.0, 30.0])
+
+        observed = env.get_observed_prices(prices)
+
+        np.testing.assert_array_equal(observed, prices)
+        assert observed is not prices
+
+    def test_full_visibility_hides_nothing(self) -> None:
+        env = CartelEnv(
+            n_firms=3,
+            seed=0,
+            use_information_asymmetry=True,
+            price_visibility_prob=1.0,
+            observation_noise_std=0.0,
+        )
+        prices = np.array([10.0, 20.0, 30.0])
+
+        np.testing.assert_allclose(env.get_observed_prices(prices), prices)
+
+    def test_zero_visibility_hides_everything(self) -> None:
+        env = CartelEnv(
+            n_firms=3, seed=0, use_information_asymmetry=True, price_visibility_prob=0.0
+        )
+
+        assert np.isnan(env.get_observed_prices(np.array([10.0, 20.0, 30.0]))).all()
+
+    def test_hidden_rate_independent_of_firm_count(self) -> None:
+        """Each price is hidden with probability 1 - p, regardless of n_firms."""
+        env = CartelEnv(
+            n_firms=5, seed=0, use_information_asymmetry=True, price_visibility_prob=0.8
+        )
+        prices = np.full(5, 20.0)
+
+        hidden = np.mean(
+            [np.isnan(env.get_observed_prices(prices)).mean() for _ in range(2000)]
+        )
+
+        # Old behaviour hid 1 - 0.8**4 ≈ 59% of prices with 5 firms
+        assert abs(hidden - 0.2) < 0.02
+
+
+class TestLearningCurves:
+    """Learning-curve cost reductions are opt-in and reset each episode."""
+
+    @staticmethod
+    def _profit_after(env: CartelEnv, steps: int) -> float:
+        env.reset(seed=0)
+        for _ in range(steps):
+            env.step(np.array([30.0, 30.0]))
+        return float(env._calculate_profits(np.array([30.0]), np.array([10.0]))[0])
+
+    def test_off_by_default(self) -> None:
+        env = CartelEnv(n_firms=2, seed=0)
+
+        # (30 - 10) * 10, however much has been produced
+        assert self._profit_after(env, 200) == 200.0
+
+    def test_enabled_costs_fall_with_output(self) -> None:
+        env = CartelEnv(n_firms=2, seed=0, use_learning_curves=True)
+
+        early = self._profit_after(env, 1)
+        late = self._profit_after(env, 200)
+
+        assert late > early > 200.0
+
+    def test_reset_clears_cumulative_production(self) -> None:
+        env = CartelEnv(n_firms=2, seed=0, use_learning_curves=True)
+        for _ in range(50):
+            env.step(np.array([30.0, 30.0]))
+
+        env.reset(seed=0)
+
+        assert not env.cumulative_production.any()
+
+    def test_agent_learning_rate_is_not_overwritten(self) -> None:
+        assert CartelEnv(n_firms=2, learning_rate=0.3).learning_rate == 0.3

@@ -9,8 +9,8 @@ import pytest
 
 from regulator.economic_validation import (
     EconomicValidator,
-    validate_economic_data,
     check_economic_plausibility,
+    validate_economic_data,
 )
 
 
@@ -288,9 +288,9 @@ class TestEconomicValidator:
         assert any("positive correlation" in error for error in errors)
 
     def test_validate_economic_relationships_concentrated_market(self, validator):
-        """Test economic relationships with overly concentrated market."""
-        prices = [40.0, 50.0, 60.0]
-        market_shares = [0.995, 0.003, 0.002]  # One firm dominates
+        """A firm that isn't the cheapest can't take almost the whole market."""
+        prices = [60.0, 50.0, 40.0]
+        market_shares = [0.995, 0.003, 0.002]  # The most expensive firm dominates
         individual_quantities = [39.8, 0.12, 0.08]
         errors = []
 
@@ -301,6 +301,16 @@ class TestEconomicValidator:
         # Should add error for market concentration
         assert len(errors) > 0
         assert any("Market share too concentrated" in error for error in errors)
+
+    def test_cheapest_firm_may_dominate(self, validator):
+        """Near-monopoly share for the cheapest firm is consistent."""
+        errors: list[str] = []
+
+        validator._validate_economic_relationships(
+            [40.0, 50.0, 60.0], [0.995, 0.003, 0.002], [39.8, 0.12, 0.08], errors
+        )
+
+        assert not any("too concentrated" in error for error in errors)
 
     def test_validate_economic_relationships_negative_quantity(self, validator):
         """Test economic relationships with negative quantities."""
@@ -479,10 +489,8 @@ class TestEconomicValidator:
             profits=profits,
         )
 
-        # Single firm scenario should be flagged as too concentrated
-        assert is_valid is False
-        assert len(errors) > 0
-        assert any("Market share too concentrated" in error for error in errors)
+        # A single firm holding the whole market is not an inconsistency
+        assert not any("too concentrated" in error for error in errors)
 
     def test_edge_case_very_small_tolerance(self):
         """Test edge case with very small tolerance."""

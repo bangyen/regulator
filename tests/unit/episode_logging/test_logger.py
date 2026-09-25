@@ -30,7 +30,7 @@ class TestLogger:
             assert logger.log_file.exists()
 
             # Check that header was written
-            with open(logger.log_file, "r") as f:
+            with open(logger.log_file) as f:
                 header_line = f.readline().strip()
                 header = json.loads(header_line)
 
@@ -210,7 +210,7 @@ class TestLogger:
             )
 
             # Verify episode end data was written
-            with open(logger.log_file, "r") as f:
+            with open(logger.log_file) as f:
                 lines = f.readlines()
                 end_line = lines[-1].strip()
                 end_data = json.loads(end_line)
@@ -427,7 +427,7 @@ class TestLogger:
             logger.log_episode_end()
 
             # Verify file structure
-            with open(logger.log_file, "r") as f:
+            with open(logger.log_file) as f:
                 lines = f.readlines()
 
                 # Should have header + 5 steps + end = 7 lines

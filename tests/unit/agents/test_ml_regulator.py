@@ -5,8 +5,9 @@ This module tests the MLRegulator class including ML-based detection,
 feature extraction, and model training functionality.
 """
 
-import numpy as np
 from unittest.mock import patch
+
+import numpy as np
 
 from regulator.agents.ml_regulator import MLRegulator
 
@@ -24,7 +25,8 @@ class TestMLRegulator:
         assert regulator.feature_window_size == 10
         assert regulator.retrain_frequency == 50
         assert regulator.anomaly_detector is not None
-        assert regulator.collusion_classifier is not None
+        # No classifier unless one is supplied or fit offline
+        assert regulator.collusion_classifier is None
 
     def test_initialization_custom_params(self) -> None:
         """Test ML regulator initialization with custom parameters."""
@@ -150,62 +152,67 @@ class TestMLRegulator:
         assert isinstance(results["ml_features"], list)
 
     def test_training_data_update(self) -> None:
-        """Test training data update functionality."""
+        """Online training data is unlabeled feature windows."""
         regulator = MLRegulator(seed=42)
-
-        # Initially no training data
         assert len(regulator.training_features) == 0
-        assert len(regulator.training_labels) == 0
 
-        # Add some training data
-        features = np.random.rand(20).astype(np.float32)
-        regulator._update_training_data(features, True)
-
-        assert len(regulator.training_features) == 1
-        assert len(regulator.training_labels) == 1
-        assert regulator.training_labels[0] == 1
-
-        # Add more training data
-        for i in range(10):
-            features = np.random.rand(20).astype(np.float32)
-            is_collusion = i % 2 == 0  # Alternate between collusion and normal
-            regulator._update_training_data(features, is_collusion)
+        for _ in range(11):
+            regulator._update_training_data(np.random.rand(20).astype(np.float32))
 
         assert len(regulator.training_features) == 11
-        assert len(regulator.training_labels) == 11
+        assert not hasattr(regulator, "training_labels")
 
-    def test_model_retraining(self) -> None:
-        """Test ML model retraining functionality."""
+    def test_retraining_fits_only_the_anomaly_detector(self) -> None:
         regulator = MLRegulator(seed=42)
+        for _ in range(25):
+            regulator._update_training_data(np.random.rand(20).astype(np.float32))
 
-        # Add sufficient training data
-        for i in range(25):
-            features = np.random.rand(20).astype(np.float32)
-            is_collusion = i % 3 == 0  # Some collusion cases
-            regulator._update_training_data(features, is_collusion)
-
-        # Test retraining
         regulator._retrain_models()
 
-        # Models should still be available
-        assert regulator.anomaly_detector is not None
-        assert regulator.collusion_classifier is not None
+        assert hasattr(regulator.anomaly_detector[-1], "estimators_")
+        assert regulator.collusion_classifier is None
+        is_anomaly, _ = regulator._detect_ml_anomalies(np.random.rand(20))
+        assert isinstance(is_anomaly, (bool, np.bool_))
 
     def test_insufficient_training_data(self) -> None:
-        """Test retraining with insufficient training data."""
+        """Retraining with too little data leaves the detector unfitted."""
         regulator = MLRegulator(seed=42)
+        for _ in range(5):
+            regulator._update_training_data(np.random.rand(20).astype(np.float32))
 
-        # Add insufficient training data
-        for i in range(5):
-            features = np.random.rand(20).astype(np.float32)
-            regulator._update_training_data(features, i % 2 == 0)
-
-        # Retraining should not fail with insufficient data
         regulator._retrain_models()
 
-        # Models should still be available
-        assert regulator.anomaly_detector is not None
-        assert regulator.collusion_classifier is not None
+        assert not hasattr(regulator.anomaly_detector[-1], "estimators_")
+        assert regulator._detect_ml_anomalies(np.random.rand(20)) == (False, 0.0)
+
+    def test_rule_violations_do_not_train_the_classifier(self) -> None:
+        """Rule-based flags must not become classifier labels (circularity)."""
+        regulator = MLRegulator(seed=42, retrain_frequency=5, parallel_steps=2)
+        for step in range(30):
+            regulator.monitor_step(np.array([50.0, 50.0]), step)
+
+        assert regulator.collusion_classifier is None
+
+    def test_fit_classifier_enables_collusion_detection(self) -> None:
+        rng = np.random.default_rng(0)
+        X = np.vstack([rng.normal(0, 1, (50, 20)), rng.normal(3, 1, (50, 20))])
+        y = np.array([0] * 50 + [1] * 50)
+        regulator = MLRegulator(seed=42, ml_collusion_threshold=0.5)
+
+        regulator.fit_classifier(X, y)
+
+        assert regulator._classify_collusion(np.full(20, 3.0))[0]
+        assert not regulator._classify_collusion(np.zeros(20))[0]
+
+    def test_supplied_classifier_survives_reset(self) -> None:
+        rng = np.random.default_rng(0)
+        regulator = MLRegulator(seed=42)
+        regulator.fit_classifier(rng.normal(size=(40, 20)), np.arange(40) % 2)
+        classifier = regulator.collusion_classifier
+
+        regulator.reset(n_firms=2)
+
+        assert regulator.collusion_classifier is classifier
 
     def test_apply_penalties_with_ml(self) -> None:
         """Test penalty application including ML-based fines."""
@@ -231,9 +238,8 @@ class TestMLRegulator:
         regulator = MLRegulator(seed=42)
 
         # Add some training data
-        for i in range(10):
-            features = np.random.rand(20).astype(np.float32)
-            regulator._update_training_data(features, i % 2 == 0)
+        for _ in range(10):
+            regulator._update_training_data(np.random.rand(20).astype(np.float32))
 
         stats = regulator.get_ml_statistics()
 
@@ -247,8 +253,7 @@ class TestMLRegulator:
 
         assert stats["ml_enabled"] is True
         assert stats["training_samples"] == 10
-        assert "collusion_rate" in stats
-        assert "normal_rate" in stats
+        assert stats["classifier_fitted"] is False
 
     def test_get_ml_statistics_disabled(self) -> None:
         """Test ML statistics when ML is disabled."""
@@ -267,21 +272,13 @@ class TestMLRegulator:
             prices = np.array([50.0 + i, 55.0 + i, 60.0 + i])
             regulator.monitor_step(prices, i)
 
-        # Add training data
-        features = np.random.rand(20).astype(np.float32)
-        regulator._update_training_data(features, True)
+        regulator._update_training_data(np.random.rand(20).astype(np.float32))
 
-        # Reset
         regulator.reset(n_firms=3)
 
-        # Check that state is reset
         assert len(regulator.training_features) == 0
-        assert len(regulator.training_labels) == 0
         assert regulator.step_count == 0
-
-        # Models should be reinitialized
         assert regulator.anomaly_detector is not None
-        assert regulator.collusion_classifier is not None
 
     def test_error_handling_in_ml_methods(self) -> None:
         """Test error handling in ML methods."""

@@ -7,7 +7,7 @@ collusion detector, and synthetic data generation functionality.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -45,7 +45,7 @@ class TestFeatureExtractor:
         }
 
         # Create step data
-        steps = cast(List[Dict[str, Any]], [])
+        steps = cast(list[dict[str, Any]], [])
         np.random.seed(42)
         n_steps = 20
 
@@ -156,8 +156,8 @@ class TestFeatureExtractor:
         extractor = FeatureExtractor()
 
         # Create multiple log files
-        log_files: List[Union[str, Path]] = []
-        for i in range(3):
+        log_files: list[str | Path] = []
+        for _ in range(3):
             log_files.append(self.create_mock_log_file(tmp_path))
 
         features = extractor.extract_features_batch(log_files)
@@ -330,7 +330,7 @@ class TestSyntheticLabels:
     def test_generate_synthetic_labels(self, tmp_path: Path) -> None:
         """Test synthetic label generation."""
         # Create mock log files
-        log_files: List[Union[str, Path]] = []
+        log_files: list[str | Path] = []
         for i in range(5):
             log_file = tmp_path / f"episode_{i}.jsonl"
             # Create a simple mock log file
@@ -388,7 +388,7 @@ class TestIntegration:
     def test_full_pipeline(self, tmp_path: Path) -> None:
         """Test the complete ML detector pipeline."""
         # Create mock log files
-        log_files: List[Union[str, Path]] = []
+        log_files: list[str | Path] = []
         for i in range(10):
             log_file = tmp_path / f"episode_{i}.jsonl"
 
@@ -526,3 +526,50 @@ class TestIntegration:
         assert predictions[0] in [0, 1]
         assert probabilities.shape == (1, 2)
         assert np.allclose(np.sum(probabilities, axis=1), 1.0)
+
+
+class TestStrategicFeatures:
+    """Features describing how firms react to each other."""
+
+    @staticmethod
+    def _features(prices: list[list[float]]) -> dict[str, float]:
+        from regulator.detectors.ml_detector import (
+            STRATEGIC_FEATURE_NAMES,
+            _strategic_features,
+        )
+
+        values = _strategic_features(np.array(prices, dtype=float), 10.0, 100.0)
+        return dict(zip(STRATEGIC_FEATURE_NAMES, values, strict=True))
+
+    def test_markup_normalized_by_demand(self) -> None:
+        f = self._features([[55.0, 55.0]] * 5)
+
+        assert f["normalized_markup"] == pytest.approx(0.5)
+        assert f["rigidity"] == 1.0
+        assert f["cut_rate"] == 0.0
+
+    def test_follower_shows_lead_lag(self) -> None:
+        leader = [40, 45, 42, 48, 44, 50, 46, 41, 47, 43]
+        follower = [40] + leader[:-1]  # copies the leader one period later
+        f = self._features([[a, b] for a, b in zip(leader, follower, strict=True)])
+
+        assert f["lead_lag_corr"] > 0.4
+
+    def test_punish_and_return(self) -> None:
+        # Firm 0 cuts at t=3; firm 1 retaliates at t=4; both return by t=6
+        prices = [[50, 50], [50, 50], [50, 50], [42, 50], [42, 42], [50, 46], [50, 50]]
+        f = self._features(prices)
+
+        assert f["cut_rate"] > 0
+        assert f["rival_response_to_cut"] < -0.1
+        assert f["cut_recovery_rate"] == 1.0
+
+    def test_marginal_cost_read_from_header(self) -> None:
+        from regulator.detectors.ml_detector import _environment_params
+
+        header = {"environment_params": {"marginal_cost": 15.0}}
+        old = {"episode_summary": {"environment_params": {"marginal_cost": 12.0}}}
+
+        assert _environment_params(header)["marginal_cost"] == 15.0
+        assert _environment_params(old)["marginal_cost"] == 12.0
+        assert _environment_params(None) == {}

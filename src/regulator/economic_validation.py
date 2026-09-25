@@ -7,7 +7,7 @@ by the simulation is consistent and economically plausible.
 
 import math
 import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -49,14 +49,14 @@ class EconomicValidator:
 
     def validate_step_data(
         self,
-        prices: List[float],
+        prices: list[float],
         market_price: float,
         total_demand: float,
-        individual_quantities: List[float],
-        market_shares: Optional[List[float]] = None,
-        profits: Optional[List[float]] = None,
+        individual_quantities: list[float],
+        market_shares: list[float] | None = None,
+        profits: list[float] | None = None,
         demand_shock: float = 0.0,
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         Validate a single step of economic data.
 
@@ -125,7 +125,7 @@ class EconomicValidator:
         # and fixed costs that may be enabled in the environment
         if profits and individual_quantities:
             for i, (price, quantity, profit) in enumerate(
-                zip(prices, individual_quantities, profits)
+                zip(prices, individual_quantities, profits, strict=False)
             ):
                 # Basic sanity check: profits should be reasonable relative to revenue
                 revenue = price * quantity
@@ -161,10 +161,10 @@ class EconomicValidator:
 
     def _validate_economic_relationships(
         self,
-        prices: List[float],
-        market_shares: List[float],
-        individual_quantities: List[float],
-        errors: List[str],
+        prices: list[float],
+        market_shares: list[float],
+        individual_quantities: list[float],
+        errors: list[str],
     ) -> None:
         """Validate economic relationships between prices, shares, and quantities."""
 
@@ -193,11 +193,20 @@ class EconomicValidator:
                     # Handle cases where correlation can't be computed
                     pass
 
-            # Check that market shares are reasonable (not too concentrated)
+            # A near-monopoly share is expected for the cheapest firm when
+            # prices differ a lot; it is only inconsistent for a firm that
+            # isn't the cheapest
             max_share = max(market_shares)
-            if max_share > 0.99:  # No firm should have >99% market share (very lenient)
+            leader = market_shares.index(max_share)
+            if (
+                len(prices) > 1
+                and max_share > 0.99
+                and prices[leader] > min(prices) + self.tolerance
+            ):
                 errors.append(
-                    f"Market share too concentrated: max share is {max_share}"
+                    f"Market share too concentrated: firm {leader} has {max_share} "
+                    f"of the market at price {prices[leader]} above the minimum "
+                    f"{min(prices)}"
                 )
 
         # Check that quantities are non-negative
@@ -207,8 +216,8 @@ class EconomicValidator:
                     errors.append(f"Firm {i} has negative quantity: {quantity}")
 
     def validate_episode_consistency(
-        self, episode_data: Dict[str, Any]
-    ) -> Tuple[bool, List[str]]:
+        self, episode_data: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """
         Validate consistency across an entire episode.
 
@@ -248,7 +257,7 @@ class EconomicValidator:
         return len(errors) == 0, errors
 
     def _validate_episode_level_consistency(
-        self, episode_data: Dict[str, Any], errors: List[str]
+        self, episode_data: dict[str, Any], errors: list[str]
     ) -> None:
         """Validate consistency at the episode level."""
         steps = episode_data.get("steps", [])
@@ -279,7 +288,7 @@ class EconomicValidator:
             expected_total_profits = step_profits_sum + total_penalties
 
             for i, (final, calculated) in enumerate(
-                zip(final_total_profits, expected_total_profits)
+                zip(final_total_profits, expected_total_profits, strict=False)
             ):
                 # Use a very lenient tolerance for profit aggregation due to potential differences
                 # in how profits are calculated vs accumulated (e.g., different cost structures)
@@ -310,11 +319,11 @@ class EconomicValidator:
 
 
 def validate_economic_data(
-    episode_data: Dict[str, Any],
+    episode_data: dict[str, Any],
     demand_intercept: float = 100.0,
     demand_slope: float = -1.0,
     marginal_cost: float = 10.0,
-) -> Tuple[bool, List[str]]:
+) -> tuple[bool, list[str]]:
     """
     Convenience function to validate economic data.
 
@@ -336,7 +345,7 @@ def validate_economic_data(
     return validator.validate_episode_consistency(episode_data)
 
 
-def check_economic_plausibility(episode_data: Dict[str, Any]) -> Dict[str, Any]:
+def check_economic_plausibility(episode_data: dict[str, Any]) -> dict[str, Any]:
     """
     Check economic plausibility of episode data and return summary statistics.
 

@@ -11,27 +11,28 @@ It measures detection accuracy and F1 score for each tier.
 """
 
 import argparse
-import numpy as np
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-from regulator.cartel.cartel_env import CartelEnv
-from regulator.agents.firm_agents import TitForTatAgent, RandomAgent
+import numpy as np
+
 from regulator.agents.adaptive_agent import AdaptiveAgent
-from regulator.agents.stealth_agent import StealthCollusiveAgent
+from regulator.agents.firm_agents import RandomAgent, TitForTatAgent
 from regulator.agents.regulator import Regulator
+from regulator.agents.stealth_agent import StealthCollusiveAgent
+from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.episode_runner import run_episode_with_regulator_logging
 
 
 def run_tier(
     tier_name: str,
-    env_params: Dict[str, Any],
-    agent_types: List[str],
+    env_params: dict[str, Any],
+    agent_types: list[str],
     n_episodes: int = 5,
     steps: int = 100,
-    regulator_config: Dict[str, Any] = None,
-) -> Dict[str, Any]:
+    regulator_config: dict[str, Any] = None,
+) -> dict[str, Any]:
     """Runs a set of episodes for a specific complexity tier."""
     print(f"\n--- Running Tier: {tier_name} ---")
 
@@ -66,12 +67,12 @@ def run_tier(
             agent_types=agent_types,
         )
         results.append(res)
-        print(f"  Episode {ep+1}/{n_episodes} complete.")
+        print(f"  Episode {ep + 1}/{n_episodes} complete.")
 
     return summarize_tier(results)
 
 
-def summarize_tier(tier_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_tier(tier_results: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculates summary statistics for a tier."""
     parallel_violations = []
     structural_violations = []
@@ -102,7 +103,9 @@ def summarize_tier(tier_results: List[Dict[str, Any]]) -> Dict[str, Any]:
             np.mean(
                 [
                     1 if (p > 0 or s > 0) else 0
-                    for p, s in zip(parallel_violations, structural_violations)
+                    for p, s in zip(
+                        parallel_violations, structural_violations, strict=True
+                    )
                 ]
             )
         ),

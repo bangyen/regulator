@@ -14,11 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
+from regulator.agents.firm_agents import BestResponseAgent, RandomAgent, TitForTatAgent
 from regulator.agents.regulator import Regulator
-from regulator.agents.firm_agents import RandomAgent, BestResponseAgent, TitForTatAgent
 from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.episode_runner import run_episode_with_regulator_logging
-from regulator.episode_logging.episode_logger import EpisodeLogger
+from regulator.episode_logging.logger import Logger
 
 
 class TestRegulatorMonitoringIntegration:
@@ -205,8 +205,8 @@ class TestRegulatorMonitoringIntegration:
             regulator = Regulator(seed=42)
 
             # Create logger
-            logger = EpisodeLogger(
-                log_file=Path(temp_dir) / "test_regulator_logging.jsonl", n_firms=2
+            logger = Logger(
+                log_dir=temp_dir, episode_id="test_regulator_logging", n_firms=2
             )
 
             # Run episode with logging

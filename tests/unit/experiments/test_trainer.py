@@ -4,17 +4,18 @@ Tests for the trainer module.
 This module tests the training functions for ML models and episode running.
 """
 
-import pytest
 import json
 import tempfile
-import numpy as np
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, mock_open, patch
+
+import numpy as np
+import pytest
 
 from regulator.experiments.trainer import (
     create_demo_episodes,
-    train_and_evaluate_detector,
     run_episode,
+    train_and_evaluate_detector,
     train_ml_detector,
 )
 
@@ -48,7 +49,7 @@ class TestCreateDemoEpisodes:
             episode_files = create_demo_episodes(output_dir, n_episodes)
 
             # Check content of first file
-            with open(episode_files[0], "r") as f:
+            with open(episode_files[0]) as f:
                 content = f.read().strip()
                 data = json.loads(content)
 
@@ -229,18 +230,18 @@ class TestTrainAndEvaluateDetector:
 class TestRunEpisode:
     """Test the run_episode function."""
 
-    @patch("regulator.experiments.trainer.print")
-    def test_run_episode_basic(self, mock_print):
+    def test_run_episode_basic(self, caplog):
         """Test basic episode running."""
         firms = ["firm1", "firm2", "firm3"]
         steps = 50
         seed = 42
         log_dir = "test_logs"
 
-        result = run_episode(firms, steps, seed=seed, log_dir=log_dir)
+        with caplog.at_level("INFO", logger="regulator.experiments.trainer"):
+            result = run_episode(firms, steps, seed=seed, log_dir=log_dir)
 
-        # Verify print calls
-        assert mock_print.call_count >= 2
+        # Verify progress is logged
+        assert len(caplog.records) >= 2
 
         # Verify result structure
         assert result["episode_id"] == f"episode_{seed}"
@@ -500,7 +501,6 @@ class TestTrainMlDetector:
                 patch("builtins.open", new_callable=mock_open),
                 patch("json.dump"),
             ):
-
                 mock_create_demo.return_value = []
                 mock_train_eval.return_value = (
                     Mock(),

@@ -19,7 +19,7 @@ source venv/bin/activate  # On macOS/Linux
 # venv\Scripts\activate   # On Windows
 
 # Install dependencies (if not already done)
-pip install -e .
+pip install -e ".[dashboard]"
 
 # Run dashboard
 python dashboard/main.py
@@ -47,15 +47,21 @@ python dashboard/main.py
 ```
 
 ### 3. Interact
-- **Refresh** - Click refresh button or wait for auto-update (5s)
-- **Switch Views** - Toggle between Price and Risk charts
-- **Export Data** - Click Export button to download JSON
+- **Run** - Pick up to three firms, the regulator, steps and a seed (blank =
+  random), then click Run Experiment
+- **Refresh** - Data reloads every 30 seconds and after each run
+- **Switch Views** - Toggle the main chart between Price and Profit
+- **Export Data** - Click Export (Enforcement view) to download JSON
+
+Logs are read from `logs/` at the repo root; set `REGULATOR_LOG_DIR` to use
+another directory. `DASHBOARD_HOST`, `DASHBOARD_PORT` and `FLASK_DEBUG`
+control the server.
 
 ## Features
 
-- **Real-time Monitoring** - Auto-refreshes every 5 seconds
+- **Real-time Monitoring** - Auto-refreshes every 30 seconds
 - **Key Metrics** - Price, violations, fines, risk scores
-- **Interactive Charts** - Switchable price/risk views
+- **Interactive Charts** - Switchable price/profit views
 - **Activity Table** - Recent step-by-step data
 - **Data Export** - Download JSON snapshots
 

@@ -6,7 +6,7 @@ structured data logging, making it easy to integrate logging into existing
 environment loops.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -16,14 +16,14 @@ from regulator.episode_logging.logger import Logger
 
 def run_episode_with_logging(
     env: CartelEnv,
-    agents: List[Any],
-    logger: Optional[Logger] = None,
+    agents: list[Any],
+    logger: Logger | None = None,
     log_dir: str = "logs",
-    episode_id: Optional[str] = None,
-    agent_types: Optional[List[str]] = None,
-    regulator_flags: Optional[Dict[str, Any]] = None,
-    additional_info: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    episode_id: str | None = None,
+    agent_types: list[str] | None = None,
+    regulator_flags: dict[str, Any] | None = None,
+    additional_info: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Run a CartelEnv episode with integrated structured data logging.
 
@@ -58,7 +58,7 @@ def run_episode_with_logging(
             agent.reset()
 
     # Track episode data
-    episode_data: Dict[str, Any] = {
+    episode_data: dict[str, Any] = {
         "total_steps": 0,
         "total_rewards": np.zeros(env.n_firms),
         "episode_prices": [],
@@ -73,7 +73,7 @@ def run_episode_with_logging(
     while step < env.max_steps:
         # Each agent chooses a price
         prices = []
-        for i, agent in enumerate(agents):
+        for agent in agents:
             price = agent.choose_price(obs, info=info)
             prices.append(price)
 
@@ -82,13 +82,15 @@ def run_episode_with_logging(
         # Take step in environment
         next_obs, rewards, terminated, truncated, step_info = env.step(action)
 
-        # Update agent histories
+        # Update agent histories; learning agents also see their profit
         for i, agent in enumerate(agents):
             if hasattr(agent, "update_history"):
                 rival_prices = np.array(
                     [prices[j] for j in range(len(prices)) if j != i]
                 )
                 agent.update_history(prices[i], rival_prices)
+            if hasattr(agent, "observe_outcome"):
+                agent.observe_outcome(float(rewards[i]))
 
         # Prepare additional info for logging
         step_additional_info = additional_info.copy() if additional_info else {}
@@ -205,13 +207,13 @@ def run_episode_with_logging(
 
 def run_episode_with_regulator_logging(
     env: CartelEnv,
-    agents: List[Any],
-    regulator: Any,
-    logger: Optional[Logger] = None,
+    agents: list[Any],
+    regulator: Any | None,
+    logger: Logger | None = None,
     log_dir: str = "logs",
-    episode_id: Optional[str] = None,
-    agent_types: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    episode_id: str | None = None,
+    agent_types: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Run a CartelEnv episode with regulator monitoring and integrated logging.
 
@@ -221,7 +223,8 @@ def run_episode_with_regulator_logging(
     Args:
         env: CartelEnv environment instance
         agents: List of agent instances
-        regulator: Regulator instance for monitoring
+        regulator: Regulator instance for monitoring, or None for an
+            unregulated episode (no detection, no fines)
         logger: Optional Logger instance (created if None)
         log_dir: Directory to save log files
         episode_id: Unique identifier for this episode
@@ -276,20 +279,31 @@ def run_episode_with_regulator_logging(
     while step < env.max_steps:
         # Each agent chooses a price
         prices = []
-        for i, agent in enumerate(agents):
+        for agent in agents:
             price = agent.choose_price(obs, info=info)
             prices.append(price)
 
         action = np.array(prices, dtype=np.float32)
 
         # Regulator monitors the step
-        detection_results = regulator.monitor_step(action, step, info)
+        if regulator is not None:
+            detection_results = regulator.monitor_step(action, step, info)
+        else:
+            detection_results = {
+                "parallel_violation": False,
+                "structural_break_violation": False,
+                "fines_applied": np.zeros(env.n_firms),
+                "violation_details": [],
+            }
 
         # Take step in environment
         next_obs, rewards, terminated, truncated, step_info = env.step(action)
 
         # Apply regulator penalties
-        modified_rewards = regulator.apply_penalties(rewards, detection_results)
+        if regulator is not None:
+            modified_rewards = regulator.apply_penalties(rewards, detection_results)
+        else:
+            modified_rewards = np.asarray(rewards, dtype=float)
 
         # Update agent histories
         for i, agent in enumerate(agents):
@@ -298,6 +312,9 @@ def run_episode_with_regulator_logging(
                     [prices[j] for j in range(len(prices)) if j != i]
                 )
                 agent.update_history(prices[i], rival_prices)
+            # Learning agents see their profit after fines
+            if hasattr(agent, "observe_outcome"):
+                agent.observe_outcome(float(modified_rewards[i]))
 
         # Prepare regulator flags for logging
         regulator_flags = {
@@ -341,7 +358,9 @@ def run_episode_with_regulator_logging(
         # Update episode tracking
         episode_data["total_steps"] = step + 1
         episode_data["total_rewards"] += modified_rewards
-        episode_data["total_fines"] += np.sum(detection_results["fines_applied"])
+        episode_data["total_fines"] += np.sum(
+            detection_results["fines_applied"]
+        ) + np.sum(detection_results.get("ml_fines_applied", 0.0))
         prices_list = episode_data["episode_prices"]
         if isinstance(prices_list, list):
             prices_list.append(prices.copy())

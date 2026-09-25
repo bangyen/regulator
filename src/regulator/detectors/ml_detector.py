@@ -6,15 +6,18 @@ by analyzing price patterns, profit margins, and market dynamics from episode lo
 """
 
 import json
+import logging
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+logger = logging.getLogger(__name__)
 
 try:
     from lightgbm import LGBMClassifier
@@ -51,6 +54,100 @@ def _safe_correlation(x: np.ndarray, y: np.ndarray) -> float:
         return 0.0
 
 
+def _environment_params(episode_info: dict[str, Any] | None) -> dict[str, Any]:
+    """Environment parameters from an episode header (current or old layout)."""
+    if not episode_info:
+        return {}
+    params = episode_info.get("environment_params")
+    if params is None:
+        params = episode_info.get("episode_summary", {}).get("environment_params")
+    return dict(params or {})
+
+
+STRATEGIC_FEATURE_NAMES = [
+    "normalized_markup",
+    "sync_change_corr",
+    "lead_lag_corr",
+    "rigidity",
+    "cut_rate",
+    "rival_response_to_cut",
+    "cut_recovery_rate",
+]
+
+
+def _strategic_features(
+    prices: np.ndarray,
+    marginal_cost: float,
+    demand_intercept: float,
+    cut_threshold: float = 0.03,
+    recovery_window: int = 3,
+) -> np.ndarray:
+    """
+    Features about how firms respond to each other, not just price levels.
+
+    - normalized_markup: mean (p - mc) / (a - mc); 0 at marginal cost, 1 at
+      the demand choke price
+    - sync_change_corr: mean same-period correlation of firms' price changes
+    - lead_lag_corr: mean correlation of one firm's change with a rival's
+      change in the next period (following/matching)
+    - rigidity: share of periods in which no firm moves by more than 0.5%
+    - cut_rate: share of firm-periods with an unprovoked unilateral cut of
+      more than cut_threshold (relative)
+    - rival_response_to_cut: mean relative price change of rivals in the
+      period after a cut (negative = retaliation)
+    - cut_recovery_rate: share of cuts where the cutter restores at least
+      half the cut within recovery_window periods (punish-and-return)
+    """
+    n_steps, n_firms = prices.shape
+    features = np.zeros(len(STRATEGIC_FEATURE_NAMES))
+    span = max(demand_intercept - marginal_cost, 1e-6)
+    features[0] = float(np.mean((prices - marginal_cost) / span))
+    if n_steps < 3:
+        return features
+
+    changes = np.diff(prices, axis=0)
+    relative = changes / np.maximum(prices[:-1], 1e-6)
+
+    sync, lead_lag = [], []
+    for i in range(n_firms):
+        for j in range(n_firms):
+            if i == j:
+                continue
+            if i < j:
+                sync.append(_safe_correlation(changes[:, i], changes[:, j]))
+            lead_lag.append(_safe_correlation(changes[:-1, i], changes[1:, j]))
+    features[1] = float(np.mean(sync)) if sync else 0.0
+    features[2] = float(np.mean(lead_lag)) if lead_lag else 0.0
+
+    features[3] = float(np.mean(np.all(np.abs(relative) < 0.005, axis=1)))
+
+    responses, recoveries, n_cuts = [], [], 0
+    for t in range(len(relative) - 1):
+        for i in range(n_firms):
+            rivals = [j for j in range(n_firms) if j != i]
+            unilateral = relative[t, i] < -cut_threshold and all(
+                relative[t, j] > -cut_threshold / 2 for j in rivals
+            )
+            # A cut that answers a rival's cut is a response, not a deviation
+            provoked = t > 0 and any(
+                relative[t - 1, j] < -cut_threshold for j in rivals
+            )
+            if not unilateral or provoked:
+                continue
+            n_cuts += 1
+            responses.append(float(np.mean(relative[t + 1, rivals])))
+            cut_size = -changes[t, i]
+            window = prices[t + 2 : t + 2 + recovery_window, i]
+            recovered = window.size > 0 and window.max() >= prices[t + 1, i] + (
+                cut_size / 2
+            )
+            recoveries.append(float(recovered))
+    features[4] = n_cuts / (len(relative) * n_firms)
+    features[5] = float(np.mean(responses)) if responses else 0.0
+    features[6] = float(np.mean(recoveries)) if recoveries else 0.0
+    return features
+
+
 class FeatureExtractor:
     """
     Extracts features from episode logs for collusion detection.
@@ -70,7 +167,7 @@ class FeatureExtractor:
             raise ValueError("Minimum steps must be at least 3 for meaningful features")
         self.min_steps = min_steps
 
-    def extract_features_from_log(self, log_file: Union[str, Path]) -> np.ndarray:
+    def extract_features_from_log(self, log_file: str | Path) -> np.ndarray:
         """
         Extract features from a single episode log file.
 
@@ -91,7 +188,7 @@ class FeatureExtractor:
         steps_data = []
         episode_info = None
 
-        with open(log_path, "r") as f:
+        with open(log_path) as f:
             for line in f:
                 try:
                     data = json.loads(line.strip())
@@ -110,7 +207,7 @@ class FeatureExtractor:
         return self._extract_features_from_steps(steps_data, episode_info)
 
     def _extract_features_from_steps(
-        self, steps_data: List[Dict[str, Any]], episode_info: Optional[Dict[str, Any]]
+        self, steps_data: list[dict[str, Any]], episode_info: dict[str, Any] | None
     ) -> np.ndarray:
         """
         Extract features from parsed step data.
@@ -158,14 +255,9 @@ class FeatureExtractor:
         features.append(np.mean(autocorrs) if autocorrs else 0.0)
 
         # 3. Profit margin features
-        # Calculate profit margins (assuming marginal cost from episode info)
-        marginal_cost = 10.0  # Default
-        if episode_info and "environment_params" in episode_info.get(
-            "episode_summary", {}
-        ):
-            marginal_cost = episode_info["episode_summary"]["environment_params"].get(
-                "marginal_cost", 10.0
-            )
+        # Calculate profit margins using the episode's marginal cost
+        env_params = _environment_params(episode_info)
+        marginal_cost = float(env_params.get("marginal_cost", 10.0))
 
         profit_margins = (prices - marginal_cost) / prices
         profit_margins = np.clip(profit_margins, 0, 1)  # Clip to [0, 1]
@@ -230,9 +322,15 @@ class FeatureExtractor:
         features.append(n_steps)
         features.append(n_firms)
 
+        # 11. Strategic-interaction features (firm-count independent)
+        demand_intercept = float(env_params.get("demand_intercept", 100.0))
+        features.extend(
+            _strategic_features(prices, marginal_cost, demand_intercept).tolist()
+        )
+
         return np.array(features, dtype=np.float32)  # type: ignore[no-any-return]
 
-    def extract_features_batch(self, log_files: List[Union[str, Path]]) -> np.ndarray:
+    def extract_features_batch(self, log_files: list[str | Path]) -> np.ndarray:
         """
         Extract features from multiple log files.
 
@@ -251,7 +349,7 @@ class FeatureExtractor:
                 features_list.append(features)
                 valid_files.append(log_file)
             except (ValueError, FileNotFoundError) as e:
-                print(f"Warning: Skipping {log_file}: {e}")
+                logger.warning("Skipping %s: %s", log_file, e)
                 continue
 
         if not features_list:
@@ -271,7 +369,7 @@ class CollusionDetector:
     def __init__(
         self,
         model_type: str = "logistic",
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         **model_kwargs: Any,
     ) -> None:
         """
@@ -306,7 +404,7 @@ class CollusionDetector:
 
         self.scaler = StandardScaler()
         self.is_trained = False
-        self.feature_names: Optional[List[str]] = None
+        self.feature_names: list[str] | None = None
 
     def train(
         self,
@@ -314,7 +412,7 @@ class CollusionDetector:
         y: np.ndarray,
         test_size: float = 0.2,
         validation_split: bool = True,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Train the collusion detector.
 
@@ -397,7 +495,7 @@ class CollusionDetector:
         X_scaled = self.scaler.transform(X)
         return np.array(self.model.predict_proba(X_scaled))  # type: ignore[no-any-return]
 
-    def get_feature_importance(self) -> Optional[np.ndarray]:
+    def get_feature_importance(self) -> np.ndarray | None:
         """
         Get feature importance scores.
 
@@ -416,10 +514,10 @@ class CollusionDetector:
 
 
 def generate_synthetic_labels(
-    log_files: List[Union[str, Path]],
+    log_files: list[str | Path],
     collusion_ratio: float = 0.5,
-    random_state: Optional[int] = None,
-) -> Tuple[List[Union[str, Path]], np.ndarray]:
+    random_state: int | None = None,
+) -> tuple[list[str | Path], np.ndarray]:
     """
     Generate synthetic labels for collusion detection.
 
@@ -444,7 +542,7 @@ def generate_synthetic_labels(
     for log_file in log_files:
         try:
             # Parse log file to extract agent types and behavior patterns
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
 
             # Extract episode header
@@ -540,7 +638,7 @@ def generate_synthetic_labels(
             labels.append(1 if is_collusive else 0)
 
         except Exception as e:
-            print(f"Warning: Error processing {log_file}: {e}")
+            logger.warning("Error processing %s: %s", log_file, e)
             continue
 
     return valid_files, np.array(labels, dtype=int)

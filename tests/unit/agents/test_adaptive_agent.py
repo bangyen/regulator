@@ -5,8 +5,9 @@ This module tests the AdaptiveAgent class including learning behavior,
 strategy adaptation, and performance tracking.
 """
 
-import numpy as np
 from unittest.mock import MagicMock
+
+import numpy as np
 
 from regulator.agents.adaptive_agent import AdaptiveAgent
 

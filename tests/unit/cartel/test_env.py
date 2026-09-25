@@ -335,9 +335,9 @@ class TestCartelEnv:
         assert len(rewards) == 2, "Should have rewards for 2 firms"
         assert np.allclose(info["market_price"], 25.0)
         assert np.allclose(info["total_demand"], 75.0)
-        assert (
-            len(info["individual_quantities"]) == 2
-        ), "Should have quantities for 2 firms"
+        assert len(info["individual_quantities"]) == 2, (
+            "Should have quantities for 2 firms"
+        )
         assert np.allclose(np.sum(info["individual_quantities"]), 75.0, rtol=1e-3)
 
     def test_step_reward_calculation_edge_cases(self) -> None:
@@ -354,16 +354,13 @@ class TestCartelEnv:
 
         obs, _ = env.reset(seed=42)
 
-        # Test case: prices below marginal cost
-        # Note: Due to learning curves, costs decrease with cumulative production,
-        # so profits may be positive even when prices are below marginal cost
+        # Prices below marginal cost lose money (unless demand is zero)
         prices = np.array([5.0, 8.0], dtype=np.float32)
         next_obs, rewards, terminated, truncated, info = env.step(prices)
 
-        # With learning curves, profits can be positive even when price < marginal cost
-        # The important thing is that the profit calculation is consistent
         assert len(rewards) == 2
-        assert np.all(np.isfinite(rewards))
+        sold = info["individual_quantities"] > 0
+        assert np.all(rewards[sold] < 0)
 
         # Test case: very high prices (demand should be zero)
         prices = np.array([150.0, 200.0], dtype=np.float32)
@@ -431,7 +428,7 @@ class TestCartelEnv:
         prices = np.array([20.0, 30.0], dtype=np.float32)
         total_expected_profits = np.array([0.0, 0.0], dtype=np.float32)
 
-        for step in range(3):
+        for _ in range(3):
             obs, rewards, terminated, truncated, info = env.step(prices)
             total_expected_profits += rewards
 
@@ -476,10 +473,7 @@ class TestCartelEnv:
         profits = env._calculate_profits(prices, quantities)
 
         # Expected: (20-10)*10 = 100, (30-10)*15 = 300
-        # But with learning curves, costs may be different
-        expected_profits = np.array([100.0, 300.0])
-        # Allow for some tolerance due to learning curves
-        assert np.allclose(profits, expected_profits, rtol=0.1)
+        assert np.allclose(profits, [100.0, 300.0])
 
     def test_profit_calculation_negative_profits(self) -> None:
         """Test that negative profits are allowed for economic realism."""
@@ -500,12 +494,8 @@ class TestCartelEnv:
         # Should be negative since prices < marginal cost
         assert np.all(profits < 0.0)
 
-        # Check that profits are negative (exact values may vary due to learning curves)
         # Expected: (10-20)*5 = -50, (15-20)*8 = -40
-        # But with learning curves, costs may be different
-        assert np.all(
-            profits < 0.0
-        ), "Profits should be negative when prices < marginal cost"
+        assert np.allclose(profits, [-50.0, -40.0])
 
     def test_price_change_constraint(self) -> None:
         """Test that price changes are constrained for market stability."""

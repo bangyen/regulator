@@ -13,10 +13,12 @@ import sys
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
-from flask import Flask, Response, jsonify, render_template
+from flask import Flask, Response, jsonify, render_template, request
+
+from regulator.experiments.experiment_runner import AGENT_TYPES, REGULATOR_CONFIGS
 
 # Configure logging
 logging.basicConfig(
@@ -27,17 +29,28 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Track running experiments
-running_experiments = {"status": "idle", "progress": None, "error_message": None}
+# Track running experiments (mutated in place; guarded by run_lock on start)
+running_experiments: dict[str, Any] = {
+    "status": "idle",
+    "progress": None,
+    "error_message": None,
+}
+run_lock = threading.Lock()
 
 
-def load_latest_experiment() -> Optional[Dict[str, Any]]:
+def get_log_dir() -> Path:
+    """Directory holding experiment logs (override with REGULATOR_LOG_DIR)."""
+    default = Path(__file__).parent.parent / "logs"
+    return Path(os.environ.get("REGULATOR_LOG_DIR", default))
+
+
+def load_latest_experiment() -> dict[str, Any] | None:
     """Load most recent experiment data from logs directory.
 
     Returns parsed experiment data including step-by-step metrics,
     or None if no experiment logs are found.
     """
-    log_dir = Path(__file__).parent.parent / "logs"
+    log_dir = get_log_dir()
     if not log_dir.exists():
         logger.warning(f"Log directory does not exist: {log_dir}")
         return None
@@ -50,7 +63,7 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
     steps = []
     n_firms = 2  # Default
     try:
-        with open(log_files[0], "r") as f:
+        with open(log_files[0]) as f:
             for line in f:
                 if line.strip():
                     data = json.loads(line)
@@ -66,7 +79,7 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
         return None
 
 
-def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_metrics(data: dict[str, Any]) -> dict[str, Any]:
     """Calculate aggregate metrics from experiment data.
 
     Computes summary statistics including price averages, violation counts,
@@ -123,7 +136,7 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
+def extract_time_series(data: dict[str, Any]) -> dict[str, list[Any]]:
     """Extract time series data for visualization.
 
     Transforms step-by-step experiment data into time series arrays
@@ -189,7 +202,7 @@ def index() -> str:
 
 
 @app.route("/api/data")
-def get_data() -> Union[Tuple[Response, int], Response]:
+def get_data() -> tuple[Response, int] | Response:
     """API endpoint for dashboard data.
 
     Returns combined metrics and time series data from the most recent
@@ -213,7 +226,7 @@ def list_experiments() -> Response:
     Returns metadata for the 10 most recent experiment runs,
     including filenames and modification timestamps.
     """
-    log_dir = Path(__file__).parent.parent / "logs"
+    log_dir = get_log_dir()
     if not log_dir.exists():
         return jsonify([])
 
@@ -234,17 +247,75 @@ def list_experiments() -> Response:
     return jsonify(experiments)
 
 
-def run_experiment_background(steps: int, firms: List[str]) -> None:
+MAX_STEPS = 1000
+MAX_FIRMS = 5
+DEFAULT_RUN: dict[str, Any] = {
+    "firms": ["random", "titfortat"],
+    "regulator": "rule_based",
+    "steps": 50,
+    "seed": None,
+}
+
+
+def parse_run_request(payload: dict[str, Any] | None) -> dict[str, Any]:
+    """Validate an experiment request, filling defaults for missing fields.
+
+    Raises:
+        ValueError: with a user-facing message when a field is invalid
+    """
+    payload = payload or {}
+    config = {**DEFAULT_RUN, **{k: v for k, v in payload.items() if v is not None}}
+
+    firms = config["firms"]
+    if not isinstance(firms, list) or not 1 <= len(firms) <= MAX_FIRMS:
+        raise ValueError(f"firms must be a list of 1-{MAX_FIRMS} agent types")
+    for firm in firms:
+        if (
+            not isinstance(firm, str)
+            or firm.lower().replace("_", "").replace("-", "") not in AGENT_TYPES
+        ):
+            raise ValueError(
+                f"Unknown agent type {firm!r}; valid: {', '.join(AGENT_TYPES)}"
+            )
+
+    if config["regulator"] not in REGULATOR_CONFIGS:
+        raise ValueError(
+            f"Unknown regulator {config['regulator']!r}; "
+            f"valid: {', '.join(REGULATOR_CONFIGS)}"
+        )
+
+    steps = config["steps"]
+    if not isinstance(steps, int) or isinstance(steps, bool):
+        raise ValueError("steps must be an integer")
+    if not 5 <= steps <= MAX_STEPS:
+        raise ValueError(f"steps must be between 5 and {MAX_STEPS}")
+
+    seed = config["seed"]
+    if seed is None:
+        seed = random.randint(1, 999999)
+    elif not isinstance(seed, int) or isinstance(seed, bool) or seed < 0:
+        raise ValueError("seed must be a non-negative integer")
+
+    return {
+        "firms": firms,
+        "regulator": config["regulator"],
+        "steps": steps,
+        "seed": seed,
+    }
+
+
+def run_experiment_background(config: dict[str, Any]) -> None:
     """Run experiment in background thread.
 
     Executes the experiment runner script as a subprocess to avoid
     blocking the Flask server. Updates global status for polling.
+
+    Args:
+        config: Validated request from parse_run_request
     """
-    global running_experiments
     try:
-        running_experiments["status"] = "running"
         running_experiments["progress"] = 0
-        logger.info(f"Starting experiment: {steps} steps, firms={firms}")
+        logger.info(f"Starting experiment: {config}")
 
         project_root = Path(__file__).parent.parent
 
@@ -252,18 +323,19 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
         venv_python = project_root / "venv" / "bin" / "python3"
         python_cmd = str(venv_python) if venv_python.exists() else sys.executable
 
-        # Generate random seed for each experiment
-        seed = random.randint(1, 999999)
-
         cmd = [
             python_cmd,
             "scripts/run_experiment.py",
             "--steps",
-            str(steps),
+            str(config["steps"]),
             "--firms",
-            ",".join(firms),
+            ",".join(config["firms"]),
+            "--regulator",
+            config["regulator"],
             "--seed",
-            str(seed),
+            str(config["seed"]),
+            "--log-dir",
+            str(get_log_dir()),
         ]
 
         # Set up environment with project root in PYTHONPATH
@@ -278,10 +350,11 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
         running_experiments["progress"] = 100
         logger.info("Experiment completed successfully")
     except subprocess.CalledProcessError as e:
+        output = (e.stderr or e.stdout or "").strip()
         running_experiments["status"] = "error"
         running_experiments["progress"] = None
-        running_experiments["error_message"] = f"Process failed: {e.stderr[:200]}"
-        logger.error(f"Experiment failed: {e.stderr}")
+        running_experiments["error_message"] = f"Process failed: {output[-200:]}"
+        logger.error(f"Experiment failed: {output}")
     except Exception as e:
         running_experiments["status"] = "error"
         running_experiments["progress"] = None
@@ -289,32 +362,48 @@ def run_experiment_background(steps: int, firms: List[str]) -> None:
         logger.error(f"Experiment error: {e}")
 
 
+@app.route("/api/options")
+def run_options() -> Response:
+    """Choices and defaults for the Run Experiment controls."""
+    return jsonify(
+        {
+            "agent_types": list(AGENT_TYPES),
+            "regulator_configs": list(REGULATOR_CONFIGS),
+            "max_steps": MAX_STEPS,
+            "max_firms": MAX_FIRMS,
+            "defaults": DEFAULT_RUN,
+        }
+    )
+
+
 @app.route("/api/experiment/run", methods=["POST"])
-def run_experiment() -> Response:
+def run_experiment() -> tuple[Response, int] | Response:
     """Start a new experiment in the background.
 
-    Initiates a new simulation run with default parameters. The experiment
-    runs asynchronously while status can be polled via /api/experiment/status.
+    Accepts an optional JSON body with firms, regulator, steps and seed (see
+    parse_run_request); missing fields use DEFAULT_RUN. Status can be polled
+    via /api/experiment/status.
     """
-    global running_experiments
+    with run_lock:
+        if running_experiments["status"] == "running":
+            logger.warning("Attempted to start experiment while one is already running")
+            return jsonify({"error": "Experiment already running"}), 409
 
-    if running_experiments["status"] == "running":
-        logger.warning("Attempted to start experiment while one is already running")
-        return jsonify({"error": "Experiment already running"}), 400
+        try:
+            config = parse_run_request(request.get_json(silent=True))
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
-    # Reset state
-    running_experiments = {"status": "idle", "progress": None, "error_message": None}
+        # Mark running before the thread starts so a second request is refused
+        running_experiments.update(
+            {"status": "running", "progress": None, "error_message": None}
+        )
 
-    # Default experiment parameters
-    steps = 50
-    firms = ["random", "titfortat"]
-
-    # Start experiment in background thread
-    thread = threading.Thread(target=run_experiment_background, args=(steps, firms))
+    thread = threading.Thread(target=run_experiment_background, args=(config,))
     thread.daemon = True
     thread.start()
 
-    return jsonify({"status": "started", "steps": steps, "firms": firms})
+    return jsonify({"status": "started", **config})
 
 
 @app.route("/api/experiment/status")
@@ -337,5 +426,10 @@ def health_check() -> Response:
 
 
 if __name__ == "__main__":
-    logger.info("Starting Regulator Dashboard on http://0.0.0.0:5000")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Debug mode exposes the Werkzeug debugger (arbitrary code execution), so
+    # it is opt-in and the server binds to localhost unless told otherwise.
+    host = os.environ.get("DASHBOARD_HOST", "127.0.0.1")
+    port = int(os.environ.get("DASHBOARD_PORT", "5000"))
+    debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes")
+    logger.info(f"Starting Regulator Dashboard on http://{host}:{port}")
+    app.run(debug=debug, host=host, port=port)

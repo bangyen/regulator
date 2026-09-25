@@ -1,6 +1,6 @@
 """Unit tests for dashboard functionality."""
 
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -8,7 +8,7 @@ from dashboard.main import calculate_metrics, extract_time_series
 
 
 @pytest.fixture
-def sample_data() -> Dict[str, Any]:
+def sample_data() -> dict[str, Any]:
     """Create sample experiment data for testing."""
     return {
         "steps": [
@@ -50,7 +50,7 @@ def sample_data() -> Dict[str, Any]:
     }
 
 
-def test_calculate_metrics(sample_data: Dict[str, Any]) -> None:
+def test_calculate_metrics(sample_data: dict[str, Any]) -> None:
     """Test metric calculation from experiment data."""
     metrics = calculate_metrics(sample_data)
 
@@ -69,7 +69,7 @@ def test_calculate_metrics_empty_data() -> None:
     assert metrics == {}
 
 
-def test_extract_time_series(sample_data: Dict[str, Any]) -> None:
+def test_extract_time_series(sample_data: dict[str, Any]) -> None:
     """Test time series extraction from experiment data."""
     time_series = extract_time_series(sample_data)
 
