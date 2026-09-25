@@ -94,6 +94,57 @@ def test_empty_log_dir_shows_error_state(
         os.environ["REGULATOR_LOG_DIR"] = previous
 
 
+def test_run_controls_are_populated(dashboard: Any) -> None:
+    expect(dashboard.locator("#firm-1")).to_have_value("random")
+    expect(dashboard.locator("#firm-2")).to_have_value("titfortat")
+    expect(dashboard.locator("#firm-3")).to_have_value("")
+    expect(dashboard.locator("#regulator-select")).to_have_value("rule_based")
+    expect(dashboard.locator("#steps-input")).to_have_value("50")
+    options = dashboard.locator("#regulator-select option").all_inner_texts()
+    assert options == ["Rule-based", "ML", "Enhanced", "None"]
+
+
+def test_run_uses_selected_configuration(dashboard: Any, log_dir: Path) -> None:
+    before = set(log_dir.glob("*.jsonl"))
+    dashboard.select_option("#firm-1", "stealth")
+    dashboard.select_option("#firm-2", "stealth")
+    dashboard.select_option("#firm-3", "bestresponse")
+    dashboard.select_option("#regulator-select", "enhanced")
+    dashboard.fill("#steps-input", "12")
+    dashboard.fill("#seed-input", "5")
+
+    with dashboard.expect_request("**/api/experiment/run") as request_info:
+        dashboard.click("#run-btn")
+
+    assert request_info.value.post_data_json == {
+        "firms": ["stealth", "stealth", "bestresponse"],
+        "regulator": "enhanced",
+        "steps": 12,
+        "seed": 5,
+    }
+    expect(dashboard.locator("#run-btn")).to_be_enabled(timeout=60_000)
+    (new_log,) = set(log_dir.glob("*.jsonl")) - before
+    steps = [line for line in new_log.read_text().splitlines() if '"step"' in line]
+    assert len([s for s in steps if '"type": "step"' in s]) == 12
+    assert '"n_firms": 3' in new_log.read_text().splitlines()[0]
+
+
+def test_invalid_steps_show_server_error(
+    page: Any, server_url: str, log_dir: Path
+) -> None:
+    page.route("https://fonts.g*/**", lambda route: route.abort())
+    page.goto(server_url)
+    expect(page.locator("#regulator-select")).to_have_value("rule_based")
+    page.fill("#steps-input", "2")
+    messages: list[str] = []
+    page.on("dialog", lambda dialog: (messages.append(dialog.message), dialog.accept()))
+
+    page.click("#run-btn")
+
+    expect(page.locator("#sidebar-status")).to_have_text("Error")
+    assert messages and "steps must be between 5" in messages[0]
+
+
 def test_run_experiment_button(dashboard: Any, log_dir: Path) -> None:
     before = set(log_dir.glob("*.jsonl"))
 

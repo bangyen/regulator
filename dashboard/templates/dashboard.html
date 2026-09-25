@@ -71,6 +71,32 @@
             <header class="header">
                 <h1 class="page-title">Dashboard Overview</h1>
                 <div class="header-actions">
+                    <form class="run-controls" id="run-controls" onsubmit="return false">
+                        <label class="field">
+                            <span class="field-label">Firm 1</span>
+                            <select id="firm-1" class="firm-select"></select>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Firm 2</span>
+                            <select id="firm-2" class="firm-select"></select>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Firm 3</span>
+                            <select id="firm-3" class="firm-select" data-optional="true"></select>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Regulator</span>
+                            <select id="regulator-select"></select>
+                        </label>
+                        <label class="field field-narrow">
+                            <span class="field-label">Steps</span>
+                            <input id="steps-input" type="number" min="5" step="1" value="50">
+                        </label>
+                        <label class="field field-narrow">
+                            <span class="field-label">Seed</span>
+                            <input id="seed-input" type="number" min="0" step="1" placeholder="random">
+                        </label>
+                    </form>
                     <button class="btn-primary" id="run-btn">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                             <polygon points="4 2 14 8 4 14 4 2" fill="currentColor"/>
