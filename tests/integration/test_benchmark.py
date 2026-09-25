@@ -69,3 +69,20 @@ def test_benchmark_llm_real_model_path_reports_usage() -> None:
     assert result["prompt_tokens"] == 400
     assert result["completion_tokens"] == 80
     assert result["mean_latency_s"] >= 0
+
+
+def test_benchmark_tacit_smoke() -> None:
+    from scripts.benchmark import benchmark_tacit
+
+    result = benchmark_tacit(
+        n_pairs=2,
+        train_steps=2_000,
+        episodes_per_pair=3,
+        steps=15,
+        model_type="logistic",
+        seed=0,
+    )
+
+    assert result["n_test"] == 6  # one patient + one myopic pair held out
+    assert 38.0 < result["mean_price_patient"] < 57.0
+    assert "collusion_index_myopic" in result

@@ -63,6 +63,10 @@ class BaseAgent(ABC):
         rival_avg = float(np.mean(rival_prices)) if rival_prices.size > 0 else 0.0
         self.rival_price_history.append(rival_avg)
 
+    def observe_outcome(self, profit: float) -> None:
+        """Receive this period's profit (after any fines). No-op by default."""
+        return None
+
     def reset(self) -> None:
         """Reset the agent's internal state."""
         self.price_history.clear()

@@ -18,12 +18,14 @@ Usage:
 """
 
 import argparse
+import copy
 import json
 import logging
 import os
 import sys
 import tempfile
 from collections.abc import Callable
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +57,7 @@ from regulator.detectors.ml_detector import CollusionDetector, FeatureExtractor
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
+from regulator.experiments.q_learning import collusion_index, train_q_learners
 
 # An agent factory takes (agent_id, seed); a line-up is one factory per firm.
 Factory = Callable[[int, int], BaseAgent]
@@ -213,6 +216,85 @@ def benchmark_ml(
     return _metrics(y_test, detector.predict(X_test), y_score)
 
 
+def _train_pair(job: tuple[float, int, int]) -> list[BaseAgent]:
+    discount, train_steps, seed = job
+    return list(train_q_learners(discount=discount, steps=train_steps, seed=seed))
+
+
+def benchmark_tacit(
+    n_pairs: int,
+    train_steps: int,
+    episodes_per_pair: int,
+    steps: int,
+    model_type: str,
+    seed: int,
+    explore: float = 0.05,
+) -> dict[str, Any]:
+    """
+    Tacit collusion: patient (discount 0.95, label 1) vs myopic (discount 0,
+    label 0) Q-learning pairs, trained in long runs and then frozen.
+
+    Nobody tells these firms to collude, so the label is the condition under
+    which collusion is known to emerge (Calvano et al. 2020). Train/test are
+    split by trained pair, so test episodes come from pairs never seen in
+    training.
+    """
+    jobs = [
+        (discount, train_steps, seed + 100 * k + (0 if discount else 50))
+        for discount in (0.95, 0.0)
+        for k in range(n_pairs)
+    ]
+    with ProcessPoolExecutor() as pool:
+        pairs = list(pool.map(_train_pair, jobs))
+
+    rng = np.random.default_rng(seed)
+    log_files: list[str | Path] = []
+    labels: list[int] = []
+    groups: list[int] = []
+    prices: dict[int, list[float]] = {0: [], 1: []}
+
+    with tempfile.TemporaryDirectory() as log_dir:
+        for pair_id, ((discount, _, _), trained) in enumerate(
+            zip(jobs, pairs, strict=True)
+        ):
+            label = int(discount > 0)
+            for _ in range(episodes_per_pair):
+                episode_seed = int(rng.integers(2**31))
+
+                def clone(i: int, s: int, trained: list = trained) -> BaseAgent:
+                    agent = copy.deepcopy(trained[i])
+                    agent.np_random = np.random.default_rng(s)
+                    agent.freeze(epsilon=explore)
+                    return agent
+
+                log = _simulate((clone, clone), episode_seed, steps, log_dir)
+                log_files.append(log)
+                labels.append(label)
+                groups.append(pair_id)
+                episode_prices = [
+                    np.mean(json.loads(line)["prices"])
+                    for line in log.read_text().splitlines()
+                    if '"type": "step"' in line
+                ]
+                prices[label].append(float(np.mean(episode_prices)))
+
+        X = FeatureExtractor().extract_features_batch(log_files)
+
+    y, groups_arr = np.array(labels), np.array(groups)
+    test_pairs = {g for g in range(len(jobs)) if g % 2 == 1}
+    test = np.isin(groups_arr, list(test_pairs))
+    detector = CollusionDetector(model_type=model_type, random_state=seed)
+    detector.train(X[~test], y[~test], validation_split=False)
+
+    y_score = detector.predict_proba(X[test])[:, 1]
+    metrics = _metrics(y[test], detector.predict(X[test]), y_score)
+    metrics["mean_price_patient"] = float(np.mean(prices[1]))
+    metrics["mean_price_myopic"] = float(np.mean(prices[0]))
+    metrics["collusion_index_patient"] = collusion_index(metrics["mean_price_patient"])
+    metrics["collusion_index_myopic"] = collusion_index(metrics["mean_price_myopic"])
+    return metrics
+
+
 def template_messages(n_messages: int, seed: int) -> list[tuple[str, int]]:
     """Labeled messages drawn from the chat agents' templates."""
     collusive = CollusiveChatAgent(agent_id=0, collusion_intensity=1.0, seed=seed)
@@ -292,6 +374,18 @@ def main() -> None:
         help=f"Comma-separated ML scenarios (default: all of {', '.join(SCENARIOS)})",
     )
     parser.add_argument(
+        "--tacit-pairs",
+        type=int,
+        default=4,
+        help="Q-learning pairs trained per class for the tacit scenario (0 skips it)",
+    )
+    parser.add_argument(
+        "--tacit-train-steps",
+        type=int,
+        default=150_000,
+        help="Training periods per Q-learning pair",
+    )
+    parser.add_argument(
         "--llm-model",
         help="Also evaluate this OpenAI model (needs OPENAI_API_KEY and the "
         "llm extra); makes paid API calls",
@@ -309,6 +403,17 @@ def main() -> None:
             args.episodes, args.steps, args.model, args.seed, scenario
         )
 
+    if args.tacit_pairs:
+        tacit = benchmark_tacit(
+            n_pairs=args.tacit_pairs,
+            train_steps=args.tacit_train_steps,
+            episodes_per_pair=max(1, args.episodes // (2 * args.tacit_pairs)),
+            steps=args.steps,
+            model_type=args.model,
+            seed=args.seed,
+        )
+        results[f"ML ({args.model}) — tacit (Q-learning)"] = tacit
+
     templates = template_messages(args.messages, args.seed)
     stub = LLMDetector(model_type="stubbed", seed=args.seed)
     results["LLM (stub) — templates"] = benchmark_llm(templates, stub)
@@ -324,6 +429,14 @@ def main() -> None:
         results[f"LLM ({args.llm_model}) — hard"] = benchmark_llm(HARD_MESSAGES, llm)
 
     print(_table(results))
+    for name, m in results.items():
+        if "collusion_index_patient" in m:
+            print(
+                f"\n{name}: mean price patient {m['mean_price_patient']:.2f} "
+                f"(collusion index {m['collusion_index_patient']:.2f}), myopic "
+                f"{m['mean_price_myopic']:.2f} "
+                f"({m['collusion_index_myopic']:.2f}); Nash 40, monopoly 55"
+            )
     for name, m in results.items():
         if "fallbacks" in m:
             print(
