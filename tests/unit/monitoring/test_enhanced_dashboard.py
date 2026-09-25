@@ -5,12 +5,13 @@ This module tests the enhanced monitoring dashboard functionality including
 data loading, visualization creation, and report generation.
 """
 
-import pytest
 import json
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
+
 import numpy as np
+import pytest
 
 from regulator.monitoring.enhanced_dashboard import EnhancedMonitoringDashboard
 
@@ -398,7 +399,7 @@ class TestEnhancedMonitoringDashboard:
         assert report_path.exists()
 
         # Check report content
-        with open(report_path, "r") as f:
+        with open(report_path) as f:
             content = f.read()
             assert "ENHANCED REGULATOR MONITORING REPORT" in content
             assert "episode1.jsonl" in content
@@ -439,7 +440,7 @@ class TestEnhancedMonitoringDashboard:
         assert report_path.exists()
 
         # Check report content
-        with open(report_path, "r") as f:
+        with open(report_path) as f:
             content = f.read()
             assert "ERROR: Could not load" in content
 
@@ -458,7 +459,7 @@ class TestEnhancedMonitoringDashboard:
         assert report_path.exists()
 
         # Check report content
-        with open(report_path, "r") as f:
+        with open(report_path) as f:
             content = f.read()
             assert "empty_episode.jsonl" in content
 
@@ -511,7 +512,7 @@ class TestEnhancedMonitoringDashboard:
         assert report_path.exists()
 
         # Check report content
-        with open(report_path, "r") as f:
+        with open(report_path) as f:
             content = f.read()
             assert "Total Steps: 3" in content
             assert "Parallel Violations: 1" in content

@@ -8,7 +8,7 @@ CartelEnv episodes and saves it to JSONL files for analysis and reproducibility.
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 
@@ -24,11 +24,11 @@ class Logger:
 
     def __init__(
         self,
-        log_dir: Union[str, Path] = "logs",
-        episode_id: Optional[str] = None,
+        log_dir: str | Path = "logs",
+        episode_id: str | None = None,
         n_firms: int = 3,
-        agent_types: Optional[List[str]] = None,
-        environment_params: Optional[Dict[str, Any]] = None,
+        agent_types: list[str] | None = None,
+        environment_params: dict[str, Any] | None = None,
     ) -> None:
         """
         Initialize the Logger.
@@ -59,7 +59,7 @@ class Logger:
         # Initialize episode metadata
         self.episode_start_time = datetime.now()
         self.step_count = 0
-        self.episode_data: List[Dict[str, Any]] = []
+        self.episode_data: list[dict[str, Any]] = []
 
         # Write episode header
         self._write_episode_header()
@@ -93,10 +93,10 @@ class Logger:
         demand_shock: float,
         market_price: float,
         total_demand: float,
-        individual_quantity: Union[float, np.ndarray],
+        individual_quantity: float | np.ndarray,
         total_profits: np.ndarray,
-        regulator_flags: Optional[Dict[str, Any]] = None,
-        additional_info: Optional[Dict[str, Any]] = None,
+        regulator_flags: dict[str, Any] | None = None,
+        additional_info: dict[str, Any] | None = None,
     ) -> None:
         """
         Log data for a single step.
@@ -168,8 +168,8 @@ class Logger:
         self,
         terminated: bool = False,
         truncated: bool = False,
-        final_rewards: Optional[np.ndarray] = None,
-        episode_summary: Optional[Dict[str, Any]] = None,
+        final_rewards: np.ndarray | None = None,
+        episode_summary: dict[str, Any] | None = None,
     ) -> None:
         """
         Log episode termination information.
@@ -207,7 +207,7 @@ class Logger:
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(end_data) + "\n")
 
-    def get_episode_data(self) -> List[Dict[str, Any]]:
+    def get_episode_data(self) -> list[dict[str, Any]]:
         """
         Get all episode data from memory.
 
@@ -231,7 +231,7 @@ class Logger:
         pass
 
     @classmethod
-    def load_episode_data(cls, log_file: Union[str, Path]) -> Dict[str, Any]:
+    def load_episode_data(cls, log_file: str | Path) -> dict[str, Any]:
         """
         Load episode data from a JSONL log file.
 
@@ -246,13 +246,13 @@ class Logger:
         if not log_file.exists():
             raise FileNotFoundError(f"Log file not found: {log_file}")
 
-        episode_data: Dict[str, Any] = {
+        episode_data: dict[str, Any] = {
             "header": None,
             "steps": [],
             "end": None,
         }
 
-        with open(log_file, "r", encoding="utf-8") as f:
+        with open(log_file, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     data = json.loads(line.strip())
@@ -269,7 +269,7 @@ class Logger:
         return episode_data
 
     @classmethod
-    def validate_log_file(cls, log_file: Union[str, Path]) -> bool:
+    def validate_log_file(cls, log_file: str | Path) -> bool:
         """
         Validate that a log file contains required data structure.
 

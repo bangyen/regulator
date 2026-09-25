@@ -5,7 +5,7 @@ This module contains functions for training ML models and running episodes.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from regulator.detectors.ml_detector import (
     CollusionDetector,
@@ -14,7 +14,7 @@ from regulator.detectors.ml_detector import (
 )
 
 
-def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> List[Path]:
+def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> list[Path]:
     """
     Create demo episode log files for training.
 
@@ -43,11 +43,11 @@ def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> List[Path]:
 
 
 def train_and_evaluate_detector(
-    log_files: List[Path],
+    log_files: list[Path],
     model_type: str = "logistic",
     test_size: float = 0.2,
     random_state: int = 42,
-) -> tuple[CollusionDetector, Dict[str, Any]]:
+) -> tuple[CollusionDetector, dict[str, Any]]:
     """
     Train and evaluate a collusion detector.
 
@@ -87,12 +87,12 @@ def train_and_evaluate_detector(
 
 
 def run_episode(
-    firms: List[str],
+    firms: list[str],
     steps: int = 50,
-    n_firms: Optional[int] = None,
+    n_firms: int | None = None,
     seed: int = 42,
     log_dir: str = "logs",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run a single episode with the specified parameters.
 
@@ -126,7 +126,7 @@ def run_episode(
 def train_ml_detector(
     n_episodes: int = 50,
     model_type: str = "logistic",
-    existing_logs: Optional[str] = None,
+    existing_logs: str | None = None,
     output_dir: str = "ml_detector_output",
 ) -> None:
     """

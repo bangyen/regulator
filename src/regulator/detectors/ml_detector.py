@@ -8,7 +8,7 @@ by analyzing price patterns, profit margins, and market dynamics from episode lo
 import json
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -70,7 +70,7 @@ class FeatureExtractor:
             raise ValueError("Minimum steps must be at least 3 for meaningful features")
         self.min_steps = min_steps
 
-    def extract_features_from_log(self, log_file: Union[str, Path]) -> np.ndarray:
+    def extract_features_from_log(self, log_file: str | Path) -> np.ndarray:
         """
         Extract features from a single episode log file.
 
@@ -91,7 +91,7 @@ class FeatureExtractor:
         steps_data = []
         episode_info = None
 
-        with open(log_path, "r") as f:
+        with open(log_path) as f:
             for line in f:
                 try:
                     data = json.loads(line.strip())
@@ -110,7 +110,7 @@ class FeatureExtractor:
         return self._extract_features_from_steps(steps_data, episode_info)
 
     def _extract_features_from_steps(
-        self, steps_data: List[Dict[str, Any]], episode_info: Optional[Dict[str, Any]]
+        self, steps_data: list[dict[str, Any]], episode_info: dict[str, Any] | None
     ) -> np.ndarray:
         """
         Extract features from parsed step data.
@@ -232,7 +232,7 @@ class FeatureExtractor:
 
         return np.array(features, dtype=np.float32)  # type: ignore[no-any-return]
 
-    def extract_features_batch(self, log_files: List[Union[str, Path]]) -> np.ndarray:
+    def extract_features_batch(self, log_files: list[str | Path]) -> np.ndarray:
         """
         Extract features from multiple log files.
 
@@ -271,7 +271,7 @@ class CollusionDetector:
     def __init__(
         self,
         model_type: str = "logistic",
-        random_state: Optional[int] = None,
+        random_state: int | None = None,
         **model_kwargs: Any,
     ) -> None:
         """
@@ -306,7 +306,7 @@ class CollusionDetector:
 
         self.scaler = StandardScaler()
         self.is_trained = False
-        self.feature_names: Optional[List[str]] = None
+        self.feature_names: list[str] | None = None
 
     def train(
         self,
@@ -314,7 +314,7 @@ class CollusionDetector:
         y: np.ndarray,
         test_size: float = 0.2,
         validation_split: bool = True,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Train the collusion detector.
 
@@ -397,7 +397,7 @@ class CollusionDetector:
         X_scaled = self.scaler.transform(X)
         return np.array(self.model.predict_proba(X_scaled))  # type: ignore[no-any-return]
 
-    def get_feature_importance(self) -> Optional[np.ndarray]:
+    def get_feature_importance(self) -> np.ndarray | None:
         """
         Get feature importance scores.
 
@@ -416,10 +416,10 @@ class CollusionDetector:
 
 
 def generate_synthetic_labels(
-    log_files: List[Union[str, Path]],
+    log_files: list[str | Path],
     collusion_ratio: float = 0.5,
-    random_state: Optional[int] = None,
-) -> Tuple[List[Union[str, Path]], np.ndarray]:
+    random_state: int | None = None,
+) -> tuple[list[str | Path], np.ndarray]:
     """
     Generate synthetic labels for collusion detection.
 
@@ -444,7 +444,7 @@ def generate_synthetic_labels(
     for log_file in log_files:
         try:
             # Parse log file to extract agent types and behavior patterns
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
 
             # Extract episode header

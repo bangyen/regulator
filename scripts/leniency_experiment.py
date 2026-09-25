@@ -11,26 +11,26 @@ import argparse
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
-from regulator.agents.regulator import Regulator
 from regulator.agents.firm_agents import (
     TitForTatAgent,
     WhistleblowerTitForTatAgent,
 )
-from regulator.cartel.cartel_env import CartelEnv
 from regulator.agents.leniency import LeniencyProgram
+from regulator.agents.regulator import Regulator
+from regulator.cartel.cartel_env import CartelEnv
 
 
 def run_episode_with_leniency(
     env: CartelEnv,
     regulator: Regulator,
-    agents: List[Any],
+    agents: list[Any],
     max_steps: int = 100,
-    seed: Optional[int] = None,
-) -> Dict[str, Any]:
+    seed: int | None = None,
+) -> dict[str, Any]:
     """
     Run a single episode with leniency program enabled.
 
@@ -55,7 +55,7 @@ def run_episode_with_leniency(
         agent.reset()
 
     # Episode tracking
-    episode_data: Dict[str, Any] = {
+    episode_data: dict[str, Any] = {
         "prices": [],
         "rewards": [],
         "fines": [],
@@ -71,7 +71,7 @@ def run_episode_with_leniency(
     for step in range(max_steps):
         # Get actions from agents
         actions = []
-        for i, agent in enumerate(agents):
+        for agent in agents:
             action = agent.choose_price(observation, env, info)
             actions.append(action)
 
@@ -179,10 +179,10 @@ def run_episode_with_leniency(
 def run_episode_without_leniency(
     env: CartelEnv,
     regulator: Regulator,
-    agents: List[Any],
+    agents: list[Any],
     max_steps: int = 100,
-    seed: Optional[int] = None,
-) -> Dict[str, Any]:
+    seed: int | None = None,
+) -> dict[str, Any]:
     """
     Run a single episode without leniency program.
 
@@ -207,7 +207,7 @@ def run_episode_without_leniency(
         agent.reset()
 
     # Episode tracking
-    episode_data: Dict[str, Any] = {
+    episode_data: dict[str, Any] = {
         "prices": [],
         "rewards": [],
         "fines": [],
@@ -223,7 +223,7 @@ def run_episode_without_leniency(
     for step in range(max_steps):
         # Get actions from agents
         actions = []
-        for i, agent in enumerate(agents):
+        for agent in agents:
             action = agent.choose_price(observation, env, info)
             actions.append(action)
 
@@ -304,8 +304,8 @@ def run_leniency_experiment(
     leniency_reduction: float = 0.5,
     fine_amount: float = 50.0,
     output_dir: str = "logs",
-    seed: Optional[int] = None,
-) -> Dict[str, Any]:
+    seed: int | None = None,
+) -> dict[str, Any]:
     """
     Run the leniency experiment comparing with and without leniency.
 
@@ -409,7 +409,7 @@ def run_leniency_experiment(
     print("Analyzing results...")
 
     # Calculate aggregate statistics
-    def calculate_aggregate_stats(episodes: List[Dict[str, Any]]) -> Dict[str, float]:
+    def calculate_aggregate_stats(episodes: list[dict[str, Any]]) -> dict[str, float]:
         summaries = [ep["summary"] for ep in episodes]
 
         return {
@@ -559,7 +559,7 @@ def run_leniency_experiment(
     return results
 
 
-def main() -> Dict[str, Any]:
+def main() -> dict[str, Any]:
     """Main function to run the leniency experiment."""
     parser = argparse.ArgumentParser(description="Run leniency program experiment")
     parser.add_argument(

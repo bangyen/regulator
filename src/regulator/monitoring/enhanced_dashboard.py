@@ -6,11 +6,12 @@ continuous risk scores, and dynamic monitoring patterns.
 """
 
 import json
-import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime
-from typing import Dict, List, Any
 from pathlib import Path
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
@@ -42,15 +43,15 @@ class EnhancedMonitoringDashboard:
             "minor_violations": "#5F27CD",
         }
 
-    def load_episode_data(self, episode_file: str) -> Dict[str, Any]:
+    def load_episode_data(self, episode_file: str) -> dict[str, Any]:
         """Load episode data from JSONL file."""
-        episode_data: Dict[str, Any] = {"steps": []}
+        episode_data: dict[str, Any] = {"steps": []}
         episode_file_path = self.log_dir / episode_file
 
         if not episode_file_path.exists():
             raise FileNotFoundError(f"Episode file not found: {episode_file_path}")
 
-        with open(episode_file_path, "r") as f:
+        with open(episode_file_path) as f:
             for line in f:
                 if line.strip():
                     try:
@@ -65,7 +66,7 @@ class EnhancedMonitoringDashboard:
 
     def create_comprehensive_dashboard(
         self,
-        episode_files: List[str],
+        episode_files: list[str],
         output_file: str = "enhanced_monitoring_dashboard.png",
     ) -> None:
         """
@@ -81,7 +82,7 @@ class EnhancedMonitoringDashboard:
         )
 
         # Load and analyze all episodes
-        episode_data: Dict[str, Any] = {}
+        episode_data: dict[str, Any] = {}
         for episode_file in episode_files:
             try:
                 data = self.load_episode_data(episode_file)
@@ -106,11 +107,11 @@ class EnhancedMonitoringDashboard:
         plt.savefig(self.log_dir / output_file, dpi=300, bbox_inches="tight")
         print(f"Enhanced dashboard saved to: {self.log_dir / output_file}")
 
-    def _plot_fines_over_time(self, ax: Any, episode_data: Dict[str, Any]) -> None:
+    def _plot_fines_over_time(self, ax: Any, episode_data: dict[str, Any]) -> None:
         """Plot fines over time."""
         ax.set_title("Fines Over Time", fontweight="bold")
 
-        for i, (episode_file, data) in enumerate(episode_data.items()):
+        for episode_file, data in episode_data.items():
             steps = data["steps"]
             if not steps:
                 continue
@@ -137,11 +138,11 @@ class EnhancedMonitoringDashboard:
         ax.grid(True, alpha=0.3)
         ax.legend()
 
-    def _plot_market_volatility(self, ax: Any, episode_data: Dict[str, Any]) -> None:
+    def _plot_market_volatility(self, ax: Any, episode_data: dict[str, Any]) -> None:
         """Plot market volatility over time."""
         ax.set_title("Market Volatility Analysis", fontweight="bold")
 
-        for i, (episode_file, data) in enumerate(episode_data.items()):
+        for episode_file, data in episode_data.items():
             steps = data["steps"]
             if not steps:
                 continue
@@ -178,11 +179,11 @@ class EnhancedMonitoringDashboard:
             label="High Volatility Threshold",
         )
 
-    def _plot_penalty_analysis(self, ax: Any, episode_data: Dict[str, Any]) -> None:
+    def _plot_penalty_analysis(self, ax: Any, episode_data: dict[str, Any]) -> None:
         """Plot penalty analysis and cumulative fines."""
         ax.set_title("Penalty Analysis and Cumulative Fines", fontweight="bold")
 
-        for i, (episode_file, data) in enumerate(episode_data.items()):
+        for episode_file, data in episode_data.items():
             steps = data["steps"]
             if not steps:
                 continue
@@ -222,13 +223,13 @@ class EnhancedMonitoringDashboard:
         ax.grid(True, alpha=0.3)
         ax.legend()
 
-    def _plot_violation_severity(self, ax: Any, episode_data: Dict[str, Any]) -> None:
+    def _plot_violation_severity(self, ax: Any, episode_data: dict[str, Any]) -> None:
         """Plot violation severity distribution."""
         ax.set_title("Violation Severity Distribution", fontweight="bold")
 
         severity_counts = {"minor": 0, "moderate": 0, "severe": 0, "critical": 0}
 
-        for episode_file, data in episode_data.items():
+        for data in episode_data.values():
             steps = data["steps"]
             if not steps:
                 continue
@@ -258,7 +259,7 @@ class EnhancedMonitoringDashboard:
         ax.grid(True, alpha=0.3)
 
         # Add value labels on bars
-        for bar, count in zip(bars, counts):
+        for bar, count in zip(bars, counts, strict=True):
             height = bar.get_height()
             ax.text(
                 bar.get_x() + bar.get_width() / 2.0,
@@ -268,7 +269,7 @@ class EnhancedMonitoringDashboard:
                 va="bottom",
             )
 
-    def _plot_monitoring_summary(self, ax: Any, episode_data: Dict[str, Any]) -> None:
+    def _plot_monitoring_summary(self, ax: Any, episode_data: dict[str, Any]) -> None:
         """Plot monitoring summary statistics."""
         ax.set_title("Monitoring Summary Statistics", fontweight="bold")
 
@@ -322,7 +323,7 @@ class EnhancedMonitoringDashboard:
             table.scale(1.2, 1.5)
 
     def generate_monitoring_report(
-        self, episode_files: List[str], output_file: str = "monitoring_report.txt"
+        self, episode_files: list[str], output_file: str = "monitoring_report.txt"
     ) -> None:
         """
         Generate a comprehensive text report of monitoring results.

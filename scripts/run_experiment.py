@@ -9,15 +9,15 @@ experiments with various agent types, regulator configurations, and analysis.
 import argparse
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
 # Import from the package
 from regulator.agents.firm_agents import (
     BaseAgent,
-    RandomAgent,
     BestResponseAgent,
+    RandomAgent,
     TitForTatAgent,
 )
 from regulator.agents.regulator import Regulator
@@ -27,9 +27,7 @@ from regulator.episode_logging.episode_runner import (
 )
 
 
-def create_agent(
-    agent_type: str, agent_id: int, seed: Optional[int] = None
-) -> BaseAgent:
+def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> BaseAgent:
     """
     Create an agent of the specified type.
 
@@ -53,7 +51,7 @@ def create_agent(
         raise ValueError(f"Unknown agent type: {agent_type}")
 
 
-def create_regulator(regulator_config: str, seed: Optional[int] = None) -> Regulator:
+def create_regulator(regulator_config: str, seed: int | None = None) -> Regulator:
     """
     Create a regulator with the specified configuration.
 
@@ -101,8 +99,8 @@ def create_regulator(regulator_config: str, seed: Optional[int] = None) -> Regul
 
 
 def calculate_welfare_metrics(
-    episode_data: Dict[str, Any], env: CartelEnv
-) -> Dict[str, float]:
+    episode_data: dict[str, Any], env: CartelEnv
+) -> dict[str, float]:
     """
     Calculate welfare metrics from episode data.
 
@@ -177,9 +175,9 @@ def calculate_welfare_metrics(
 
 
 def print_experiment_summary(
-    results: Dict[str, Any],
-    episode_data: Dict[str, Any],
-    welfare_metrics: Dict[str, float],
+    results: dict[str, Any],
+    episode_data: dict[str, Any],
+    welfare_metrics: dict[str, float],
 ) -> None:
     """
     Print a summary of the experiment results.
@@ -237,14 +235,14 @@ def print_experiment_summary(
 
 
 def run_experiment(
-    firms: List[str],
+    firms: list[str],
     steps: int = 100,
     regulator_config: str = "rule_based",
     seed: int = 42,
     log_dir: str = "logs",
-    episode_id: Optional[str] = None,
-    env_params: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    episode_id: str | None = None,
+    env_params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Run a complete experiment with the specified parameters.
 
@@ -345,7 +343,7 @@ def run_experiment(
         while step < default_env_params["max_steps"]:
             # Each agent chooses a price
             prices = []
-            for i, agent in enumerate(agents):
+            for agent in agents:
                 price = agent.choose_price(obs, env, info)
                 prices.append(price)
 

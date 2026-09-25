@@ -6,7 +6,8 @@ higher-than-competitive prices while avoiding detection through "jitter"
 and awareness of regulatory risk.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import numpy as np
 
 from regulator.agents.firm_agents import BaseAgent
@@ -29,7 +30,7 @@ class StealthCollusiveAgent(BaseAgent):
         target_collusive_price: float = 40.0,
         jitter_std: float = 2.0,
         risk_threshold: float = 0.5,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         """
         Initialize the stealth collusive agent.
@@ -46,13 +47,13 @@ class StealthCollusiveAgent(BaseAgent):
         self.target_collusive_price = target_collusive_price
         self.jitter_std = jitter_std
         self.risk_threshold = risk_threshold
-        self.violation_history: List[bool] = []
+        self.violation_history: list[bool] = []
 
     def choose_price(
         self,
         observation: np.ndarray,
-        env: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
+        env: Any | None = None,
+        info: dict[str, Any] | None = None,
     ) -> float:
         """
         Choose a price that balances collusion and stealth.

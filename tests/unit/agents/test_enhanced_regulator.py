@@ -5,9 +5,10 @@ This module tests the enhanced regulator functionality including graduated penal
 continuous monitoring scores, market awareness, and cumulative penalty tracking.
 """
 
-import pytest
-import numpy as np
 from unittest.mock import Mock
+
+import numpy as np
+import pytest
 
 from regulator.agents.enhanced_regulator import EnhancedRegulator, ViolationSeverity
 

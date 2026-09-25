@@ -13,7 +13,7 @@ import sys
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 from flask import Flask, Response, jsonify, render_template
@@ -31,7 +31,7 @@ app = Flask(__name__)
 running_experiments = {"status": "idle", "progress": None, "error_message": None}
 
 
-def load_latest_experiment() -> Optional[Dict[str, Any]]:
+def load_latest_experiment() -> dict[str, Any] | None:
     """Load most recent experiment data from logs directory.
 
     Returns parsed experiment data including step-by-step metrics,
@@ -50,7 +50,7 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
     steps = []
     n_firms = 2  # Default
     try:
-        with open(log_files[0], "r") as f:
+        with open(log_files[0]) as f:
             for line in f:
                 if line.strip():
                     data = json.loads(line)
@@ -66,7 +66,7 @@ def load_latest_experiment() -> Optional[Dict[str, Any]]:
         return None
 
 
-def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_metrics(data: dict[str, Any]) -> dict[str, Any]:
     """Calculate aggregate metrics from experiment data.
 
     Computes summary statistics including price averages, violation counts,
@@ -123,7 +123,7 @@ def calculate_metrics(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def extract_time_series(data: Dict[str, Any]) -> Dict[str, List[Any]]:
+def extract_time_series(data: dict[str, Any]) -> dict[str, list[Any]]:
     """Extract time series data for visualization.
 
     Transforms step-by-step experiment data into time series arrays
@@ -189,7 +189,7 @@ def index() -> str:
 
 
 @app.route("/api/data")
-def get_data() -> Union[Tuple[Response, int], Response]:
+def get_data() -> tuple[Response, int] | Response:
     """API endpoint for dashboard data.
 
     Returns combined metrics and time series data from the most recent
@@ -234,7 +234,7 @@ def list_experiments() -> Response:
     return jsonify(experiments)
 
 
-def run_experiment_background(steps: int, firms: List[str]) -> None:
+def run_experiment_background(steps: int, firms: list[str]) -> None:
     """Run experiment in background thread.
 
     Executes the experiment runner script as a subprocess to avoid

@@ -9,8 +9,8 @@ import pytest
 
 from regulator.economic_validation import (
     EconomicValidator,
-    validate_economic_data,
     check_economic_plausibility,
+    validate_economic_data,
 )
 
 

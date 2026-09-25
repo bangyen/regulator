@@ -9,8 +9,7 @@ import json
 import math
 import tempfile
 from pathlib import Path
-
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -83,7 +82,7 @@ class TestCLIFunctions:
         env = MockEnv()
 
         # Mock episode data
-        episode_data: Dict[str, Any] = {
+        episode_data: dict[str, Any] = {
             "episode_prices": [[50.0, 55.0], [52.0, 57.0], [48.0, 53.0]],
             "episode_profits": [[400.0, 450.0], [420.0, 470.0], [380.0, 430.0]],
         }
@@ -120,7 +119,7 @@ class TestCLIFunctions:
                 self.n_firms = 2
 
         env = MockEnv()
-        episode_data: Dict[str, Any] = {"episode_prices": [], "episode_profits": []}
+        episode_data: dict[str, Any] = {"episode_prices": [], "episode_profits": []}
 
         metrics = calculate_welfare_metrics(episode_data, env)  # type: ignore
 
@@ -158,11 +157,11 @@ class TestCLIExecution:
 
             # Check log file content
             log_file = log_files[0]
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 lines = f.readlines()
-                assert (
-                    len(lines) >= 3
-                ), "Log file should have header, steps, and summary"
+                assert len(lines) >= 3, (
+                    "Log file should have header, steps, and summary"
+                )
 
                 # Check header
                 header = json.loads(lines[0])

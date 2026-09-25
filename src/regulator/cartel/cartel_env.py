@@ -6,7 +6,7 @@ by setting prices, with demand shocks affecting market outcomes. The environment
 models oligopolistic competition with constant marginal costs and demand curves.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -27,7 +27,7 @@ class CartelEnv(gym.Env):
         n_firms: int = 3,
         max_steps: int = 100,
         marginal_cost: float = 10.0,
-        marginal_costs: Union[List[float], None] = None,  # Allow firm-specific costs
+        marginal_costs: list[float] | None = None,  # Allow firm-specific costs
         demand_intercept: float = 100.0,
         demand_slope: float = -1.0,
         shock_std: float = 5.0,
@@ -51,13 +51,13 @@ class CartelEnv(gym.Env):
         use_dynamic_elasticity: bool = False,  # Enable dynamic price elasticity
         elasticity_sensitivity: float = 0.5,  # How much elasticity varies with market conditions
         use_capacity_constraints: bool = False,  # Enable production capacity limits
-        capacity: Union[List[float], None] = None,  # Production capacity per firm
+        capacity: list[float] | None = None,  # Production capacity per firm
         use_learning_agents: bool = False,  # Enable adaptive learning in agents
         learning_rate: float = 0.1,  # Learning rate for adaptive agents
         use_market_entry_exit: bool = False,  # Enable dynamic firm entry/exit
         exit_threshold: float = -100.0,  # Profit threshold for firm exit
         max_consecutive_losses: int = 5,  # Max losses before exit
-        seed: Union[int, None] = None,
+        seed: int | None = None,
     ):
         """
         Initialize the Cartel Environment.
@@ -222,12 +222,12 @@ class CartelEnv(gym.Env):
         self.consecutive_losses: np.ndarray = np.zeros(
             n_firms, dtype=int
         )  # Track consecutive losses
-        self.price_history: List[float] = (
-            []
-        )  # Store price history for dynamic elasticity
-        self.demand_history: List[float] = (
-            []
-        )  # Store demand history for dynamic elasticity
+        self.price_history: list[
+            float
+        ] = []  # Store price history for dynamic elasticity
+        self.demand_history: list[
+            float
+        ] = []  # Store demand history for dynamic elasticity
         self.current_elasticity = price_elasticity  # Current dynamic elasticity
 
         # Enhanced market share model attributes
@@ -265,8 +265,8 @@ class CartelEnv(gym.Env):
         self.learning_rate = 0.8  # 20% cost reduction per doubling of production
 
     def reset(
-        self, seed: Union[int, None] = None, options: Union[Dict[str, Any], None] = None
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        self, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         """
         Reset the environment to initial state.
 
@@ -294,8 +294,8 @@ class CartelEnv(gym.Env):
         self.current_elasticity = self.price_elasticity
 
         # Reset demand shock history
-        self._shock_history: List[float] = []
-        self._previous_shock: Optional[float] = None
+        self._shock_history: list[float] = []
+        self._previous_shock: float | None = None
 
         # Create initial observation
         observation = np.concatenate(
@@ -313,7 +313,7 @@ class CartelEnv(gym.Env):
 
     def step(
         self, action: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, bool, bool, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, np.ndarray, bool, bool, dict[str, Any]]:
         """
         Execute one step in the environment.
 
@@ -412,7 +412,7 @@ class CartelEnv(gym.Env):
         """Close the environment (not implemented)."""
         pass
 
-    def _get_market_info(self) -> Dict[str, Any]:
+    def _get_market_info(self) -> dict[str, Any]:
         """Get current market parameters for agents."""
         return {
             "n_firms": self.n_firms,
@@ -559,7 +559,7 @@ class CartelEnv(gym.Env):
                     self.demand_intercept * (market_price**self.current_elasticity)
                 )
             else:
-                base_demand = float(0.0)
+                base_demand = 0.0
         else:
             # Original linear demand curve
             base_demand = float(
@@ -815,11 +815,10 @@ class CartelEnv(gym.Env):
         # For competitors, apply visibility probability
         for i in range(self.n_firms):
             for j in range(self.n_firms):
-                if i != j:  # Don't affect own price observation
-                    if self.np_random.random() > self.price_visibility_prob:
-                        observed_prices[i] = (
-                            np.nan
-                        )  # Cannot observe this competitor's price
+                # Don't affect own price observation
+                if i != j and self.np_random.random() > self.price_visibility_prob:
+                    # Cannot observe this competitor's price
+                    observed_prices[i] = np.nan
 
         result: np.ndarray = observed_prices.astype(np.float32)
         return result

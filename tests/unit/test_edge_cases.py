@@ -15,8 +15,8 @@ from regulator.agents.firm_agents import RandomAgent
 from regulator.agents.regulator import Regulator
 from regulator.cartel.cartel_env import CartelEnv
 from regulator.detectors.llm_detector import LLMDetector
-from regulator.episode_logging.logger import Logger
 from regulator.episode_logging.episode_logger import EpisodeLogger
+from regulator.episode_logging.logger import Logger
 
 
 class TestEdgeCases:

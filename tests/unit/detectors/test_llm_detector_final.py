@@ -405,9 +405,9 @@ class TestLLMDetectorLLMModel:
             # Mock OpenAI response
             mock_response = Mock()
             mock_response.choices = [Mock()]
-            mock_response.choices[0].message.content = (
-                '{"is_collusive": true, "confidence": 0.9, "reasoning": "Contains collusive content"}'
-            )
+            mock_response.choices[
+                0
+            ].message.content = '{"is_collusive": true, "confidence": 0.9, "reasoning": "Contains collusive content"}'
             mock_openai.OpenAI.return_value.chat.completions.create.return_value = (
                 mock_response
             )
@@ -427,11 +427,11 @@ class TestLLMDetectorLLMModel:
 
     def test_llm_model_initialization_without_api_key(self) -> None:
         """Test LLM model initialization without API key."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(
-                ValueError, match="OPENAI_KEY environment variable not set"
-            ):
-                LLMDetector(model_type="llm")
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(ValueError, match="OPENAI_KEY environment variable not set"),
+        ):
+            LLMDetector(model_type="llm")
 
 
 class TestLLMDetectorExportImport:
@@ -468,7 +468,7 @@ class TestLLMDetectorExportImport:
             # Check that file was created and contains data
             assert os.path.exists(temp_file)
 
-            with open(temp_file, "r") as f:
+            with open(temp_file) as f:
                 data = json.load(f)
 
             assert "detection_summary" in data

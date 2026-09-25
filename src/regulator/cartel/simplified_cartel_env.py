@@ -6,7 +6,7 @@ core regulatory analysis. It removes unnecessarily complex features while mainta
 essential economic relationships for studying collusion and regulatory effectiveness.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -34,7 +34,7 @@ class SimplifiedCartelEnv(gym.Env):
         n_firms: int = 3,
         max_steps: int = 100,
         marginal_cost: float = 10.0,
-        marginal_costs: Union[List[float], None] = None,
+        marginal_costs: list[float] | None = None,
         demand_intercept: float = 100.0,
         demand_slope: float = -1.0,
         shock_std: float = 5.0,
@@ -46,8 +46,8 @@ class SimplifiedCartelEnv(gym.Env):
         use_fixed_costs: bool = True,
         fixed_cost: float = 50.0,
         use_capacity_constraints: bool = False,
-        capacity: Union[List[float], None] = None,
-        seed: Union[int, None] = None,
+        capacity: list[float] | None = None,
+        seed: int | None = None,
     ):
         """
         Initialize the Simplified Cartel Environment.
@@ -127,7 +127,7 @@ class SimplifiedCartelEnv(gym.Env):
 
         # Set up capacity constraints
         if self.use_capacity_constraints and capacity is not None:
-            self.capacity_array: Optional[np.ndarray] = np.array(
+            self.capacity_array: np.ndarray | None = np.array(
                 capacity, dtype=np.float32
             )
         else:
@@ -155,11 +155,11 @@ class SimplifiedCartelEnv(gym.Env):
         # Episode state
         self.current_step = 0
         self.current_demand_shock = 0.0
-        self.previous_prices: Optional[np.ndarray] = None
+        self.previous_prices: np.ndarray | None = None
 
     def reset(
-        self, seed: Union[int, None] = None, options: Union[Dict[str, Any], None] = None
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        self, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         """Reset the environment to initial state."""
         if seed is not None:
             self.np_random = np.random.default_rng(seed)
@@ -188,7 +188,7 @@ class SimplifiedCartelEnv(gym.Env):
 
     def step(
         self, action: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, bool, bool, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, np.ndarray, bool, bool, dict[str, Any]]:
         """Execute one step in the environment."""
         # Validate action
         if not self.action_space.contains(action):
@@ -333,11 +333,10 @@ class SimplifiedCartelEnv(gym.Env):
 
     def render(self, mode: str = "human") -> None:
         """Render the environment (placeholder)."""
-        if mode == "human":
-            if self.previous_prices is not None:
-                print(
-                    f"Step {self.current_step}: Market price = {np.mean(self.previous_prices):.2f}"
-                )
+        if mode == "human" and self.previous_prices is not None:
+            print(
+                f"Step {self.current_step}: Market price = {np.mean(self.previous_prices):.2f}"
+            )
 
     def close(self) -> None:
         """Close the environment (placeholder)."""

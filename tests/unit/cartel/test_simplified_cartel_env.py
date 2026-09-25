@@ -5,9 +5,9 @@ This module tests the simplified cartel environment functionality including
 environment initialization, step execution, economic calculations, and edge cases.
 """
 
-import pytest
-import numpy as np
 import gymnasium as gym
+import numpy as np
+import pytest
 
 from regulator.cartel.simplified_cartel_env import SimplifiedCartelEnv
 
@@ -264,7 +264,7 @@ class TestSimplifiedCartelEnv:
         action = np.array([50.0, 50.0, 50.0], dtype=np.float32)
 
         # Run until termination
-        for step in range(env.max_steps + 1):
+        for _ in range(env.max_steps + 1):
             obs, rewards, terminated, truncated, info = env.step(action)
             if terminated:
                 break
@@ -440,13 +440,12 @@ class TestSimplifiedCartelEnv:
         obs, rewards, terminated, truncated, info = env.step(action)
 
         # Check that profits are calculated correctly
-        for i, (price, quantity, profit, cost) in enumerate(
-            zip(
-                info["prices"],
-                info["individual_quantity"],
-                info["profits"],
-                info["costs"],
-            )
+        for price, quantity, profit, cost in zip(
+            info["prices"],
+            info["individual_quantity"],
+            info["profits"],
+            info["costs"],
+            strict=False,
         ):
             expected_profit = price * quantity - cost
             assert abs(profit - expected_profit) < 1e-6
