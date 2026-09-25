@@ -34,7 +34,7 @@ class TestLLMDetectorInitialization:
             # Mock the models.list() call to avoid API call
             mock_openai.OpenAI.return_value.models.list.return_value = []
 
-            with patch.dict(os.environ, {"OPENAI_KEY": "test_key"}):
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}):
                 detector = LLMDetector(
                     model_type="llm", confidence_threshold=0.7, seed=123
                 )
@@ -382,10 +382,8 @@ class TestLLMDetectorLLMModel:
         """Test LLM model initialization."""
         with (
             patch("regulator.detectors.llm_detector.openai") as mock_openai,
-            patch("regulator.detectors.llm_detector.os.getenv") as mock_getenv,
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-api-key"}, clear=True),
         ):
-            # Mock the environment variable
-            mock_getenv.return_value = "test-api-key"
             # Mock the models.list() call to avoid API call
             mock_openai.OpenAI.return_value.models.list.return_value = []
 
@@ -398,10 +396,8 @@ class TestLLMDetectorLLMModel:
         """Test LLM model classification (mocked)."""
         with (
             patch("regulator.detectors.llm_detector.openai") as mock_openai,
-            patch("regulator.detectors.llm_detector.os.getenv") as mock_getenv,
+            patch.dict(os.environ, {"OPENAI_API_KEY": "test-api-key"}, clear=True),
         ):
-            # Mock the environment variable
-            mock_getenv.return_value = "test-api-key"
             # Mock OpenAI response
             mock_response = Mock()
             mock_response.choices = [Mock()]
@@ -424,12 +420,61 @@ class TestLLMDetectorLLMModel:
 
             assert result["is_collusive"] is True
             assert result["confidence"] == 0.9
+            assert "llm_fallback" not in result
+            create = mock_openai.OpenAI.return_value.chat.completions.create
+            assert create.call_args.kwargs["model"] == "gpt-4o-mini"
+
+    def test_llm_model_name_and_env_settings(self) -> None:
+        """Model, temperature and max tokens come from args/env."""
+        env = {
+            "OPENAI_API_KEY": "k",
+            "OPENAI_MODEL": "env-model",
+            "OPENAI_TEMPERATURE": "0.3",
+            "OPENAI_MAX_TOKENS": "42",
+        }
+        with (
+            patch("regulator.detectors.llm_detector.openai"),
+            patch.dict(os.environ, env, clear=True),
+        ):
+            assert LLMDetector(model_type="llm").model_name == "env-model"
+            detector = LLMDetector(model_type="llm", model_name="arg-model")
+
+        assert detector.model_name == "arg-model"
+        assert detector.temperature == 0.3
+        assert detector.max_tokens == 42
+
+    def test_legacy_openai_key_env_var(self) -> None:
+        """OPENAI_KEY is still accepted."""
+        with (
+            patch("regulator.detectors.llm_detector.openai") as mock_openai,
+            patch.dict(os.environ, {"OPENAI_KEY": "legacy"}, clear=True),
+        ):
+            LLMDetector(model_type="llm")
+
+        mock_openai.OpenAI.assert_called_once_with(api_key="legacy")
+
+    def test_llm_failure_is_flagged(self) -> None:
+        """API errors fall back to the stub and are marked as fallbacks."""
+        with (
+            patch("regulator.detectors.llm_detector.openai") as mock_openai,
+            patch.dict(os.environ, {"OPENAI_API_KEY": "k"}, clear=True),
+        ):
+            mock_openai.OpenAI.return_value.chat.completions.create.side_effect = (
+                RuntimeError("rate limited")
+            )
+            detector = LLMDetector(model_type="llm")
+            result = detector.classify_message("hello", 0, 1, 1)
+
+        assert result["llm_fallback"] is True
+        assert "rate limited" in result["llm_error"]
 
     def test_llm_model_initialization_without_api_key(self) -> None:
         """Test LLM model initialization without API key."""
         with (
             patch.dict(os.environ, {}, clear=True),
-            pytest.raises(ValueError, match="OPENAI_KEY environment variable not set"),
+            pytest.raises(
+                ValueError, match="OPENAI_API_KEY environment variable not set"
+            ),
         ):
             LLMDetector(model_type="llm")
 
