@@ -60,6 +60,8 @@ class CartelEnv(gym.Env):
         use_market_entry_exit: bool = False,  # Enable dynamic firm entry/exit
         exit_threshold: float = -100.0,  # Profit threshold for firm exit
         max_consecutive_losses: int = 5,  # Max losses before exit
+        use_learning_curves: bool = False,  # Costs fall with cumulative output
+        learning_curve_rate: float = 0.8,  # Cost multiplier per doubling of output
         seed: int | None = None,
     ):
         """
@@ -96,6 +98,10 @@ class CartelEnv(gym.Env):
             use_market_entry_exit: Enable dynamic firm entry and exit
             exit_threshold: Profit threshold below which firms consider exiting
             max_consecutive_losses: Maximum consecutive loss periods before exit
+            use_learning_curves: Reduce variable costs as cumulative production
+                grows (reset each episode)
+            learning_curve_rate: Cost multiplier per doubling of cumulative
+                production (0.8 = 20% cheaper per doubling)
             seed: Random seed for reproducibility
         """
         super().__init__()
@@ -264,8 +270,9 @@ class CartelEnv(gym.Env):
         }
 
         # Learning curve attributes
+        self.use_learning_curves = use_learning_curves
+        self.learning_curve_rate = learning_curve_rate
         self.cumulative_production = np.zeros(n_firms, dtype=np.float32)
-        self.learning_rate = 0.8  # 20% cost reduction per doubling of production
 
     def reset(
         self, seed: int | None = None, options: dict[str, Any] | None = None
@@ -288,6 +295,7 @@ class CartelEnv(gym.Env):
         self.previous_prices = np.zeros(self.n_firms, dtype=np.float32)
         self.current_demand_shock = self.np_random.normal(0, self.shock_std)
         self.total_profits = np.zeros(self.n_firms, dtype=np.float32)
+        self.cumulative_production = np.zeros(self.n_firms, dtype=np.float32)
 
         # Reset new economic model state variables
         self.active_firms = np.ones(self.n_firms, dtype=bool)
@@ -735,7 +743,7 @@ class CartelEnv(gym.Env):
 
         # Apply learning curves: costs decrease with cumulative production
         # Learning curve: cost = base_cost * (cumulative_production / reference_production)^(log2(learning_rate))
-        if np.any(self.cumulative_production > 0):
+        if self.use_learning_curves and np.any(self.cumulative_production > 0):
             # Learning curve: costs decrease as cumulative production increases
             # learning_rate = 0.8 means 20% cost reduction per doubling of production
             reference_production = 10.0  # Reference production level
@@ -744,7 +752,9 @@ class CartelEnv(gym.Env):
                 self.cumulative_production / reference_production, 1e-6
             )
             # Fix: learning_rate should reduce costs, so use positive log2(learning_rate)
-            learning_factor = np.power(production_ratio, np.log2(self.learning_rate))
+            learning_factor = np.power(
+                production_ratio, np.log2(self.learning_curve_rate)
+            )
             variable_costs = variable_costs * learning_factor
 
         if self.use_economies_of_scale:
