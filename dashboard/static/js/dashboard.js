@@ -203,7 +203,7 @@ function initCharts() {
 
 function updateMetrics(metrics) {
     document.getElementById('avg-price').textContent = metrics.avg_price?.toFixed(2) || '—';
-    document.getElementById('violations').textContent = metrics.total_violations || '—';
+    document.getElementById('violations').textContent = metrics.total_violations ?? '—';
     document.getElementById('total-fines').textContent = metrics.total_fines?.toFixed(2) || '—';
     document.getElementById('risk-score').textContent = metrics.avg_risk_score?.toFixed(2) || '—';
 }
@@ -384,6 +384,62 @@ function initToggleButtons() {
     });
 }
 
+const AGENT_LABELS = {
+    random: 'Random',
+    bestresponse: 'Best response',
+    titfortat: 'Tit-for-tat',
+    stealth: 'Stealth colluder'
+};
+
+const REGULATOR_LABELS = {
+    rule_based: 'Rule-based',
+    ml: 'ML',
+    enhanced: 'Enhanced',
+    none: 'None'
+};
+
+function fillSelect(select, values, labels, selected, optional) {
+    const options = values.map(v => `<option value="${v}">${labels[v] || v}</option>`);
+    if (optional) options.unshift('<option value="">—</option>');
+    select.innerHTML = options.join('');
+    select.value = selected ?? '';
+}
+
+async function initRunControls() {
+    try {
+        const response = await fetch('/api/options');
+        const options = await response.json();
+        const defaults = options.defaults;
+
+        document.querySelectorAll('.firm-select').forEach((select, i) => {
+            const optional = select.dataset.optional === 'true';
+            fillSelect(select, options.agent_types, AGENT_LABELS, defaults.firms[i], optional);
+        });
+        fillSelect(
+            document.getElementById('regulator-select'),
+            options.regulator_configs, REGULATOR_LABELS, defaults.regulator, false
+        );
+        const steps = document.getElementById('steps-input');
+        steps.max = options.max_steps;
+        steps.value = defaults.steps;
+    } catch (error) {
+        console.error('Failed to load run options:', error);
+    }
+}
+
+function readRunConfig() {
+    const firms = [...document.querySelectorAll('.firm-select')]
+        .map(select => select.value)
+        .filter(Boolean);
+    const seed = document.getElementById('seed-input').value;
+    return {
+        firms,
+        regulator: document.getElementById('regulator-select').value,
+        steps: parseInt(document.getElementById('steps-input').value, 10),
+        seed: seed === '' ? null : parseInt(seed, 10)
+    };
+}
+
 function initExperimentRunner() {
     const runBtn = document.getElementById('run-btn');
     if (!runBtn) return;
@@ -401,9 +457,14 @@ function initExperimentRunner() {
             
             document.getElementById('sidebar-status').textContent = 'Running';
             
-            const response = await fetch('/api/experiment/run', { method: 'POST' });
+            const response = await fetch('/api/experiment/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(readRunConfig())
+            });
             if (!response.ok) {
-                throw new Error('Failed to start experiment');
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body.error || 'Failed to start experiment');
             }
             
             // Poll for status
@@ -450,7 +511,7 @@ function initExperimentRunner() {
                 Run Experiment
             `;
             document.getElementById('sidebar-status').textContent = 'Error';
-            alert('Failed to start experiment');
+            alert(error.message || 'Failed to start experiment');
         }
     });
 }
@@ -481,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initCharts();
     initToggleButtons();
+    initRunControls();
     initExperimentRunner();
     initExportButton();
     
