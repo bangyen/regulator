@@ -43,6 +43,7 @@ from regulator.agents.firm_agents import (
     BaseAgent,
     BestResponseAgent,
     CollusiveAgent,
+    NoisyAgent,
     RandomAgent,
     TitForTatAgent,
 )
@@ -70,32 +71,6 @@ def _adaptive(tendency: float) -> Factory:
 
 def _cls(agent_cls: type[BaseAgent]) -> Factory:
     return lambda i, s: agent_cls(agent_id=i, seed=s)
-
-
-class NoisyAgent(BaseAgent):
-    """Wraps an agent and adds Gaussian noise to its prices."""
-
-    def __init__(self, inner: BaseAgent, noise_std: float, seed: int) -> None:
-        super().__init__(inner.agent_id, seed)
-        self.inner = inner
-        self.noise_std = noise_std
-
-    def choose_price(
-        self,
-        observation: np.ndarray,
-        env: Any | None = None,
-        info: dict[str, Any] | None = None,
-    ) -> float:
-        price = self.inner.choose_price(observation, env, info)
-        return float(max(1.0, price + self.np_random.normal(0, self.noise_std)))
-
-    def update_history(self, my_price: float, rival_prices: np.ndarray) -> None:
-        super().update_history(my_price, rival_prices)
-        self.inner.update_history(my_price, rival_prices)
-
-    def reset(self) -> None:
-        super().reset()
-        self.inner.reset()
 
 
 def _noisy_best() -> Factory:
