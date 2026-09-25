@@ -337,5 +337,10 @@ def health_check() -> Response:
 
 
 if __name__ == "__main__":
-    logger.info("Starting Regulator Dashboard on http://0.0.0.0:5000")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Debug mode exposes the Werkzeug debugger (arbitrary code execution), so
+    # it is opt-in and the server binds to localhost unless told otherwise.
+    host = os.environ.get("DASHBOARD_HOST", "127.0.0.1")
+    port = int(os.environ.get("DASHBOARD_PORT", "5000"))
+    debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes")
+    logger.info(f"Starting Regulator Dashboard on http://{host}:{port}")
+    app.run(debug=debug, host=host, port=port)

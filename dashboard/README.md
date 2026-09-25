@@ -19,7 +19,7 @@ source venv/bin/activate  # On macOS/Linux
 # venv\Scripts\activate   # On Windows
 
 # Install dependencies (if not already done)
-pip install -e .
+pip install -e ".[dashboard]"
 
 # Run dashboard
 python dashboard/main.py

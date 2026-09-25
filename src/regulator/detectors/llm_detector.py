@@ -194,7 +194,7 @@ class LLMDetector:
         """
         if not OPENAI_AVAILABLE:
             raise ImportError(
-                "OpenAI package not available. Install with: pip install openai"
+                "OpenAI package not available. Install with: pip install \"regulator[llm]\""
             )
 
         # Get API key from environment
