@@ -6,11 +6,14 @@ by setting prices, with demand shocks affecting market outcomes. The environment
 models oligopolistic competition with constant marginal costs and demand curves.
 """
 
+import logging
 from typing import Any
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+
+logger = logging.getLogger(__name__)
 
 
 class CartelEnv(gym.Env):
@@ -534,7 +537,7 @@ class CartelEnv(gym.Env):
                 if self.consecutive_losses[i] >= self.max_consecutive_losses:
                     # Firm exits market
                     self.active_firms[i] = False
-                    print(f"Firm {i} exited market due to sustained losses")
+                    logger.info("Firm %d exited market due to sustained losses", i)
             else:
                 self.consecutive_losses[i] = 0
 

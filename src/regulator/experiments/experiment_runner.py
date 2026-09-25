@@ -5,6 +5,7 @@ This module contains the core functions for running experiments,
 training models, and executing episodes.
 """
 
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -21,6 +22,8 @@ from regulator.cartel.cartel_env import CartelEnv
 from regulator.episode_logging.episode_runner import (
     run_episode_with_regulator_logging,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def create_agent(agent_type: str, agent_id: int, seed: int | None = None) -> BaseAgent:
@@ -263,12 +266,11 @@ def run_experiment(
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         episode_id = f"experiment_{timestamp}"
 
-    print(f"Running experiment: {episode_id}")
-    print(f"Firms: {', '.join(firms)}")
-    print(f"Steps: {steps}")
-    print(f"Regulator: {regulator_config}")
-    print(f"Seed: {seed}")
-    print("-" * 60)
+    logger.info("Running experiment: %s", episode_id)
+    logger.info("Firms: %s", ", ".join(firms))
+    logger.info("Steps: %d", steps)
+    logger.info("Regulator: %s", regulator_config)
+    logger.info("Seed: %s", seed)
 
     # Run episode with regulator
     results = run_episode_with_regulator_logging(
@@ -310,8 +312,8 @@ def run_experiment(
     results = convert_numpy_types(results)  # type: ignore
 
     # Calculate welfare metrics from logger data
-    logger = results["logger"]
-    episode_data = logger.load_episode_data(logger.get_log_file_path())
+    episode_logger = results["logger"]
+    episode_data = episode_logger.load_episode_data(episode_logger.get_log_file_path())
     welfare_metrics = calculate_welfare_metrics(episode_data["steps"], env)
     results["welfare_metrics"] = welfare_metrics
 

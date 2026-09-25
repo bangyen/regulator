@@ -4,6 +4,7 @@ Training functions for the Regulator package.
 This module contains functions for training ML models and running episodes.
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,8 @@ from regulator.detectors.ml_detector import (
     FeatureExtractor,
     generate_synthetic_labels,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def create_demo_episodes(output_dir: Path, n_episodes: int = 50) -> list[Path]:
@@ -60,26 +63,28 @@ def train_and_evaluate_detector(
     Returns:
         Tuple of (trained_detector, evaluation_metrics)
     """
-    print(f"Training {model_type} collusion detector...")
+    logger.info("Training %s collusion detector...", model_type)
 
     # Generate synthetic labels
-    print("Generating synthetic labels...")
+    logger.info("Generating synthetic labels...")
     log_files_with_labels, labels = generate_synthetic_labels(
         [str(f) for f in log_files]
     )
 
-    print(f"Generated labels for {len(log_files)} episodes")
-    print(f"Collusive episodes: {sum(labels)}")
-    print(f"Competitive episodes: {len(labels) - sum(labels)}")
+    logger.info("Generated labels for %d episodes", len(log_files))
+    logger.info("Collusive episodes: %d", sum(labels))
+    logger.info("Competitive episodes: %d", len(labels) - sum(labels))
 
     # Extract features
-    print("Extracting features...")
+    logger.info("Extracting features...")
     extractor = FeatureExtractor()
     features = extractor.extract_features_batch([str(f) for f in log_files])
-    print(f"Extracted {features.shape[1]} features from {len(log_files)} episodes")
+    logger.info(
+        "Extracted %d features from %d episodes", features.shape[1], len(log_files)
+    )
 
     # Train detector
-    print("Training detector...")
+    logger.info("Training detector...")
     detector = CollusionDetector(model_type=model_type, random_state=random_state)
     metrics = detector.train(features, labels, test_size=test_size)
 
@@ -108,8 +113,8 @@ def run_episode(
     """
     # This is a simplified version - in practice, you'd want to use
     # the actual episode running logic from the scripts
-    print(f"Running episode with {len(firms)} firms: {', '.join(firms)}")
-    print(f"Steps: {steps}, Seed: {seed}")
+    logger.info("Running episode with %d firms: %s", len(firms), ", ".join(firms))
+    logger.info("Steps: %d, Seed: %s", steps, seed)
 
     # Create a simple result
     result = {
@@ -146,12 +151,14 @@ def train_ml_detector(
     if existing_logs:
         # Use existing log files
         log_files = list(Path(existing_logs).glob("*.jsonl"))
-        print(f"Using {len(log_files)} existing log files from {existing_logs}")
+        logger.info(
+            "Using %d existing log files from %s", len(log_files), existing_logs
+        )
     else:
         # Create demo episodes
-        print(f"Creating {n_episodes} demo episodes...")
+        logger.info("Creating %d demo episodes...", n_episodes)
         log_files = create_demo_episodes(output_path, n_episodes)
-        print(f"Created {n_episodes} demo episodes in {output_dir}")
+        logger.info("Created %d demo episodes in %s", n_episodes, output_dir)
 
     # Train and evaluate detector
     detector, metrics = train_and_evaluate_detector(

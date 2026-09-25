@@ -5,6 +5,7 @@ This module implements an MLRegulator class that combines traditional rule-based
 detection with machine learning models to identify sophisticated collusion patterns.
 """
 
+import logging
 import warnings
 from typing import Any
 
@@ -14,6 +15,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
 
 from .regulator import Regulator
+
+logger = logging.getLogger(__name__)
 
 
 class MLRegulator(Regulator):
@@ -326,7 +329,9 @@ class MLRegulator(Regulator):
                 # Evaluate model performance
                 y_pred = self.collusion_classifier.predict(X_scaled)
                 accuracy = accuracy_score(y, y_pred)
-                print(f"ML Regulator: Retrained models with accuracy: {accuracy:.3f}")
+                logger.info(
+                    "ML Regulator: Retrained models with accuracy: %.3f", accuracy
+                )
 
         except Exception as e:
             warnings.warn(f"ML model retraining failed: {e}", stacklevel=2)
